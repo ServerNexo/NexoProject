@@ -1,11 +1,14 @@
 name: NexoMinions
-version: 1.0-SNAPSHOT
+version: '${project.version}'
 main: me.nexo.minions.NexoMinions
 api-version: '1.21'
-depend: [NexoCore, Nexo, auraskills, NexoColecciones] # 🟢 Ahora depende de ambos
+author: 'TuNombre'
+description: 'Sistema de minions y automatizacion.'
+# 🟢 Corregí 'auraskills' a 'AuraSkills' para que coincida exactamente
+depend: [NexoCore, Nexo, AuraSkills, NexoColecciones]
 
 commands:
   minion:
-    description: Comando principal para administrar los abejas mineras.
+    description: Comando principal para administrar los minions.
     permission: nexominions.admin
     usage: /minion give <jugador> <tipo> [nivel]

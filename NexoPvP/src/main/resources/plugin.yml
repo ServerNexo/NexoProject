@@ -1,8 +1,11 @@
 name: NexoPvP
-version: 1.0
+version: '${project.version}'
 main: me.nexo.pvp.NexoPvP
 api-version: '1.21'
+author: 'TuNombre'
+description: 'Sistema de combate y pasivas PvP.'
 depend: [NexoCore]
+
 commands:
   pvp:
     description: Activa o desactiva tu Modo de Guerra

@@ -1,8 +1,10 @@
 name: NexoItems
-version: '1.0'
+version: '${project.version}'
 main: me.nexo.items.NexoItems
 api-version: '1.21'
-depend: [NexoCore]
+author: 'TuNombre'
+description: 'Manejador de armaduras, armas, mochilas y accesorios.'
+depend: [NexoCore, Nexo] # Añadí Nexo externo por si usas texturas custom
 
 commands:
   desguace:
@@ -11,8 +13,8 @@ commands:
     description: Abre la bolsa de accesorios.
     aliases: [bolsa, bag, acc]
   wardrobe:
-      description: Abre el menú de Guardarropa RPG.
-      aliases: [ armario ]
+    description: Abre el menú de Guardarropa RPG.
+    aliases: [ armario ]
   pv:
     description: Abre tu mochila virtual.
     aliases: [ playervault, vault, mochila ]

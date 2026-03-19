@@ -1,5 +1,7 @@
 name: NexoMechanics
-version: '1.0'
+version: '${project.version}'
 main: me.nexo.mechanics.NexoMechanics
 api-version: '1.21'
+author: 'TuNombre'
+description: 'Mecanicas adicionales y minijuegos.'
 depend: [NexoCore]

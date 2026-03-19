@@ -1,9 +1,12 @@
 name: NexoCore
-version: 1.0
+version: '${project.version}'
 main: me.nexo.core.NexoCore
 api-version: '1.21'
+author: 'Z0101'
+description: 'Cerebro principal y conexion a base de datos de la red Nexo.'
 softdepend: [PlaceholderAPI, MythicMobs, eco]
 depend: [AuraSkills, Nexo]
+
 commands:
   nexocore:
     description: Comando de administracion del Nexo

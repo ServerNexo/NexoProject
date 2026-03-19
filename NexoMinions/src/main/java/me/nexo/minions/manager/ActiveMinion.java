@@ -2,7 +2,6 @@ package me.nexo.minions.manager;
 
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.colecciones.CollectionProfile;
-import me.nexo.core.user.NexoAPI;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionTier;
@@ -16,6 +15,7 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
@@ -29,6 +29,7 @@ public class ActiveMinion {
     private final NexoMinions plugin;
     private final ItemDisplay entity;
     private final Interaction hitbox;
+    private final TextDisplay holograma; // 🌟 NUEVO: El holograma del minion
     private final UUID ownerId;
     private final MinionType type;
     private int tier;
@@ -37,10 +38,12 @@ public class ActiveMinion {
     private final ItemStack[] upgrades = new ItemStack[4];
     private int trabajosRealizados = 0;
 
-    public ActiveMinion(NexoMinions plugin, ItemDisplay entity, Interaction hitbox, UUID ownerId, MinionType type, int tier, long nextActionTime, int storedItems) {
+    // 🌟 Constructor actualizado para recibir el Holograma
+    public ActiveMinion(NexoMinions plugin, ItemDisplay entity, Interaction hitbox, TextDisplay holograma, UUID ownerId, MinionType type, int tier, long nextActionTime, int storedItems) {
         this.plugin = plugin;
         this.entity = entity;
         this.hitbox = hitbox;
+        this.holograma = holograma;
         this.ownerId = ownerId;
         this.type = type;
         this.tier = tier;
@@ -53,8 +56,30 @@ public class ActiveMinion {
         }
     }
 
+    // 🌟 NUEVO: Magia matemática para calcular el trabajo mientras el jugador dormía (Offline)
+    public void calcularTrabajoOffline(long currentTimeMillis) {
+        long tiempoPasado = currentTimeMillis - this.nextActionTime;
+        if (tiempoPasado > 0) {
+            long tiempoPorAccion = (long) (MinionTier.getDelayMillis(this.tier) * getSpeedMultiplier());
+            int trabajosPerdidos = (int) (tiempoPasado / tiempoPorAccion);
+
+            int maxStorage = MinionTier.getMaxStorage(this.tier);
+            this.storedItems = Math.min(maxStorage, this.storedItems + trabajosPerdidos);
+            this.entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
+
+            // Actualizamos el reloj para que empiece limpio
+            this.nextActionTime = currentTimeMillis + tiempoPorAccion;
+            this.entity.getPersistentDataContainer().set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, this.nextActionTime);
+        }
+    }
+
     public void tick(long currentTimeMillis) {
-        if (storedItems >= MinionTier.getMaxStorage(tier) && !tieneMejora("STORAGE_LINK")) {
+        int maxStorage = MinionTier.getMaxStorage(tier);
+
+        // 🌟 NUEVO: Actualizamos el texto flotante en tiempo real
+        actualizarHolograma(maxStorage);
+
+        if (storedItems >= maxStorage && !tieneMejora("STORAGE_LINK")) {
             animar(); return;
         }
 
@@ -65,6 +90,17 @@ public class ActiveMinion {
             entity.getPersistentDataContainer().set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, nextActionTime);
         }
         animar();
+    }
+
+    private void actualizarHolograma(int maxStorage) {
+        if (holograma == null || holograma.isDead()) return;
+
+        if (storedItems >= maxStorage) {
+            holograma.setText("§c§l¡INVENTARIO LLENO!\n§e" + storedItems + " / " + maxStorage);
+        } else {
+            String nombreBonito = type.name().replace("MINION_", "").replace("_", " ");
+            holograma.setText("§aAbeja " + nombreBonito + " Nvl " + tier + "\n§fAlmacenado: §e" + storedItems + " / " + maxStorage);
+        }
     }
 
     private void realizarTrabajo() {
@@ -87,25 +123,15 @@ public class ActiveMinion {
 
         Player owner = Bukkit.getPlayer(ownerId);
         if (owner != null && owner.isOnline()) {
-
-            // 1. Colecciones
+            // 1. Colecciones (El progreso sí lo damos pasivamente)
             String blockId = type.getTargetMaterial().name().toLowerCase();
-            // 1. Obtener el perfil desde el nuevo Manager de Colecciones
-            me.nexo.colecciones.colecciones.CollectionProfile profile = me.nexo.colecciones.colecciones.CollectionManager.getProfile(ownerId);
-
+            CollectionProfile profile = CollectionManager.getProfile(ownerId);
             if (profile != null) {
                 profile.addProgress(blockId, 1, false);
             }
 
-            // 🟢 2. ARQUITECTURA LIMPIA: NexoMinions pide a NexoCore que entregue la XP
-            String tipoMinion = type.name();
-
-            if (tipoMinion.contains("WHEAT") || tipoMinion.contains("CARROT") || tipoMinion.contains("POTATO") || tipoMinion.contains("MELON") || tipoMinion.contains("PUMPKIN") || tipoMinion.contains("SUGAR_CANE")) {
-                NexoAPI.getInstance().addAgriculturaXpAsync(ownerId, 2);
-            }
-            else if (tipoMinion.contains("ORE") || tipoMinion.contains("COBBLESTONE") || tipoMinion.contains("STONE") || tipoMinion.contains("OBSIDIAN")) {
-                NexoAPI.getInstance().addMineriaXpAsync(ownerId, 2);
-            }
+            // 🚨 NOTA: La XP de AuraSkills la quitamos de aquí.
+            // Debe darse de golpe cuando el jugador abra el MinionMenu y presione el botón "Recolectar Todo".
         }
     }
 
@@ -174,6 +200,10 @@ public class ActiveMinion {
     }
 
     private void animar() {
+        // 🌟 NUEVO: Magia de Interpolación para girar a 60 FPS fluidamente
+        entity.setInterpolationDuration(20);
+        entity.setInterpolationDelay(0);
+
         Transformation trans = entity.getTransformation();
         float nuevoAngulo = (System.currentTimeMillis() % 4000) / 4000f * (float) Math.PI * 2;
         trans.getLeftRotation().set(new AxisAngle4f(nuevoAngulo, new Vector3f(0, 1, 0)));
@@ -182,6 +212,7 @@ public class ActiveMinion {
 
     public ItemDisplay getEntity() { return entity; }
     public Interaction getHitbox() { return hitbox; }
+    public TextDisplay getHolograma() { return holograma; }
     public MinionType getType() { return type; }
     public int getTier() { return tier; }
     public int getStoredItems() { return storedItems; }

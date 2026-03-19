@@ -9,6 +9,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -34,6 +35,10 @@ public class MinionManager {
             display.setBillboard(ItemDisplay.Billboard.FIXED);
             display.setInvulnerable(true);
 
+            // 🌟 NUEVO: Interpolación inicial para que la abeja gire fluido a 60 FPS
+            display.setInterpolationDuration(20);
+            display.setInterpolationDelay(0);
+
             // 🐛 Parche: 5 segundos de espera inicial para no escupir al instante
             long tiempoPrimeraAccion = System.currentTimeMillis() + 5000L;
 
@@ -51,8 +56,19 @@ public class MinionManager {
                 inter.getPersistentDataContainer().set(new NamespacedKey(plugin, "minion_display_id"), PersistentDataType.STRING, display.getUniqueId().toString());
             });
 
-            // 🌟 Conectamos la abeja pasándole el 'plugin' para que no dé errores
-            minionsActivos.put(display.getUniqueId(), new ActiveMinion(plugin, display, hitbox, ownerId, type, tier, tiempoPrimeraAccion, 0));
+            // 🌟 NUEVO: Creamos el Holograma flotante
+            Location holoLoc = loc.clone().add(0, 1.2, 0); // 1.2 bloques por encima
+            TextDisplay holograma = loc.getWorld().spawn(holoLoc, TextDisplay.class, holo -> {
+                holo.setBillboard(TextDisplay.Billboard.CENTER);
+                holo.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 0)); // Fondo semi-transparente
+                holo.setText("§eCargando Abeja...");
+            });
+
+            // Guardamos la ID del holograma en la abeja para poder borrarlo si el server se reinicia
+            pdc.set(new NamespacedKey(plugin, "minion_holo_id"), PersistentDataType.STRING, holograma.getUniqueId().toString());
+
+            // 🌟 Conectamos la abeja pasándole el Holograma
+            minionsActivos.put(display.getUniqueId(), new ActiveMinion(plugin, display, hitbox, holograma, ownerId, type, tier, tiempoPrimeraAccion, 0));
         });
     }
 
@@ -60,10 +76,9 @@ public class MinionManager {
         ActiveMinion minion = minionsActivos.remove(displayId);
         if (minion != null) {
 
-            // 🌟 PARCHE CRÍTICO: Devolver las Mejoras y Combustibles al recoger el minion
+            // Devolver las Mejoras y Combustibles al recoger el minion
             for (ItemStack upgrade : minion.getUpgrades()) {
                 if (upgrade != null && !upgrade.getType().isAir()) {
-                    // Se las damos en el inventario o las tiramos al suelo si está lleno
                     var sobrante = player.getInventory().addItem(upgrade);
                     for (ItemStack drop : sobrante.values()) {
                         player.getWorld().dropItemNaturally(player.getLocation(), drop);
@@ -73,6 +88,7 @@ public class MinionManager {
 
             if (minion.getEntity() != null) minion.getEntity().remove();
             if (minion.getHitbox() != null) minion.getHitbox().remove();
+            if (minion.getHolograma() != null) minion.getHolograma().remove(); // 🌟 NUEVO: Borramos el holograma
 
             player.sendMessage("§a§l¡BZZZ! §eHas recogido tu Minion de vuelta.");
 
@@ -89,6 +105,7 @@ public class MinionManager {
         for (ActiveMinion minion : minionsActivos.values()) {
             if (minion.getEntity().isDead() || !minion.getEntity().isValid()) {
                 if (minion.getHitbox() != null) minion.getHitbox().remove();
+                if (minion.getHolograma() != null) minion.getHolograma().remove(); // 🌟 NUEVO: Prevención de hologramas huérfanos
                 minionsActivos.remove(minion.getEntity().getUniqueId());
                 continue;
             }
@@ -96,12 +113,10 @@ public class MinionManager {
         }
     }
 
-    // Usado por el Menú GUI para encontrar la abeja correcta
     public ActiveMinion getMinion(UUID displayId) {
         return minionsActivos.get(displayId);
     }
 
-    // Usado por el MinionLoadListener para reconectar abejas al reiniciar
     public ConcurrentHashMap<UUID, ActiveMinion> getMinionsActivos() {
         return minionsActivos;
     }
