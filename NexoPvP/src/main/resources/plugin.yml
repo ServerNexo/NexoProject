@@ -1,0 +1,9 @@
+name: NexoPvP
+version: 1.0
+main: me.nexo.pvp.NexoPvP
+api-version: '1.21'
+depend: [NexoCore]
+commands:
+  pvp:
+    description: Activa o desactiva tu Modo de Guerra
+    aliases: [ modo ]

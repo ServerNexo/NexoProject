@@ -1,0 +1,22 @@
+# ==========================================
+# 🌟 CONFIGURACIÓN DE COLECCIONES Y SLAYERS
+# ==========================================
+colecciones:
+  cobblestone:
+    nombre: "&7Piedra Labrada"
+    material: COBBLESTONE
+    niveles:
+      1:
+        requiere: 50
+        recompensa: "Has alcanzado el Nivel 1"
+      2:
+        requiere: 250
+        recompensa: "Has alcanzado el Nivel 2"
+
+  wheat:
+    nombre: "&eTrigo"
+    material: WHEAT
+    niveles:
+      1:
+        requiere: 100
+        recompensa: "Has alcanzado el Nivel 1"

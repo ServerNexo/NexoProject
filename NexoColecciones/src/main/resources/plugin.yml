@@ -1,0 +1,5 @@
+name: NexoColecciones
+version: 1.0
+main: me.nexo.colecciones.NexoColecciones
+api-version: '1.21'
+depend: [NexoCore]

@@ -1,0 +1,24 @@
+# ==========================================
+# 🛑 IGNORAR ARCHIVOS COMPILADOS DE MAVEN
+# ==========================================
+target/
+*/target/
+*.jar
+!src/
+
+# ==========================================
+# 🛑 IGNORAR ARCHIVOS DE INTELLIJ IDEA
+# ==========================================
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+*/out/
+
+# ==========================================
+# 🛑 IGNORAR ARCHIVOS DEL SISTEMA OPERATIVO
+# ==========================================
+.DS_Store
+Thumbs.db
+ehthumbs.db
