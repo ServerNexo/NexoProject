@@ -1,5 +1,6 @@
 package me.nexo.minions.listeners;
 
+import me.nexo.core.user.NexoAPI; // 🌟 IMPORTANTE: Conectamos con tu Core
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.manager.ActiveMinion;
@@ -15,6 +16,8 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+
+import java.util.HashMap;
 
 public class MenuListener implements Listener {
     private final NexoMinions plugin;
@@ -55,12 +58,60 @@ public class MenuListener implements Listener {
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
-            player.getInventory().addItem(new ItemStack(minion.getType().getTargetMaterial(), cantidad));
+
+            // 1. Entregar ítems y proteger de inventarios llenos
+            HashMap<Integer, ItemStack> sobrante = player.getInventory().addItem(new ItemStack(minion.getType().getTargetMaterial(), cantidad));
+            for (ItemStack drop : sobrante.values()) {
+                player.getWorld().dropItemNaturally(player.getLocation(), drop); // Tira al suelo lo que no cabe
+            }
+
+            // 🌟 2. ENTREGAR LA EXPERIENCIA (Soporte para 5 Profesiones de AuraSkills)
+            String tipoMinion = minion.getType().name();
+            double xpGanada = cantidad * 2.0;
+
+            String skillAura = "";
+            String nombreSkill = "";
+
+            // ⛏️ 1. Minero
+            if (tipoMinion.contains("ORE") || tipoMinion.contains("COBBLESTONE") || tipoMinion.contains("STONE") || tipoMinion.contains("OBSIDIAN")) {
+                skillAura = "mining"; nombreSkill = "Minería";
+            }
+            // 🌾 2. Agricultor
+            else if (tipoMinion.contains("WHEAT") || tipoMinion.contains("CARROT") || tipoMinion.contains("POTATO") || tipoMinion.contains("MELON") || tipoMinion.contains("PUMPKIN") || tipoMinion.contains("SUGAR_CANE")) {
+                skillAura = "farming"; nombreSkill = "Agricultura";
+            }
+            // 🪓 3. Leñador
+            else if (tipoMinion.contains("LOG") || tipoMinion.contains("WOOD")) {
+                skillAura = "foraging"; nombreSkill = "Tala";
+            }
+            // 🎣 4. Pescador
+            else if (tipoMinion.contains("FISH") || tipoMinion.contains("SALMON")) {
+                skillAura = "fishing"; nombreSkill = "Pesca";
+            }
+            // ⚔️ 5. Luchador (Mobs)
+            else if (tipoMinion.contains("FLESH") || tipoMinion.contains("BONE") || tipoMinion.contains("SPIDER") || tipoMinion.contains("GUNPOWDER") || tipoMinion.contains("SLIME") || tipoMinion.contains("BLAZE")) {
+                skillAura = "fighting"; nombreSkill = "Combate";
+            }
+
+            // Si detectamos una profesión válida, entregamos la XP
+            if (!skillAura.isEmpty()) {
+                // Ejecutamos el comando nativo de AuraSkills desde la consola de forma silenciosa (-s)
+                String comando = "skills addxp " + player.getName() + " " + skillAura + " " + xpGanada + " -s";
+                org.bukkit.Bukkit.getServer().dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), comando);
+
+                // Le avisamos al jugador con un mensaje bonito
+                player.sendMessage(ChatColor.LIGHT_PURPLE + "✨ +" + xpGanada + " XP de " + nombreSkill);
+            }
+
+            // 3. Limpiar la mochila
             minion.setStoredItems(0);
             minion.getEntity().getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);
+
             player.sendMessage(ChatColor.GREEN + "¡Extraíste " + cantidad + " ítems!");
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
-            player.closeInventory();
+
+            // 4. Recargar el menú para que la mochila se vea vacía al instante
+            player.openInventory(new MinionMenu(plugin, minion).getInventory());
         }
 
         // 🧨 Clic en Recoger Minion (Slot 35)
@@ -127,7 +178,8 @@ public class MenuListener implements Listener {
 
         // Si tiene suficientes, procedemos a cobrarlos
         int porCobrar = cantidadNecesaria;
-        for (ItemStack item : player.getInventory().getContents()) {
+        for (int i = 0; i < player.getInventory().getSize(); i++) {
+            ItemStack item = player.getInventory().getItem(i);
             if (porCobrar <= 0) break;
             if (item == null || item.getType().isAir()) continue;
 
@@ -142,7 +194,7 @@ public class MenuListener implements Listener {
             if (coincide) {
                 if (item.getAmount() <= porCobrar) {
                     porCobrar -= item.getAmount();
-                    item.setAmount(0); // Borra el stack
+                    player.getInventory().setItem(i, null); // 🐛 Fix: Limpiamos la ranura de forma segura
                 } else {
                     item.setAmount(item.getAmount() - porCobrar);
                     porCobrar = 0;

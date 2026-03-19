@@ -29,7 +29,7 @@ public class ActiveMinion {
     private final NexoMinions plugin;
     private final ItemDisplay entity;
     private final Interaction hitbox;
-    private final TextDisplay holograma; // 🌟 NUEVO: El holograma del minion
+    private final TextDisplay holograma;
     private final UUID ownerId;
     private final MinionType type;
     private int tier;
@@ -38,7 +38,10 @@ public class ActiveMinion {
     private final ItemStack[] upgrades = new ItemStack[4];
     private int trabajosRealizados = 0;
 
-    // 🌟 Constructor actualizado para recibir el Holograma
+    // 🌟 NUEVO: Memoria caché para no dar lag buscando cofres
+    private InventoryHolder cachedStorage = null;
+    private long lastStorageCheckTime = 0;
+
     public ActiveMinion(NexoMinions plugin, ItemDisplay entity, Interaction hitbox, TextDisplay holograma, UUID ownerId, MinionType type, int tier, long nextActionTime, int storedItems) {
         this.plugin = plugin;
         this.entity = entity;
@@ -56,7 +59,6 @@ public class ActiveMinion {
         }
     }
 
-    // 🌟 NUEVO: Magia matemática para calcular el trabajo mientras el jugador dormía (Offline)
     public void calcularTrabajoOffline(long currentTimeMillis) {
         long tiempoPasado = currentTimeMillis - this.nextActionTime;
         if (tiempoPasado > 0) {
@@ -67,7 +69,6 @@ public class ActiveMinion {
             this.storedItems = Math.min(maxStorage, this.storedItems + trabajosPerdidos);
             this.entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
 
-            // Actualizamos el reloj para que empiece limpio
             this.nextActionTime = currentTimeMillis + tiempoPorAccion;
             this.entity.getPersistentDataContainer().set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, this.nextActionTime);
         }
@@ -76,7 +77,6 @@ public class ActiveMinion {
     public void tick(long currentTimeMillis) {
         int maxStorage = MinionTier.getMaxStorage(tier);
 
-        // 🌟 NUEVO: Actualizamos el texto flotante en tiempo real
         actualizarHolograma(maxStorage);
 
         if (storedItems >= maxStorage && !tieneMejora("STORAGE_LINK")) {
@@ -123,15 +123,11 @@ public class ActiveMinion {
 
         Player owner = Bukkit.getPlayer(ownerId);
         if (owner != null && owner.isOnline()) {
-            // 1. Colecciones (El progreso sí lo damos pasivamente)
             String blockId = type.getTargetMaterial().name().toLowerCase();
             CollectionProfile profile = CollectionManager.getProfile(ownerId);
             if (profile != null) {
                 profile.addProgress(blockId, 1, false);
             }
-
-            // 🚨 NOTA: La XP de AuraSkills la quitamos de aquí.
-            // Debe darse de golpe cuando el jugador abra el MinionMenu y presione el botón "Recolectar Todo".
         }
     }
 
@@ -172,16 +168,44 @@ public class ActiveMinion {
         return false;
     }
 
+    // 🌟 NUEVO: Sistema de guardado en cofre hiperoptimizado (Caché + Lazy Scan)
     private boolean guardarEnCofreAdyacente(ItemStack item) {
-        int[][] offsets = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
-        for (int[] offset : offsets) {
-            Block b = entity.getLocation().clone().add(offset[0], 0, offset[2]).getBlock();
-            if (b.getState() instanceof InventoryHolder holder) {
-                var sobrante = holder.getInventory().addItem(item);
-                if (sobrante.isEmpty()) return true;
+        long currentTime = System.currentTimeMillis();
+
+        // 1. Si ya tenemos un cofre memorizado, intentamos usarlo directamente
+        if (cachedStorage != null) {
+            if (cachedStorage.getInventory().getLocation() != null &&
+                    cachedStorage.getInventory().getLocation().getBlock().getState() instanceof InventoryHolder) {
+
+                var sobrante = cachedStorage.getInventory().addItem(item);
+                if (sobrante.isEmpty()) {
+                    return true; // ¡Éxito instantáneo sin lag!
+                } else {
+                    cachedStorage = null; // Cofre lleno. Borramos la memoria.
+                }
+            } else {
+                cachedStorage = null; // Cofre destruido. Borramos la memoria.
             }
         }
-        return false;
+
+        // 2. Si no tenemos cofre memorizado, solo escaneamos cada 10 segundos para evitar lag masivo
+        if (currentTime - lastStorageCheckTime > 10000) {
+            lastStorageCheckTime = currentTime;
+            int[][] offsets = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+
+            for (int[] offset : offsets) {
+                Block b = entity.getLocation().clone().add(offset[0], 0, offset[2]).getBlock();
+                if (b.getState() instanceof InventoryHolder holder) {
+                    var sobrante = holder.getInventory().addItem(item);
+                    if (sobrante.isEmpty()) {
+                        cachedStorage = holder; // ¡Memorizamos este cofre para la próxima vez!
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false; // No hay cofres disponibles o están llenos
     }
 
     public ItemStack[] getUpgrades() { return upgrades; }
@@ -200,7 +224,6 @@ public class ActiveMinion {
     }
 
     private void animar() {
-        // 🌟 NUEVO: Magia de Interpolación para girar a 60 FPS fluidamente
         entity.setInterpolationDuration(20);
         entity.setInterpolationDelay(0);
 

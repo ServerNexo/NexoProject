@@ -35,7 +35,7 @@ public class MinionMenu implements InventoryHolder {
         cristal.setItemMeta(metaCristal);
         for (int i = 0; i < 36; i++) inv.setItem(i, cristal);
 
-        // 🌟 ÍCONOS DE GUÍA (No se pueden tocar, solo explican los huecos de abajo)
+        // 🌟 ÍCONOS DE GUÍA
         crearIconoGuia(1, Material.COAL, ChatColor.GOLD + "🔥 Ranura de Combustible", "Coloca aquí materiales para acelerar", "el tiempo de trabajo de tu minion.", "⬇️ Ponlo en el hueco de abajo ⬇️");
         crearIconoGuia(2, Material.DROPPER, ChatColor.AQUA + "📦 Ranura de Compactor", "Coloca aquí compactadores para", "convertir materiales en bloques.", "⬇️ Ponlo en el hueco de abajo ⬇️");
         crearIconoGuia(6, Material.CHEST, ChatColor.GREEN + "🧰 Ranura de Expansor", "Coloca aquí expansores para", "aumentar la mochila del minion.", "⬇️ Ponlo en el hueco de abajo ⬇️");
@@ -68,7 +68,7 @@ public class MinionMenu implements InventoryHolder {
         stats.setItemMeta(metaStats);
         inv.setItem(13, stats);
 
-        // 🌟 EL BOTÓN DE EVOLUCIÓN (Súper intuitivo)
+        // 🌟 EL BOTÓN DE EVOLUCIÓN
         ItemStack evolucion = new ItemStack(Material.NETHER_STAR);
         ItemMeta metaEvo = evolucion.getItemMeta();
         int sigNivel = minion.getTier() + 1;
@@ -82,7 +82,6 @@ public class MinionMenu implements InventoryHolder {
             loreEvo.add("");
             loreEvo.add(ChatColor.YELLOW + "Costo de Mejora:");
 
-            // Leemos el costo dinámicamente desde TiersConfig (Debes tener tu archivo tiers.yml configurado)
             ConfigurationSection costo = plugin.getTiersConfig().getCostoEvolucion(minion.getType(), sigNivel);
             if (costo != null) {
                 String reqName = costo.getString("nexo_id", costo.getString("material", "Desconocido"));
@@ -95,12 +94,35 @@ public class MinionMenu implements InventoryHolder {
         evolucion.setItemMeta(metaEvo);
         inv.setItem(22, evolucion);
 
-        // Botón Extraer
-        ItemStack recoger = new ItemStack(Material.HOPPER);
-        ItemMeta metaRecoger = recoger.getItemMeta();
-        metaRecoger.setDisplayName(ChatColor.AQUA + "📦 Extraer Materiales");
-        recoger.setItemMeta(metaRecoger);
-        inv.setItem(31, recoger);
+        // 🌟 EL NUEVO BOTÓN DE EXTRACCIÓN (Muestra Materiales y Experiencia)
+        String tipoMinion = minion.getType().name();
+        int xpAcumulada = minion.getStoredItems() * 2; // 2 de XP por cada ítem farmeado
+        String tipoSkill = "";
+
+        if (tipoMinion.contains("WHEAT") || tipoMinion.contains("CARROT") || tipoMinion.contains("POTATO") || tipoMinion.contains("MELON") || tipoMinion.contains("PUMPKIN") || tipoMinion.contains("SUGAR_CANE")) {
+            tipoSkill = "Agricultura";
+        } else if (tipoMinion.contains("ORE") || tipoMinion.contains("COBBLESTONE") || tipoMinion.contains("STONE") || tipoMinion.contains("OBSIDIAN")) {
+            tipoSkill = "Minería";
+        }
+
+        ItemStack extraer = new ItemStack(Material.HOPPER);
+        ItemMeta metaExtraer = extraer.getItemMeta();
+        metaExtraer.setDisplayName(ChatColor.AQUA + "📦 Extraer Materiales");
+
+        List<String> loreExtraer = new ArrayList<>();
+        loreExtraer.add(ChatColor.GRAY + "Recoge todo lo que tu minion ha farmeado.");
+        loreExtraer.add("");
+        loreExtraer.add(ChatColor.WHITE + "Materiales listos: " + ChatColor.YELLOW + minion.getStoredItems() + " uds");
+
+        if (!tipoSkill.isEmpty() && minion.getStoredItems() > 0) {
+            loreExtraer.add(ChatColor.WHITE + "Experiencia (" + tipoSkill + "): " + ChatColor.LIGHT_PURPLE + "+" + xpAcumulada + " XP");
+        }
+
+        loreExtraer.add("");
+        loreExtraer.add(ChatColor.GREEN + "► ¡Clic para recolectar todo!");
+        metaExtraer.setLore(loreExtraer);
+        extraer.setItemMeta(metaExtraer);
+        inv.setItem(31, extraer);
 
         // Botón Recoger Minion
         ItemStack romper = new ItemStack(Material.BARRIER);

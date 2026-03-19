@@ -90,7 +90,11 @@ public class MinionManager {
             if (minion.getHitbox() != null) minion.getHitbox().remove();
             if (minion.getHolograma() != null) minion.getHolograma().remove(); // 🌟 NUEVO: Borramos el holograma
 
-            player.sendMessage("§a§l¡BZZZ! §eHas recogido tu Minion de vuelta.");
+            // 🌟 NUEVO: Le devolvemos 1 "espacio" libre al jugador al recoger la abeja
+            addPlacedMinion(player, -1);
+
+            // Mensaje actualizado mostrando el límite actual
+            player.sendMessage("§a§l¡BZZZ! §eHas recogido tu Minion. §7(" + getPlacedMinions(player) + "/" + getMaxMinions(player) + ")");
 
             // Avisamos si perdió bloques por no sacarlos del menú antes
             if (minion.getStoredItems() > 0) {
@@ -115,6 +119,28 @@ public class MinionManager {
 
     public ActiveMinion getMinion(UUID displayId) {
         return minionsActivos.get(displayId);
+    }
+
+    // =========================================
+    // 🌟 SISTEMA DE LÍMITES POR JUGADOR
+    // =========================================
+    public int getPlacedMinions(Player player) {
+        NamespacedKey key = new NamespacedKey(plugin, "minions_placed");
+        return player.getPersistentDataContainer().getOrDefault(key, PersistentDataType.INTEGER, 0);
+    }
+
+    public void addPlacedMinion(Player player, int amount) {
+        NamespacedKey key = new NamespacedKey(plugin, "minions_placed");
+        int current = getPlacedMinions(player);
+        player.getPersistentDataContainer().set(key, PersistentDataType.INTEGER, Math.max(0, current + amount));
+    }
+
+    public int getMaxMinions(Player player) {
+        // Busca el permiso más alto que tenga el jugador (desde 50 hasta 1)
+        for (int i = 50; i >= 1; i--) {
+            if (player.hasPermission("nexominions.limit." + i)) return i;
+        }
+        return 5; // 🌟 Límite por defecto para jugadores nuevos
     }
 
     public ConcurrentHashMap<UUID, ActiveMinion> getMinionsActivos() {
