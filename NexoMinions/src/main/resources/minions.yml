@@ -1,0 +1,11 @@
+minion_bee_cobble:
+  display_name: "Abeja Minera"
+  material: COBBLESTONE
+
+minion_bee_wheat:
+  display_name: "Abeja Agricultora"
+  material: WHEAT
+
+minion_bee_oak:
+  display_name: "Abeja Leñadora"
+  material: OAK_LOG

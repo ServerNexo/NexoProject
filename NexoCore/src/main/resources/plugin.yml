@@ -1,0 +1,14 @@
+name: NexoCore
+version: 1.0
+main: me.nexo.core.NexoCore
+api-version: '1.21'
+softdepend: [PlaceholderAPI, MythicMobs, eco]
+depend: [AuraSkills, Nexo]
+commands:
+  nexocore:
+    description: Comando de administracion del Nexo
+    permission: nexo.admin
+
+libraries:
+  - com.zaxxer:HikariCP:5.1.0
+  - org.postgresql:postgresql:42.7.2

@@ -1,0 +1,21 @@
+name: NexoItems
+version: '1.0'
+main: me.nexo.items.NexoItems
+api-version: '1.21'
+depend: [NexoCore]
+
+commands:
+  desguace:
+    description: Abre el menú de desguace del Nexo.
+  accesorios:
+    description: Abre la bolsa de accesorios.
+    aliases: [bolsa, bag, acc]
+  wardrobe:
+      description: Abre el menú de Guardarropa RPG.
+      aliases: [ armario ]
+  pv:
+    description: Abre tu mochila virtual.
+    aliases: [ playervault, vault, mochila ]
+  test:
+    description: Comando de desarrollador para probar items y menús.
+    permission: nexo.admin

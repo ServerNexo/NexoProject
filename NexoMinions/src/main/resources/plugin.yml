@@ -1,0 +1,11 @@
+name: NexoMinions
+version: 1.0-SNAPSHOT
+main: me.nexo.minions.NexoMinions
+api-version: '1.21'
+depend: [NexoCore, Nexo, auraskills, NexoColecciones] # 🟢 Ahora depende de ambos
+
+commands:
+  minion:
+    description: Comando principal para administrar los abejas mineras.
+    permission: nexominions.admin
+    usage: /minion give <jugador> <tipo> [nivel]
