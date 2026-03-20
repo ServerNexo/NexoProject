@@ -4,6 +4,9 @@ import me.nexo.colecciones.colecciones.ColeccionesConfig;
 import me.nexo.colecciones.colecciones.ColeccionesListener;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.colecciones.FlushTask;
+// 🌟 NUEVOS IMPORTS PARA EL MENÚ Y EL COMANDO
+import me.nexo.colecciones.commands.ComandoColecciones;
+import me.nexo.colecciones.menu.MenuListener;
 import me.nexo.core.NexoCore;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -28,10 +31,20 @@ public class NexoColecciones extends JavaPlugin {
         this.collectionManager = new CollectionManager(this);
 
         // ==========================================
-        // 2. REGISTRAR EVENTOS
+        // 2. REGISTRAR EVENTOS Y COMANDOS
         // ==========================================
         // El Listener de colecciones ahora vigila el Anti-Exploit
         getServer().getPluginManager().registerEvents(new ColeccionesListener(this), this);
+
+        // 🌟 NUEVO: Registramos la protección del menú para que no roben ítems
+        getServer().getPluginManager().registerEvents(new MenuListener(), this);
+
+        // 🌟 NUEVO: Registramos el comando /colecciones
+        if (getCommand("colecciones") != null) {
+            getCommand("colecciones").setExecutor(new ComandoColecciones(this));
+        } else {
+            getLogger().warning("⚠️ No se pudo registrar /colecciones. Verifica tu plugin.yml.");
+        }
 
         // ==========================================
         // 3. CONECTAR A LA BASE DE DATOS Y AUTO-GUARDADO

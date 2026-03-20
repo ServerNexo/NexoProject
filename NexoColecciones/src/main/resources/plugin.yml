@@ -5,3 +5,7 @@ api-version: '1.21'
 author: 'TuNombre'
 description: 'Sistema de Slayers y farmeo progresivo.'
 depend: [NexoCore]
+commands:
+  colecciones:
+    description: "Abre el menú de tus colecciones"
+    aliases: [col, coleccion]

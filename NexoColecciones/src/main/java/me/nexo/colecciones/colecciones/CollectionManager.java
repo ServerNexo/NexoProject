@@ -33,7 +33,7 @@ public class CollectionManager {
 
     public CollectionManager(NexoColecciones plugin) {
         this.plugin = plugin;
-        registrarColeccionesEjemplo();
+        cargarDesdeConfig(); // 🌟 Ahora carga dinámicamente desde el YAML
     }
 
     public void addProgress(Player player, String itemId, int amount) {
@@ -79,11 +79,54 @@ public class CollectionManager {
         return 0;
     }
 
-    private void registrarColeccionesEjemplo() {
-        Map<Integer, List<String>> robleRewards = new HashMap<>();
-        robleRewards.put(1, List.of("give %player% wooden_axe 1"));
-        robleRewards.put(5, List.of("nexoitems give %player% madera_refinada 1"));
-        itemsRegistrados.put("OAK_LOG", new CollectionItem("OAK_LOG", CollectionCategory.TALA, "Madera de Roble", robleRewards));
+    // 🌟 NUEVO: Cargador dinámico desde colecciones.yml
+    public void cargarDesdeConfig() {
+        itemsRegistrados.clear();
+
+        org.bukkit.configuration.file.FileConfiguration config = plugin.getColeccionesConfig().getConfig();
+        if (config == null || !config.contains("colecciones")) {
+            plugin.getLogger().warning("¡No se encontró la sección 'colecciones' en colecciones.yml!");
+            return;
+        }
+
+        org.bukkit.configuration.ConfigurationSection seccionPrincipal = config.getConfigurationSection("colecciones");
+        if (seccionPrincipal == null) return;
+
+        for (String categoriaStr : seccionPrincipal.getKeys(false)) {
+            CollectionCategory categoria;
+            try {
+                categoria = CollectionCategory.valueOf(categoriaStr.toUpperCase());
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Categoría inválida en config: " + categoriaStr);
+                continue;
+            }
+
+            org.bukkit.configuration.ConfigurationSection seccionCategoria = seccionPrincipal.getConfigurationSection(categoriaStr);
+            if (seccionCategoria == null) continue;
+
+            for (String itemId : seccionCategoria.getKeys(false)) {
+                org.bukkit.configuration.ConfigurationSection itemData = seccionCategoria.getConfigurationSection(itemId);
+                if (itemData == null) continue;
+
+                String nombreBonito = itemData.getString("nombre", itemId).replace("&", "§");
+
+                Map<Integer, List<String>> comandos = new HashMap<>();
+                if (itemData.contains("recompensas")) {
+                    org.bukkit.configuration.ConfigurationSection recompensas = itemData.getConfigurationSection("recompensas");
+                    if (recompensas != null) {
+                        for (String nivelStr : recompensas.getKeys(false)) {
+                            try {
+                                int nivel = Integer.parseInt(nivelStr);
+                                comandos.put(nivel, recompensas.getStringList(nivelStr));
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+                }
+
+                itemsRegistrados.put(itemId.toUpperCase(), new CollectionItem(itemId.toUpperCase(), categoria, nombreBonito, comandos));
+            }
+        }
+        plugin.getLogger().info("✅ Se han cargado " + itemsRegistrados.size() + " colecciones desde la configuración.");
     }
 
     // ==========================================
@@ -92,6 +135,9 @@ public class CollectionManager {
     public CollectionProfile getProfile(UUID uuid) { return perfiles.get(uuid); }
     public void removeProfile(UUID uuid) { perfiles.remove(uuid); }
     public ConcurrentHashMap<UUID, CollectionProfile> getPerfiles() { return perfiles; }
+
+    // 🌟 NUEVO: Getter para que el menú pueda leer los ítems registrados
+    public Map<String, CollectionItem> getItemsRegistrados() { return itemsRegistrados; }
 
     public void loadPlayerFromDatabase(UUID uuid, HikariDataSource hikari) {
         String sql = "SELECT collections_data FROM nexo_collections WHERE uuid = ?";
