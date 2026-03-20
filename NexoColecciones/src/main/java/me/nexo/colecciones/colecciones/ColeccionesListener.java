@@ -1,80 +1,43 @@
 package me.nexo.colecciones.colecciones;
 
-// 🟢 ARQUITECTURA: Importamos tu nuevo Addon
 import me.nexo.colecciones.NexoColecciones;
-
-// 🟢 MANTENEMOS ESTO: Importamos el Core para pedirle la conexión a Supabase
-import me.nexo.core.NexoCore;
-
-import org.bukkit.entity.Player;
+import org.bukkit.block.Block;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 
 public class ColeccionesListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Usamos NexoColecciones como dueño del evento
     private final NexoColecciones plugin;
-    private final ColeccionesConfig config;
+    private final CollectionManager manager;
+    private static final String ANTI_EXPLOIT_KEY = "nexo_player_placed";
 
-    // 🟢 INYECCIÓN DE DEPENDENCIAS: Pedimos el plugin y la config
-    public ColeccionesListener(NexoColecciones plugin, ColeccionesConfig config) {
+    public ColeccionesListener(NexoColecciones plugin) {
         this.plugin = plugin;
-        this.config = config;
-    }
-
-    @EventHandler
-    public void onJoin(PlayerJoinEvent event) {
-        // 🟢 COMUNICACIÓN ENTRE MICROSERVICIOS: Le pedimos el DataSource al Core
-        NexoCore core = NexoCore.getPlugin(NexoCore.class);
-        CollectionManager.loadPlayerFromDatabase(event.getPlayer().getUniqueId(), core.getDatabaseManager().getDataSource());
-    }
-
-    @EventHandler
-    public void onQuit(PlayerQuitEvent event) {
-        // Se borra de la RAM (El guardado lo hace FlushTask)
-        CollectionManager.removeProfile(event.getPlayer().getUniqueId());
-    }
-
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPlace(BlockPlaceEvent event) {
-        // Marcamos el bloque como "puesto por un jugador" usando nuestro Addon
-        event.getBlock().setMetadata("player_placed", new FixedMetadataValue(plugin, true));
+        this.manager = plugin.getCollectionManager();
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onBreak(BlockBreakEvent event) {
-        if (event.getBlock().hasMetadata("player_placed")) return;
-
-        String blockId = event.getBlock().getType().name().toLowerCase();
-
-        // 🟢 Usamos la nueva variable config
-        if (config.esColeccion(blockId)) {
-            CollectionProfile profile = CollectionManager.getProfile(event.getPlayer().getUniqueId());
-            if (profile != null) profile.addProgress(blockId, 1, false);
-        }
+    public void onBlockPlace(BlockPlaceEvent event) {
+        // Marcamos el bloque como "Puesto por un jugador"
+        event.getBlock().setMetadata(ANTI_EXPLOIT_KEY, new FixedMetadataValue(plugin, true));
     }
 
-    @EventHandler(priority = EventPriority.HIGHEST)
-    public void onKill(EntityDeathEvent event) {
-        Player killer = event.getEntity().getKiller();
-        if (killer == null) return;
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBlockBreak(BlockBreakEvent event) {
+        Block block = event.getBlock();
 
-        String mobId = event.getEntity().getType().name().toLowerCase();
-
-        // 🟢 Usamos la nueva variable config
-        if (config.esSlayer(mobId)) {
-            CollectionProfile profile = CollectionManager.getProfile(killer.getUniqueId());
-            if (profile != null) {
-                int xpPorKill = config.getDatosSlayer(mobId).getInt("xp_por_kill", 1);
-                profile.addProgress("slayer_" + mobId, xpPorKill, true);
-            }
+        // Si tiene la marca, abortamos y no sumamos puntos
+        if (block.hasMetadata(ANTI_EXPLOIT_KEY)) {
+            block.removeMetadata(ANTI_EXPLOIT_KEY, plugin);
+            return;
         }
+
+        // Si es un bloque natural, sumamos 1 punto a su colección
+        String blockId = block.getType().name();
+        manager.addProgress(event.getPlayer(), blockId, 1);
     }
 }

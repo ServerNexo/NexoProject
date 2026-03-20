@@ -2,6 +2,7 @@ package me.nexo.colecciones.colecciones;
 
 import com.google.gson.Gson;
 import com.zaxxer.hikari.HikariDataSource;
+import me.nexo.colecciones.NexoColecciones;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.sql.Connection;
@@ -26,7 +27,10 @@ public class FlushTask extends BukkitRunnable {
             conn.setAutoCommit(false);
             int batchCount = 0;
 
-            for (CollectionProfile profile : CollectionManager.getAllProfiles()) {
+            NexoColecciones plugin = NexoColecciones.getPlugin(NexoColecciones.class);
+
+            // Toma los perfiles directo del Cerebro
+            for (CollectionProfile profile : plugin.getCollectionManager().getPerfiles().values()) {
                 if (profile.isNeedsFlush()) {
                     ps.setString(1, profile.getPlayerUUID().toString());
                     ps.setString(2, gson.toJson(profile.getProgress()));

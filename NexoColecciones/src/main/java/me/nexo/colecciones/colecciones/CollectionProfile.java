@@ -1,6 +1,5 @@
 package me.nexo.colecciones.colecciones;
 
-// 🟢 ARQUITECTURA: Importamos tu nuevo plugin
 import me.nexo.colecciones.NexoColecciones;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
@@ -19,19 +18,23 @@ public class CollectionProfile {
         this.progress = loadedProgress != null ? loadedProgress : new ConcurrentHashMap<>();
     }
 
+    // Método para leer el progreso actual en la RAM
+    public int getProgress(String id) {
+        return this.progress.getOrDefault(id, 0);
+    }
+
+    // Método para añadir progreso y marcar para guardar
     public void addProgress(String id, int amount, boolean isSlayer) {
         int oldAmount = progress.getOrDefault(id, 0);
         int newAmount = oldAmount + amount;
         progress.put(id, newAmount);
-        this.needsFlush = true;
+        this.needsFlush = true; // Avisa al FlushTask que debe guardar esto
 
         verificarMetas(id, oldAmount, newAmount, isSlayer);
     }
 
     private void verificarMetas(String id, int oldAmt, int newAmt, boolean isSlayer) {
-        // 🟢 ARQUITECTURA: Llamamos a la clase principal de NexoColecciones
         NexoColecciones plugin = NexoColecciones.getPlugin(NexoColecciones.class);
-
         ConfigurationSection datos = isSlayer ? plugin.getColeccionesConfig().getDatosSlayer(id) : plugin.getColeccionesConfig().getDatosColeccion(id);
         if (datos == null) return;
 
@@ -51,13 +54,11 @@ public class CollectionProfile {
         ConfigurationSection recompensa = datos.getConfigurationSection("recompensas." + nivelStr);
         if (recompensa == null) return;
 
-        // 🟢 ARQUITECTURA: La tarea se lanza a nombre de NexoColecciones
         Bukkit.getScheduler().runTask(NexoColecciones.getPlugin(NexoColecciones.class), () -> {
             org.bukkit.entity.Player player = Bukkit.getPlayer(playerUUID);
             if (player != null && player.isOnline()) {
                 player.sendMessage("§a§l¡NIVEL ALCANZADO! §fLlegaste al nivel §e" + nivelStr + " §fen §b" + nombreBonito);
 
-                // Ejecutar comandos de la configuración (Ej: dar dinero o XP)
                 List<String> comandos = recompensa.getStringList("comandos");
                 for (String cmd : comandos) {
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", player.getName()));

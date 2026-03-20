@@ -1,7 +1,7 @@
 package me.nexo.minions.manager;
 
-import me.nexo.colecciones.colecciones.CollectionManager;
-import me.nexo.colecciones.colecciones.CollectionProfile;
+// 🌟 Importamos directamente el plugin principal de Colecciones
+import me.nexo.colecciones.NexoColecciones;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionTier;
@@ -58,7 +58,6 @@ public class ActiveMinion {
         }
     }
 
-    // 🌟 NUEVO: Calcula el límite real sumando el Nivel Base + El Ítem Expansor
     public int getRealMaxStorage() {
         int base = MinionTier.getMaxStorage(tier);
         int bonus = 0;
@@ -66,7 +65,7 @@ public class ActiveMinion {
         for (ItemStack item : upgrades) {
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
             if (datos != null && datos.getString("tipo", "").equals("STORAGE")) {
-                bonus += datos.getInt("bonus_capacidad", 0); // Ej: Expansor Pequeño da +64 slots
+                bonus += datos.getInt("bonus_capacidad", 0);
             }
         }
         return base + bonus;
@@ -78,7 +77,6 @@ public class ActiveMinion {
             long tiempoPorAccion = (long) (MinionTier.getDelayMillis(this.tier) * getSpeedMultiplier());
             int trabajosPerdidos = (int) (tiempoPasado / tiempoPorAccion);
 
-            // 🌟 Usamos el límite real (Base + Expansores)
             int maxStorage = getRealMaxStorage();
             this.storedItems = Math.min(maxStorage, this.storedItems + trabajosPerdidos);
             this.entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
@@ -89,12 +87,12 @@ public class ActiveMinion {
     }
 
     public void tick(long currentTimeMillis) {
-        int maxStorage = getRealMaxStorage(); // 🌟 Usamos el límite real
+        int maxStorage = getRealMaxStorage();
 
         actualizarHolograma(maxStorage);
 
         if (storedItems >= maxStorage && !tieneMejora("STORAGE_LINK")) {
-            animar(); return; // El inventario está lleno y no tiene Tolva de cofres, deja de trabajar
+            animar(); return;
         }
 
         if (currentTimeMillis >= nextActionTime) {
@@ -128,7 +126,6 @@ public class ActiveMinion {
         }
 
         if (!guardadoEnCofre) {
-            // Protección extra: Por si acaso, verificamos que no se pase del límite al farmear activo
             if (this.storedItems < getRealMaxStorage()) {
                 this.storedItems += 1;
                 entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
@@ -138,13 +135,14 @@ public class ActiveMinion {
         this.trabajosRealizados++;
         consumirCombustibles();
 
+        // 🌟 NUEVO SISTEMA DE COLECCIONES: Se conecta directo al motor y calcula O(1)
         Player owner = Bukkit.getPlayer(ownerId);
         if (owner != null && owner.isOnline()) {
-            String blockId = type.getTargetMaterial().name().toLowerCase();
-            CollectionProfile profile = CollectionManager.getProfile(ownerId);
-            if (profile != null) {
-                profile.addProgress(blockId, 1, false);
-            }
+            // BUGFIX: Dejamos el nombre en MAYÚSCULAS para que coincida con "OAK_LOG", "DIAMOND_ORE", etc.
+            String blockId = type.getTargetMaterial().name();
+
+            // Hablamos con el Cerebro de Colecciones para sumar el progreso y ver si sube de nivel
+            NexoColecciones.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, blockId, 1);
         }
     }
 
