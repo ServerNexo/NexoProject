@@ -25,8 +25,9 @@ public class TiersConfig {
         config = YamlConfiguration.loadConfiguration(configFile);
     }
 
-    // Busca cuánto cuesta subir al siguiente nivel
-    public ConfigurationSection getCostoEvolucion(MinionType tipo, int siguienteNivel) {
-        return config.getConfigurationSection(tipo.name() + "." + siguienteNivel);
+    public ConfigurationSection getCostoEvolucion(MinionType type, int tier) {
+        if (config == null) return null;
+        // 🌟 Ahora busca el costo ESPECÍFICO de ese tipo de minion
+        return config.getConfigurationSection("tiers." + tier + ".costo_evolucion." + type.name());
     }
 }

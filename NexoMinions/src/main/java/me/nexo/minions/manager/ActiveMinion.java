@@ -38,7 +38,6 @@ public class ActiveMinion {
     private final ItemStack[] upgrades = new ItemStack[4];
     private int trabajosRealizados = 0;
 
-    // 🌟 NUEVO: Memoria caché para no dar lag buscando cofres
     private InventoryHolder cachedStorage = null;
     private long lastStorageCheckTime = 0;
 
@@ -59,13 +58,28 @@ public class ActiveMinion {
         }
     }
 
+    // 🌟 NUEVO: Calcula el límite real sumando el Nivel Base + El Ítem Expansor
+    public int getRealMaxStorage() {
+        int base = MinionTier.getMaxStorage(tier);
+        int bonus = 0;
+
+        for (ItemStack item : upgrades) {
+            ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
+            if (datos != null && datos.getString("tipo", "").equals("STORAGE")) {
+                bonus += datos.getInt("bonus_capacidad", 0); // Ej: Expansor Pequeño da +64 slots
+            }
+        }
+        return base + bonus;
+    }
+
     public void calcularTrabajoOffline(long currentTimeMillis) {
         long tiempoPasado = currentTimeMillis - this.nextActionTime;
         if (tiempoPasado > 0) {
             long tiempoPorAccion = (long) (MinionTier.getDelayMillis(this.tier) * getSpeedMultiplier());
             int trabajosPerdidos = (int) (tiempoPasado / tiempoPorAccion);
 
-            int maxStorage = MinionTier.getMaxStorage(this.tier);
+            // 🌟 Usamos el límite real (Base + Expansores)
+            int maxStorage = getRealMaxStorage();
             this.storedItems = Math.min(maxStorage, this.storedItems + trabajosPerdidos);
             this.entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
 
@@ -75,12 +89,12 @@ public class ActiveMinion {
     }
 
     public void tick(long currentTimeMillis) {
-        int maxStorage = MinionTier.getMaxStorage(tier);
+        int maxStorage = getRealMaxStorage(); // 🌟 Usamos el límite real
 
         actualizarHolograma(maxStorage);
 
         if (storedItems >= maxStorage && !tieneMejora("STORAGE_LINK")) {
-            animar(); return;
+            animar(); return; // El inventario está lleno y no tiene Tolva de cofres, deja de trabajar
         }
 
         if (currentTimeMillis >= nextActionTime) {
@@ -95,7 +109,7 @@ public class ActiveMinion {
     private void actualizarHolograma(int maxStorage) {
         if (holograma == null || holograma.isDead()) return;
 
-        if (storedItems >= maxStorage) {
+        if (storedItems >= maxStorage && !tieneMejora("STORAGE_LINK")) {
             holograma.setText("§c§l¡INVENTARIO LLENO!\n§e" + storedItems + " / " + maxStorage);
         } else {
             String nombreBonito = type.name().replace("MINION_", "").replace("_", " ");
@@ -114,8 +128,11 @@ public class ActiveMinion {
         }
 
         if (!guardadoEnCofre) {
-            this.storedItems += 1;
-            entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
+            // Protección extra: Por si acaso, verificamos que no se pase del límite al farmear activo
+            if (this.storedItems < getRealMaxStorage()) {
+                this.storedItems += 1;
+                entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
+            }
         }
 
         this.trabajosRealizados++;
@@ -168,27 +185,24 @@ public class ActiveMinion {
         return false;
     }
 
-    // 🌟 NUEVO: Sistema de guardado en cofre hiperoptimizado (Caché + Lazy Scan)
     private boolean guardarEnCofreAdyacente(ItemStack item) {
         long currentTime = System.currentTimeMillis();
 
-        // 1. Si ya tenemos un cofre memorizado, intentamos usarlo directamente
         if (cachedStorage != null) {
             if (cachedStorage.getInventory().getLocation() != null &&
                     cachedStorage.getInventory().getLocation().getBlock().getState() instanceof InventoryHolder) {
 
                 var sobrante = cachedStorage.getInventory().addItem(item);
                 if (sobrante.isEmpty()) {
-                    return true; // ¡Éxito instantáneo sin lag!
+                    return true;
                 } else {
-                    cachedStorage = null; // Cofre lleno. Borramos la memoria.
+                    cachedStorage = null;
                 }
             } else {
-                cachedStorage = null; // Cofre destruido. Borramos la memoria.
+                cachedStorage = null;
             }
         }
 
-        // 2. Si no tenemos cofre memorizado, solo escaneamos cada 10 segundos para evitar lag masivo
         if (currentTime - lastStorageCheckTime > 10000) {
             lastStorageCheckTime = currentTime;
             int[][] offsets = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
@@ -198,14 +212,13 @@ public class ActiveMinion {
                 if (b.getState() instanceof InventoryHolder holder) {
                     var sobrante = holder.getInventory().addItem(item);
                     if (sobrante.isEmpty()) {
-                        cachedStorage = holder; // ¡Memorizamos este cofre para la próxima vez!
+                        cachedStorage = holder;
                         return true;
                     }
                 }
             }
         }
-
-        return false; // No hay cofres disponibles o están llenos
+        return false;
     }
 
     public ItemStack[] getUpgrades() { return upgrades; }
@@ -236,6 +249,7 @@ public class ActiveMinion {
     public ItemDisplay getEntity() { return entity; }
     public Interaction getHitbox() { return hitbox; }
     public TextDisplay getHolograma() { return holograma; }
+    public UUID getOwnerId() { return ownerId; }
     public MinionType getType() { return type; }
     public int getTier() { return tier; }
     public int getStoredItems() { return storedItems; }

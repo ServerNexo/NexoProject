@@ -29,3 +29,8 @@ upgrades:
   enlace_cofres:
     material: HOPPER
     tipo: STORAGE_LINK     # Activa la magia de guardar en cofres
+
+  expansor_pequeno:
+    material: CHEST
+    tipo: STORAGE
+    bonus_capacidad: 128

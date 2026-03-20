@@ -1,10 +1,10 @@
 package me.nexo.minions.listeners;
 
-import me.nexo.core.user.NexoAPI; // 🌟 IMPORTANTE: Conectamos con tu Core
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.minions.menu.MinionMenu;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -14,6 +14,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
@@ -32,6 +33,8 @@ public class MenuListener implements Listener {
 
         // Permitimos mover ítems en el propio inventario del jugador
         if (event.getClickedInventory() != null && event.getClickedInventory().equals(event.getWhoClicked().getInventory())) {
+            // Si hace shift-click, podría estar metiendo un ítem en las ranuras de mejora
+            if (event.isShiftClick()) guardarMejorasAsync(menu);
             return;
         }
 
@@ -45,6 +48,9 @@ public class MenuListener implements Listener {
 
         if (!esSlotDeMejora) {
             event.setCancelled(true);
+        } else {
+            // 🌟 NUEVO: Si tocó una mejora, la guardamos instantáneamente (1 tick después de que se coloque)
+            guardarMejorasAsync(menu);
         }
 
         Player player = (Player) event.getWhoClicked();
@@ -59,10 +65,9 @@ public class MenuListener implements Listener {
                 return;
             }
 
-            // 1. Entregar ítems y proteger de inventarios llenos
             HashMap<Integer, ItemStack> sobrante = player.getInventory().addItem(new ItemStack(minion.getType().getTargetMaterial(), cantidad));
             for (ItemStack drop : sobrante.values()) {
-                player.getWorld().dropItemNaturally(player.getLocation(), drop); // Tira al suelo lo que no cabe
+                player.getWorld().dropItemNaturally(player.getLocation(), drop);
             }
 
             // 🌟 2. ENTREGAR LA EXPERIENCIA (Soporte para 5 Profesiones de AuraSkills)
@@ -72,45 +77,30 @@ public class MenuListener implements Listener {
             String skillAura = "";
             String nombreSkill = "";
 
-            // ⛏️ 1. Minero
             if (tipoMinion.contains("ORE") || tipoMinion.contains("COBBLESTONE") || tipoMinion.contains("STONE") || tipoMinion.contains("OBSIDIAN")) {
                 skillAura = "mining"; nombreSkill = "Minería";
-            }
-            // 🌾 2. Agricultor
-            else if (tipoMinion.contains("WHEAT") || tipoMinion.contains("CARROT") || tipoMinion.contains("POTATO") || tipoMinion.contains("MELON") || tipoMinion.contains("PUMPKIN") || tipoMinion.contains("SUGAR_CANE")) {
+            } else if (tipoMinion.contains("WHEAT") || tipoMinion.contains("CARROT") || tipoMinion.contains("POTATO") || tipoMinion.contains("MELON") || tipoMinion.contains("PUMPKIN") || tipoMinion.contains("SUGAR_CANE")) {
                 skillAura = "farming"; nombreSkill = "Agricultura";
-            }
-            // 🪓 3. Leñador
-            else if (tipoMinion.contains("LOG") || tipoMinion.contains("WOOD")) {
+            } else if (tipoMinion.contains("LOG") || tipoMinion.contains("WOOD")) {
                 skillAura = "foraging"; nombreSkill = "Tala";
-            }
-            // 🎣 4. Pescador
-            else if (tipoMinion.contains("FISH") || tipoMinion.contains("SALMON")) {
+            } else if (tipoMinion.contains("FISH") || tipoMinion.contains("SALMON")) {
                 skillAura = "fishing"; nombreSkill = "Pesca";
-            }
-            // ⚔️ 5. Luchador (Mobs)
-            else if (tipoMinion.contains("FLESH") || tipoMinion.contains("BONE") || tipoMinion.contains("SPIDER") || tipoMinion.contains("GUNPOWDER") || tipoMinion.contains("SLIME") || tipoMinion.contains("BLAZE")) {
+            } else if (tipoMinion.contains("FLESH") || tipoMinion.contains("BONE") || tipoMinion.contains("SPIDER") || tipoMinion.contains("GUNPOWDER") || tipoMinion.contains("SLIME") || tipoMinion.contains("BLAZE")) {
                 skillAura = "fighting"; nombreSkill = "Combate";
             }
 
-            // Si detectamos una profesión válida, entregamos la XP
             if (!skillAura.isEmpty()) {
-                // Ejecutamos el comando nativo de AuraSkills desde la consola de forma silenciosa (-s)
                 String comando = "skills addxp " + player.getName() + " " + skillAura + " " + xpGanada + " -s";
                 org.bukkit.Bukkit.getServer().dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), comando);
-
-                // Le avisamos al jugador con un mensaje bonito
                 player.sendMessage(ChatColor.LIGHT_PURPLE + "✨ +" + xpGanada + " XP de " + nombreSkill);
             }
 
-            // 3. Limpiar la mochila
             minion.setStoredItems(0);
             minion.getEntity().getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);
 
             player.sendMessage(ChatColor.GREEN + "¡Extraíste " + cantidad + " ítems!");
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
 
-            // 4. Recargar el menú para que la mochila se vea vacía al instante
             player.openInventory(new MinionMenu(plugin, minion).getInventory());
         }
 
@@ -143,23 +133,52 @@ public class MenuListener implements Listener {
                 return;
             }
 
-            // 🌟 ¡EVOLUCIÓN EXITOSA!
             minion.setTier(sigNivel);
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
             player.sendMessage(ChatColor.GREEN + "¡Tu Minion ha evolucionado al Nivel " + sigNivel + "!");
             minion.getEntity().getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, minion.getEntity().getLocation().add(0, 1, 0), 50, 0.5, 0.5, 0.5, 0.1);
 
-            // Recargamos el menú
             player.openInventory(new MinionMenu(plugin, minion).getInventory());
         }
     }
 
-    // 🌟 Helper para cobrar ítems (Soporta Vanilla y Nexo)
+    // 🌟 PROTECCIÓN: Si arrastra ítems por el inventario (Drag)
+    @EventHandler
+    public void onDrag(InventoryDragEvent event) {
+        if (event.getInventory().getHolder() instanceof MinionMenu menu) {
+            guardarMejorasAsync(menu);
+        }
+    }
+
+    // Doble seguridad al cerrar
+    @EventHandler
+    public void onClose(InventoryCloseEvent event) {
+        if (!(event.getInventory().getHolder() instanceof MinionMenu menu)) return;
+        guardarMejorasInstantaneo(menu, event.getInventory());
+    }
+
+    // 🌟 NUEVO: Tarea asíncrona de 1 tick para leer el inventario DESPUÉS de que se coloque el ítem
+    private void guardarMejorasAsync(MinionMenu menu) {
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            guardarMejorasInstantaneo(menu, menu.getInventory());
+        }, 1L);
+    }
+
+    // Guarda las mejoras en la abeja
+    private void guardarMejorasInstantaneo(MinionMenu menu, org.bukkit.inventory.Inventory inv) {
+        ActiveMinion minion = menu.getMinion();
+        for (int i = 0; i < 4; i++) {
+            int invSlot = MinionMenu.UPGRADE_SLOTS[i];
+            ItemStack itemEnSlot = inv.getItem(invSlot);
+            minion.setUpgrade(i, itemEnSlot);
+        }
+    }
+
+    // Helper para cobrar ítems
     private boolean cobrarItems(Player player, int cantidadNecesaria, String material, String nexoId) {
         int recolectado = 0;
         NamespacedKey nexoKey = new NamespacedKey("nexo", "id");
 
-        // Primero verificamos si tiene suficientes
         for (ItemStack item : player.getInventory().getContents()) {
             if (item == null || item.getType().isAir()) continue;
 
@@ -176,7 +195,6 @@ public class MenuListener implements Listener {
 
         if (recolectado < cantidadNecesaria) return false;
 
-        // Si tiene suficientes, procedemos a cobrarlos
         int porCobrar = cantidadNecesaria;
         for (int i = 0; i < player.getInventory().getSize(); i++) {
             ItemStack item = player.getInventory().getItem(i);
@@ -194,7 +212,7 @@ public class MenuListener implements Listener {
             if (coincide) {
                 if (item.getAmount() <= porCobrar) {
                     porCobrar -= item.getAmount();
-                    player.getInventory().setItem(i, null); // 🐛 Fix: Limpiamos la ranura de forma segura
+                    player.getInventory().setItem(i, null);
                 } else {
                     item.setAmount(item.getAmount() - porCobrar);
                     porCobrar = 0;
@@ -202,17 +220,5 @@ public class MenuListener implements Listener {
             }
         }
         return true;
-    }
-
-    @EventHandler
-    public void onClose(InventoryCloseEvent event) {
-        if (!(event.getInventory().getHolder() instanceof MinionMenu menu)) return;
-
-        ActiveMinion minion = menu.getMinion();
-        for (int i = 0; i < 4; i++) {
-            int invSlot = MinionMenu.UPGRADE_SLOTS[i];
-            ItemStack itemEnSlot = event.getInventory().getItem(invSlot);
-            minion.setUpgrade(i, itemEnSlot);
-        }
     }
 }

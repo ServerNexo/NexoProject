@@ -63,6 +63,7 @@ public class NexoItems extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new HerreriaListener(this), this);
         getServer().getPluginManager().registerEvents(new ReforjaListener(this), this);
         getServer().getPluginManager().registerEvents(new YunqueListener(this), this);
+        getServer().getPluginManager().registerEvents(new ItemProtectionListener(this), this);
 
         // 🟢 REGISTRAMOS TODOS LOS LISTENERS QUE MUDAMOS DEL CORE
         getServer().getPluginManager().registerEvents(new BlockBreakListener(this), this);
@@ -70,6 +71,7 @@ public class NexoItems extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new DamageListener(this), this);
         getServer().getPluginManager().registerEvents(new InteractListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerItemListener(this), this);
+        getServer().getPluginManager().registerEvents(new VanillaStationsListener(this), this);
 
         // Nuevos Sistemas Modulares
         getServer().getPluginManager().registerEvents(new AccesoriosListener(this, accesoriosManager), this);

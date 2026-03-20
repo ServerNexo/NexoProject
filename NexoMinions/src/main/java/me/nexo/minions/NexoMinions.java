@@ -3,10 +3,7 @@ package me.nexo.minions;
 import me.nexo.minions.commands.ComandoMinion;
 import me.nexo.minions.data.TiersConfig; // 🌟 El nuevo import
 import me.nexo.minions.data.UpgradesConfig;
-import me.nexo.minions.listeners.MenuListener;
-import me.nexo.minions.listeners.MinionInteractListener;
-import me.nexo.minions.listeners.MinionListener;
-import me.nexo.minions.listeners.MinionLoadListener;
+import me.nexo.minions.listeners.*;
 import me.nexo.minions.manager.MinionManager;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -32,10 +29,14 @@ public class NexoMinions extends JavaPlugin {
         }
 
         // 4. Registramos los eventos
+
         getServer().getPluginManager().registerEvents(new MinionListener(this), this);
         getServer().getPluginManager().registerEvents(new MinionInteractListener(this), this);
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
         getServer().getPluginManager().registerEvents(new MinionLoadListener(this), this);
+
+        getServer().getPluginManager().registerEvents(new ExplosionListener(this), this);
+
 
         // 5. El Reloj de las Abejas (Tick)
         Bukkit.getScheduler().runTaskTimer(this, () -> {

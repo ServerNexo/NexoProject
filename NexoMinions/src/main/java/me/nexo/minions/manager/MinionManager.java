@@ -28,18 +28,15 @@ public class MinionManager {
 
     public void spawnMinion(Location loc, UUID ownerId, MinionType type, int tier) {
         loc.getWorld().spawn(loc, ItemDisplay.class, display -> {
-            // Generamos el modelo visual de Nexo
             var nexoItemBuilder = NexoItems.itemFromId(type.getNexoModelID());
             if (nexoItemBuilder != null) display.setItemStack(nexoItemBuilder.build());
 
             display.setBillboard(ItemDisplay.Billboard.FIXED);
             display.setInvulnerable(true);
 
-            // 🌟 NUEVO: Interpolación inicial para que la abeja gire fluido a 60 FPS
             display.setInterpolationDuration(20);
             display.setInterpolationDelay(0);
 
-            // 🐛 Parche: 5 segundos de espera inicial para no escupir al instante
             long tiempoPrimeraAccion = System.currentTimeMillis() + 5000L;
 
             var pdc = display.getPersistentDataContainer();
@@ -47,7 +44,7 @@ public class MinionManager {
             pdc.set(MinionKeys.TYPE, PersistentDataType.STRING, type.name());
             pdc.set(MinionKeys.TIER, PersistentDataType.INTEGER, tier);
             pdc.set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, tiempoPrimeraAccion);
-            pdc.set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0); // 📦 Nace con mochila vacía
+            pdc.set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);
 
             Interaction hitbox = loc.getWorld().spawn(loc, Interaction.class, inter -> {
                 inter.setInteractionWidth(1.2f);
@@ -56,18 +53,15 @@ public class MinionManager {
                 inter.getPersistentDataContainer().set(new NamespacedKey(plugin, "minion_display_id"), PersistentDataType.STRING, display.getUniqueId().toString());
             });
 
-            // 🌟 NUEVO: Creamos el Holograma flotante
-            Location holoLoc = loc.clone().add(0, 1.2, 0); // 1.2 bloques por encima
+            Location holoLoc = loc.clone().add(0, 1.2, 0);
             TextDisplay holograma = loc.getWorld().spawn(holoLoc, TextDisplay.class, holo -> {
                 holo.setBillboard(TextDisplay.Billboard.CENTER);
-                holo.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 0)); // Fondo semi-transparente
+                holo.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 0));
                 holo.setText("§eCargando Abeja...");
             });
 
-            // Guardamos la ID del holograma en la abeja para poder borrarlo si el server se reinicia
             pdc.set(new NamespacedKey(plugin, "minion_holo_id"), PersistentDataType.STRING, holograma.getUniqueId().toString());
 
-            // 🌟 Conectamos la abeja pasándole el Holograma
             minionsActivos.put(display.getUniqueId(), new ActiveMinion(plugin, display, hitbox, holograma, ownerId, type, tier, tiempoPrimeraAccion, 0));
         });
     }
@@ -88,15 +82,23 @@ public class MinionManager {
 
             if (minion.getEntity() != null) minion.getEntity().remove();
             if (minion.getHitbox() != null) minion.getHitbox().remove();
-            if (minion.getHolograma() != null) minion.getHolograma().remove(); // 🌟 NUEVO: Borramos el holograma
+            if (minion.getHolograma() != null) minion.getHolograma().remove();
 
-            // 🌟 NUEVO: Le devolvemos 1 "espacio" libre al jugador al recoger la abeja
-            addPlacedMinion(player, -1);
+            // 🚨 CORRECCIÓN CRÍTICA 2: Le devolvemos el espacio libre al VERDADERO DUEÑO
+            Player owner = org.bukkit.Bukkit.getPlayer(minion.getOwnerId());
+            if (owner != null && owner.isOnline()) {
+                addPlacedMinion(owner, -1);
 
-            // Mensaje actualizado mostrando el límite actual
-            player.sendMessage("§a§l¡BZZZ! §eHas recogido tu Minion. §7(" + getPlacedMinions(player) + "/" + getMaxMinions(player) + ")");
+                if (owner.getUniqueId().equals(player.getUniqueId())) {
+                    owner.sendMessage("§a§l¡BZZZ! §eHas recogido tu Minion. §7(" + getPlacedMinions(owner) + "/" + getMaxMinions(owner) + ")");
+                } else {
+                    owner.sendMessage("§c⚠️ Un administrador ha recogido uno de tus Minions.");
+                    player.sendMessage("§aMinion recogido. El espacio le fue devuelto a su dueño legítimo.");
+                }
+            } else {
+                player.sendMessage("§c⚠️ ADVERTENCIA: El dueño del Minion está OFFLINE. Su límite de minions podría desincronizarse.");
+            }
 
-            // Avisamos si perdió bloques por no sacarlos del menú antes
             if (minion.getStoredItems() > 0) {
                 player.sendMessage("§c⚠️ Se perdieron " + minion.getStoredItems() + " bloques porque no los extraíste del menú.");
             }
@@ -107,12 +109,20 @@ public class MinionManager {
 
     public void tickAll(long currentTimeMillis) {
         for (ActiveMinion minion : minionsActivos.values()) {
-            if (minion.getEntity().isDead() || !minion.getEntity().isValid()) {
+            if (minion.getEntity().isDead()) {
                 if (minion.getHitbox() != null) minion.getHitbox().remove();
-                if (minion.getHolograma() != null) minion.getHolograma().remove(); // 🌟 NUEVO: Prevención de hologramas huérfanos
+                if (minion.getHolograma() != null) minion.getHolograma().remove();
                 minionsActivos.remove(minion.getEntity().getUniqueId());
                 continue;
             }
+
+            // 🌟 PARCHE DE MEMORIA RAM: Si el chunk se descarga, lo borramos de la RAM.
+            // Al volver, el MinionLoadListener lo reconstruirá y calculará el farmeo offline.
+            if (!minion.getEntity().isValid()) {
+                minionsActivos.remove(minion.getEntity().getUniqueId());
+                continue;
+            }
+
             minion.tick(currentTimeMillis);
         }
     }
@@ -136,11 +146,10 @@ public class MinionManager {
     }
 
     public int getMaxMinions(Player player) {
-        // Busca el permiso más alto que tenga el jugador (desde 50 hasta 1)
         for (int i = 50; i >= 1; i--) {
             if (player.hasPermission("nexominions.limit." + i)) return i;
         }
-        return 5; // 🌟 Límite por defecto para jugadores nuevos
+        return 5;
     }
 
     public ConcurrentHashMap<UUID, ActiveMinion> getMinionsActivos() {

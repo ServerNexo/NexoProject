@@ -22,21 +22,25 @@ import org.bukkit.potion.PotionEffectType;
 
 public class ArmorListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Usamos nuestra nueva clase NexoItems
     private final NexoItems plugin;
 
     public ArmorListener(NexoItems plugin) {
         this.plugin = plugin;
+
+        // 🌟 EL HEARTBEAT (Latido): Escanea silenciosamente a todos cada 2 segundos.
+        // Esto evita que un jugador retenga armaduras si le bajan el nivel o le cambian de clase.
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+            for (Player p : Bukkit.getOnlinePlayers()) {
+                evaluarArmadura(p);
+            }
+        }, 40L, 40L);
     }
 
-    // Se dispara nativamente en Paper cuando te pones/quitas armadura o se rompe
     @EventHandler
     public void onArmorChange(PlayerArmorChangeEvent event) {
-        // Ejecutamos la evaluación un tick después para asegurar que el inventario ya se actualizó
         Bukkit.getScheduler().runTask(plugin, () -> evaluarArmadura(event.getPlayer()));
     }
 
-    // Evaluamos también cuando el jugador entra al servidor para cargar sus stats
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         evaluarArmadura(event.getPlayer());
@@ -54,7 +58,7 @@ public class ArmorListener implements Listener {
         // 1. DETECTAR CLASE DOMINANTE
         // ==========================================
         for (ItemStack item : armor) {
-            if (item == null || !item.hasItemMeta()) continue;
+            if (item == null || item.getType().isAir() || !item.hasItemMeta()) continue;
             var pdc = item.getItemMeta().getPersistentDataContainer();
             if (pdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
                 ArmorDTO dto = plugin.getFileManager().getArmorDTO(pdc.get(ItemManager.llaveArmaduraId, PersistentDataType.STRING));
@@ -65,7 +69,6 @@ public class ArmorListener implements Listener {
             }
         }
 
-        // 🟢 ARQUITECTURA LIMPIA: Obtenemos el usuario de nuestra caché ultrarrápida
         NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
         if (user != null) {
             user.setClaseJugador(claseDominante);
@@ -76,7 +79,7 @@ public class ArmorListener implements Listener {
         // ==========================================
         for (int i = 0; i < armor.length; i++) {
             ItemStack item = armor[i];
-            if (item == null || !item.hasItemMeta()) continue;
+            if (item == null || item.getType().isAir() || !item.hasItemMeta()) continue;
             var pdc = item.getItemMeta().getPersistentDataContainer();
 
             if (pdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
@@ -87,16 +90,13 @@ public class ArmorListener implements Listener {
                     boolean cumpleRequisitos = true;
                     String razonFallo = "";
 
-                    // A) REVISAR CHOQUE DE CLASES
                     if (!dto.claseRequerida().equalsIgnoreCase("Cualquiera") &&
                             !dto.claseRequerida().equalsIgnoreCase("Ninguna") &&
                             !dto.claseRequerida().equalsIgnoreCase(claseDominante)) {
-
                         razonFallo = "Choque de Clases (" + dto.claseRequerida() + ")";
                         cumpleRequisitos = false;
                     }
 
-                    // B) REVISAR NIVEL (NexoAPI híbrido con AuraSkills)
                     if (cumpleRequisitos) {
                         int nivelJugador = 1;
                         String skill = dto.skillRequerida();
@@ -107,7 +107,6 @@ public class ArmorListener implements Listener {
                             else if (skill.equalsIgnoreCase("Agricultura")) nivelJugador = Math.max(1, user.getAgriculturaNivel());
                         }
 
-                        // Fallback para las habilidades que siguen en AuraSkills
                         try {
                             if (skill.equalsIgnoreCase("Pesca")) nivelJugador = Math.max(1, (int) AuraSkillsApi.get().getUser(p.getUniqueId()).getSkillLevel(Skills.FISHING));
                             else if (skill.equalsIgnoreCase("Tala")) nivelJugador = Math.max(1, (int) AuraSkillsApi.get().getUser(p.getUniqueId()).getSkillLevel(Skills.FORAGING));
@@ -137,31 +136,36 @@ public class ArmorListener implements Listener {
         // 3. APLICAR VIDA Y EFECTOS FINALES
         // ==========================================
         double total = 20.0 + extraVida;
-
-        // 🟢 RESTAURADO PARA 1.21.1: Usamos MAX_HEALTH de nuevo
         var healthAttr = p.getAttribute(Attribute.MAX_HEALTH);
 
         if (healthAttr != null && healthAttr.getBaseValue() != total) {
-            // Bajamos su vida actual si se quita armadura y su vida supera el nuevo máximo
             if (p.getHealth() > total) p.setHealth(total);
-
             healthAttr.setBaseValue(total);
             p.setHealthScaled(true);
             p.setHealthScale(20.0);
         }
 
-        // Importante: Limpiamos los efectos anteriores antes de recalcular
-        p.removePotionEffect(PotionEffectType.HASTE);
-        p.removePotionEffect(PotionEffectType.SPEED);
+        // 🌟 Usamos el gestor inteligente de efectos para no crashear la cámara del jugador
+        gestionarEfecto(p, PotionEffectType.HASTE, (int) (velMineria / 20), velMineria > 0);
+        gestionarEfecto(p, PotionEffectType.SPEED, (int) (velMovimiento / 20), velMovimiento > 0);
+    }
 
-        // Aplicamos pociones con duración infinita para evitar parpadeos
-        if (velMineria > 0) {
-            int nivelHaste = (int) (velMineria / 20);
-            p.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, PotionEffect.INFINITE_DURATION, nivelHaste, false, false, false));
-        }
-        if (velMovimiento > 0) {
-            int nivelSpeed = (int) (velMovimiento / 20);
-            p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, PotionEffect.INFINITE_DURATION, nivelSpeed, false, false, false));
+    // 🌟 HELPER: Actualiza pociones sin parpadeos visuales
+    private void gestionarEfecto(Player p, PotionEffectType tipo, int nivel, boolean aplicar) {
+        if (aplicar) {
+            boolean necesitaActualizar = true;
+            PotionEffect efectoActual = p.getPotionEffect(tipo);
+
+            // Si ya tiene el efecto al mismo nivel y le queda mucho tiempo, no lo sobrescribimos
+            if (efectoActual != null && efectoActual.getAmplifier() == nivel && efectoActual.getDuration() > 100) {
+                necesitaActualizar = false;
+            }
+
+            if (necesitaActualizar) {
+                p.addPotionEffect(new PotionEffect(tipo, PotionEffect.INFINITE_DURATION, nivel, false, false, false));
+            }
+        } else {
+            p.removePotionEffect(tipo);
         }
     }
 
@@ -173,7 +177,6 @@ public class ArmorListener implements Listener {
         if(slotIndex == 2) p.getInventory().setChestplate(null);
         if(slotIndex == 3) p.getInventory().setHelmet(null);
 
-        // Evita que se borre si el inventario está lleno (lo tira al piso)
         if (!p.getInventory().addItem(clon).isEmpty()) {
             p.getWorld().dropItem(p.getLocation(), clon);
         }

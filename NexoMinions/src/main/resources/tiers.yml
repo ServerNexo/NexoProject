@@ -1,16 +1,19 @@
-# ==========================================
-# 📈 COSTOS DE EVOLUCIÓN DE MINIONS
-# ==========================================
-# Aquí configuras qué se necesita para subir AL siguiente nivel.
-
-# Para el Minion de Cobblestone:
-COBBLESTONE:
-  2: # Costo para subir a Nivel 2
-    material: COBBLESTONE
-    cantidad: 64
-  3: # Costo para subir a Nivel 3
-    material: COBBLESTONE
-    cantidad: 128
-  4: # Costo para subir a Nivel 4 usando un ítem de Nexo!
-    nexo_id: "enchanted_cobblestone"
-    cantidad: 16
+tiers:
+  1:
+    delay_segundos: 10
+    max_almacenamiento: 64
+    # Nivel 1 no tiene costo de evolución porque es el nivel en el que nacen
+  2:
+    delay_segundos: 9
+    max_almacenamiento: 128
+    costo_evolucion:
+      MINION_COBBLESTONE:
+        cantidad: 64
+        material: "COBBLESTONE"
+      MINION_WHEAT:
+        cantidad: 64
+        material: "WHEAT"
+      MINION_DIAMOND_ORE:
+        cantidad: 10
+        material: "DIAMOND"
+        nexo_id: "mi_diamante_custom" # (Opcional, si usas items de Nexo)
