@@ -8,6 +8,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import me.nexo.core.NexoCore;
 
 public class ColeccionesListener implements Listener {
 
@@ -40,4 +43,27 @@ public class ColeccionesListener implements Listener {
         String blockId = block.getType().name();
         manager.addProgress(event.getPlayer(), blockId, 1);
     }
+
+    // Asegúrate de importar esto arriba:
+    // import org.bukkit.event.player.PlayerJoinEvent;
+    // import org.bukkit.event.player.PlayerQuitEvent;
+    // import me.nexo.core.NexoCore;
+
+    // 📥 1. CUANDO EL JUGADOR ENTRA: Cargamos sus colecciones desde Supabase
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        // Le pedimos la conexión de base de datos prestada al Core
+        var dataSource = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getDataSource();
+
+        // Le decimos al Manager que cargue a este jugador en la RAM
+        manager.loadPlayerFromDatabase(event.getPlayer().getUniqueId(), dataSource);
+    }
+
+    // 📤 2. CUANDO EL JUGADOR SALE: Limpiamos la RAM
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        // Borramos su perfil de la memoria para no causar lag
+        manager.removeProfile(event.getPlayer().getUniqueId());
+    }
+
 }
