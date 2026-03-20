@@ -2,6 +2,7 @@ package me.nexo.colecciones.menu;
 
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.colecciones.CollectionProfile;
+import me.nexo.colecciones.data.CollectionCategory;
 import me.nexo.colecciones.data.CollectionItem;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -12,12 +13,42 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ColeccionesMenu {
 
-    public static void abrirMenu(Player player, CollectionManager manager) {
-        // Creamos un inventario de 54 espacios
-        Inventory inv = Bukkit.createInventory(null, 54, "§8Mis Colecciones");
+    // 🌟 1. MENÚ PRINCIPAL
+    public static void abrirMenuPrincipal(Player player) {
+        Inventory inv = Bukkit.createInventory(null, 27, "§8Categorías de Colecciones");
+
+        inv.setItem(10, crearIconoCategoria(Material.IRON_PICKAXE, CollectionCategory.MINA));
+        inv.setItem(11, crearIconoCategoria(Material.IRON_HOE, CollectionCategory.FARMING));
+        inv.setItem(12, crearIconoCategoria(Material.IRON_AXE, CollectionCategory.TALA));
+        inv.setItem(13, crearIconoCategoria(Material.IRON_SWORD, CollectionCategory.FIGHTING));
+        inv.setItem(14, crearIconoCategoria(Material.FISHING_ROD, CollectionCategory.FISHING));
+        inv.setItem(15, crearIconoCategoria(Material.BREWING_STAND, CollectionCategory.ALQUIMIA));
+        inv.setItem(16, crearIconoCategoria(Material.ENCHANTING_TABLE, CollectionCategory.ENCANTAMIENTOS));
+
+        player.openInventory(inv);
+    }
+
+    private static ItemStack crearIconoCategoria(Material mat, CollectionCategory cat) {
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName("§a§l" + cat.name());
+            List<String> lore = new ArrayList<>();
+            lore.add("§7Haz clic para ver tus");
+            lore.add("§7colecciones de esta rama.");
+            meta.setLore(lore);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    // 🌟 2. SUB-MENÚ (Por Categoría)
+    public static void abrirSubMenu(Player player, CollectionManager manager, CollectionCategory categoria) {
+        Inventory inv = Bukkit.createInventory(null, 54, "§8Colecciones: §8" + categoria.name());
         CollectionProfile profile = manager.getProfile(player.getUniqueId());
 
         if (profile == null) {
@@ -25,23 +56,14 @@ public class ColeccionesMenu {
             return;
         }
 
-        // 🌟 NUEVO: Tomamos la lista desordenada y la ORDENAMOS por Categoría y Nombre
-        List<CollectionItem> itemsOrdenados = new ArrayList<>(manager.getItemsRegistrados().values());
-        itemsOrdenados.sort((item1, item2) -> {
-            int categoriaCompare = item1.category().name().compareTo(item2.category().name());
-            if (categoriaCompare != 0) {
-                return categoriaCompare; // Primero ordenamos por Categoría
-            }
-            return item1.displayName().compareTo(item2.displayName()); // Luego por Nombre
-        });
+        List<CollectionItem> itemsFiltrados = manager.getItemsRegistrados().values().stream()
+                .filter(item -> item.category() == categoria)
+                .sorted((i1, i2) -> i1.displayName().compareTo(i2.displayName()))
+                .collect(Collectors.toList());
 
-        // Iteramos sobre la lista ya ordenada
-        for (CollectionItem item : itemsOrdenados) {
+        for (CollectionItem item : itemsFiltrados) {
             Material mat = Material.matchMaterial(item.itemId());
-
-            if (mat == null || !mat.isItem()) {
-                mat = obtenerIconoVisual(item.itemId());
-            }
+            if (mat == null || !mat.isItem()) mat = obtenerIconoVisual(item.itemId());
 
             ItemStack icono = new ItemStack(mat);
             ItemMeta meta = icono.getItemMeta();
@@ -52,7 +74,7 @@ public class ColeccionesMenu {
                 int nivel = manager.calcularNivel(cantidad);
 
                 List<String> lore = new ArrayList<>();
-                lore.add("§8Categoría: " + item.category().name());
+                lore.add("§8ID: " + item.itemId());
                 lore.add("");
                 lore.add("§7Nivel Actual: §b" + nivel);
 
@@ -60,18 +82,30 @@ public class ColeccionesMenu {
                     int siguienteMeta = CollectionManager.TIERS[nivel];
                     lore.add("§7Progreso: §e" + cantidad + " §8/ §e" + siguienteMeta);
                     lore.add("");
-                    lore.add("§a¡Sigue farmeando para subir de nivel!");
+                    lore.add("§a¡Sigue farmeando para subir!");
                 } else {
                     lore.add("§7Progreso: §e" + cantidad);
                     lore.add("");
                     lore.add("§6§l¡COLECCIÓN AL MÁXIMO!");
                 }
+                lore.add("");
+                lore.add("§7Usa §e/col top " + item.itemId());
+                lore.add("§7para ver los mejores del mundo.");
 
                 meta.setLore(lore);
                 icono.setItemMeta(meta);
             }
             inv.addItem(icono);
         }
+
+        // Botón de Volver
+        ItemStack volver = new ItemStack(Material.ARROW);
+        ItemMeta volverMeta = volver.getItemMeta();
+        if (volverMeta != null) {
+            volverMeta.setDisplayName("§cVolver atrás");
+            volver.setItemMeta(volverMeta);
+        }
+        inv.setItem(49, volver);
 
         player.openInventory(inv);
     }
@@ -87,7 +121,6 @@ public class ColeccionesMenu {
             case "NETHER_WART": return Material.NETHER_WART;
             case "MELON": return Material.MELON;
             case "PUMPKIN": return Material.PUMPKIN;
-
             case "ZOMBIE": return Material.ROTTEN_FLESH;
             case "SKELETON": return Material.BONE;
             case "CREEPER": return Material.GUNPOWDER;
@@ -95,7 +128,6 @@ public class ColeccionesMenu {
             case "ENDERMAN": return Material.ENDER_PEARL;
             case "BLAZE": return Material.BLAZE_ROD;
             case "SLIME": return Material.SLIME_BALL;
-
             default: return Material.BARRIER;
         }
     }

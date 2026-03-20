@@ -198,3 +198,15 @@ colecciones:
         15:
           - "nexo msg %player% &9&l¡LAPISLÁZULI AL MÁXIMO! Tienes descuentos permanentes en Reforjas."
           - "lp user %player% permission set nexomecanics.reforjas.descuento"
+slayers:
+  # El ID interno de la misión
+  ZOMBIE_TIER_1:
+    nombre: "&2Cacería: El Rey Putrefacto"
+    mob_para_farmear: "ZOMBIE" # El mob normal que debe matar para llenar la barra
+    kills_requeridas: 50       # Cuántos debe matar para que aparezca el Boss
+    boss_tipo: "ZOMBIE"        # Qué entidad va a aparecer al final
+    boss_nombre: "&4&lRey Zombie"
+    recompensas:
+      - "nexo msg %player% &a¡Has derrotado al Rey Zombie!"
+      - "eco give %player% 5000"
+      - "nexoitems give %player% carne_corrupta 1"

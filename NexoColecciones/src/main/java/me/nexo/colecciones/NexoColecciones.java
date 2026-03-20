@@ -4,16 +4,19 @@ import me.nexo.colecciones.colecciones.ColeccionesConfig;
 import me.nexo.colecciones.colecciones.ColeccionesListener;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.colecciones.FlushTask;
-// 🌟 NUEVOS IMPORTS PARA EL MENÚ Y EL COMANDO
 import me.nexo.colecciones.commands.ComandoColecciones;
 import me.nexo.colecciones.menu.MenuListener;
+// 🌟 NUEVOS IMPORTS PARA SLAYERS
+import me.nexo.colecciones.slayers.SlayerManager;
+import me.nexo.colecciones.slayers.SlayerListener;
 import me.nexo.core.NexoCore;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoColecciones extends JavaPlugin {
 
     private ColeccionesConfig coleccionesConfig;
-    private CollectionManager collectionManager; // 🌟 El Cerebro de la progresión
+    private CollectionManager collectionManager; // El Cerebro de la progresión
+    private SlayerManager slayerManager;        // 🌟 El Gremio de Cazadores (Slayers)
     private FlushTask flushTask;
 
     @Override
@@ -23,23 +26,27 @@ public class NexoColecciones extends JavaPlugin {
         getLogger().info("🔗 Conectado al cerebro: NexoCore.");
 
         // ==========================================
-        // 1. INICIALIZAR CONFIGURACIÓN Y EL MANAGER
+        // 1. INICIALIZAR CONFIGURACIÓN Y MANAGERS
         // ==========================================
         this.coleccionesConfig = new ColeccionesConfig(this);
 
-        // Inicializamos el sistema que maneja los 15 niveles
+        // Inicializamos los sistemas de datos
         this.collectionManager = new CollectionManager(this);
+        this.slayerManager = new SlayerManager(this); // 🌟 Inicializamos Slayers
 
         // ==========================================
         // 2. REGISTRAR EVENTOS Y COMANDOS
         // ==========================================
-        // El Listener de colecciones ahora vigila el Anti-Exploit
+        // Registro de Colecciones
         getServer().getPluginManager().registerEvents(new ColeccionesListener(this), this);
 
-        // 🌟 NUEVO: Registramos la protección del menú para que no roben ítems
+        // 🌟 Registro de Slayers
+        getServer().getPluginManager().registerEvents(new SlayerListener(this), this);
+
+        // Protección de menús
         getServer().getPluginManager().registerEvents(new MenuListener(), this);
 
-        // 🌟 NUEVO: Registramos el comando /colecciones
+        // Registro del comando central /colecciones
         if (getCommand("colecciones") != null) {
             getCommand("colecciones").setExecutor(new ComandoColecciones(this));
         } else {
@@ -52,10 +59,20 @@ public class NexoColecciones extends JavaPlugin {
         NexoCore core = NexoCore.getPlugin(NexoCore.class);
         if (core.getDatabaseManager() != null && core.getDatabaseManager().getDataSource() != null) {
             this.flushTask = new FlushTask(core.getDatabaseManager().getDataSource());
-            // Guardar en Supabase cada 10 minutos (12000 ticks)
+            // Guardar en la base de datos cada 10 minutos
             this.flushTask.runTaskTimerAsynchronously(this, 12000L, 12000L);
         } else {
             getLogger().severe("¡No se pudo conectar a la base de datos de NexoCore!");
+        }
+
+        // ==========================================
+        // 4. INTEGRACIÓN CON PLACEHOLDERAPI
+        // ==========================================
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new me.nexo.colecciones.api.ColeccionesExpansion(this).register();
+            getLogger().info("🌟 ¡PlaceholderAPI detectado y variables registradas!");
+        } else {
+            getLogger().warning("⚠️ PlaceholderAPI no encontrado. Las variables no funcionarán.");
         }
 
         getLogger().info("========================================");
@@ -75,8 +92,12 @@ public class NexoColecciones extends JavaPlugin {
         return coleccionesConfig;
     }
 
-    // 🌟 Método para que otros archivos (como FlushTask y ColeccionesListener) puedan usar el cerebro
     public CollectionManager getCollectionManager() {
         return collectionManager;
+    }
+
+    // 🌟 Nuevo Getter para acceder al sistema de Slayers
+    public SlayerManager getSlayerManager() {
+        return slayerManager;
     }
 }

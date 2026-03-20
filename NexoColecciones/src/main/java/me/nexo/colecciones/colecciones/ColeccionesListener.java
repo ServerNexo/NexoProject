@@ -149,6 +149,32 @@ public class ColeccionesListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        manager.removeProfile(event.getPlayer().getUniqueId());
+        UUID uuid = event.getPlayer().getUniqueId();
+        CollectionProfile profile = manager.getProfile(uuid);
+
+        // Si el jugador tiene datos sin guardar, los subimos a Supabase en un hilo secundario
+        if (profile != null && profile.isNeedsFlush()) {
+            var dataSource = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getDataSource();
+
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                String sql = "INSERT INTO nexo_collections (uuid, collections_data) VALUES (?, ?::jsonb) " +
+                        "ON CONFLICT (uuid) DO UPDATE SET collections_data = EXCLUDED.collections_data";
+
+                try (java.sql.Connection conn = dataSource.getConnection();
+                     java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+
+                    ps.setString(1, uuid.toString());
+                    ps.setString(2, new com.google.gson.Gson().toJson(profile.getProgress()));
+                    ps.executeUpdate();
+
+                } catch (Exception e) {
+                    plugin.getLogger().severe("Error al guardar colecciones de " + event.getPlayer().getName() + " al salir.");
+                    e.printStackTrace();
+                }
+            });
+        }
+
+        // Una vez enviada la orden de guardado, ahora SÍ lo borramos de la RAM de forma segura
+        manager.removeProfile(uuid);
     }
 }
