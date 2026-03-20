@@ -5,8 +5,9 @@ import me.nexo.colecciones.colecciones.ColeccionesListener;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.colecciones.FlushTask;
 import me.nexo.colecciones.commands.ComandoColecciones;
+import me.nexo.colecciones.commands.ComandoSlayer; // 🌟 NUEVO IMPORT PARA EL COMANDO SLAYER
 import me.nexo.colecciones.menu.MenuListener;
-// 🌟 NUEVOS IMPORTS PARA SLAYERS
+// 🌟 IMPORTS PARA SLAYERS
 import me.nexo.colecciones.slayers.SlayerManager;
 import me.nexo.colecciones.slayers.SlayerListener;
 import me.nexo.core.NexoCore;
@@ -51,6 +52,13 @@ public class NexoColecciones extends JavaPlugin {
             getCommand("colecciones").setExecutor(new ComandoColecciones(this));
         } else {
             getLogger().warning("⚠️ No se pudo registrar /colecciones. Verifica tu plugin.yml.");
+        }
+
+        // 🌟 NUEVO: Registro del comando independiente /slayer
+        if (getCommand("slayer") != null) {
+            getCommand("slayer").setExecutor(new ComandoSlayer(this));
+        } else {
+            getLogger().warning("⚠️ No se pudo registrar /slayer. Verifica tu plugin.yml.");
         }
 
         // ==========================================

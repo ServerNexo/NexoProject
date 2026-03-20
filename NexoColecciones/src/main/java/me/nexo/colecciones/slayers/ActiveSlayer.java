@@ -1,5 +1,6 @@
 package me.nexo.colecciones.slayers;
 
+import org.bukkit.boss.BossBar;
 import java.util.List;
 import java.util.UUID;
 
@@ -14,6 +15,9 @@ public class ActiveSlayer {
     private final List<String> rewards;
     private boolean bossSpawned;
 
+    // 🌟 NUEVO: Variable para guardar la BossBar del Boss
+    private BossBar bossBar;
+
     public ActiveSlayer(UUID playerId, String slayerId, String targetMob, int requiredKills, String bossType, String bossName, List<String> rewards) {
         this.playerId = playerId;
         this.slayerId = slayerId;
@@ -24,6 +28,7 @@ public class ActiveSlayer {
         this.bossName = bossName;
         this.rewards = rewards;
         this.bossSpawned = false;
+        this.bossBar = null;
     }
 
     public void addKill() {
@@ -47,4 +52,6 @@ public class ActiveSlayer {
     public List<String> getRewards() { return rewards; }
     public boolean isBossSpawned() { return bossSpawned; }
     public void setBossSpawned(boolean bossSpawned) { this.bossSpawned = bossSpawned; }
+    public BossBar getBossBar() { return bossBar; }
+    public void setBossBar(BossBar bossBar) { this.bossBar = bossBar; }
 }

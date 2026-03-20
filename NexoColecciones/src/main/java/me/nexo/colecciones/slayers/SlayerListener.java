@@ -4,6 +4,10 @@ import me.nexo.colecciones.NexoColecciones;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -11,7 +15,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 
 public class SlayerListener implements Listener {
@@ -29,16 +35,13 @@ public class SlayerListener implements Listener {
         Player player = event.getEntity().getKiller();
         if (player == null) return;
 
-        // Revisamos si el jugador tiene una cacería activa
         ActiveSlayer slayer = manager.getActiveSlayer(player.getUniqueId());
         if (slayer == null) return;
 
         LivingEntity killed = event.getEntity();
         String mobName = killed.getType().name();
 
-        // ==========================================
-        // 1. ¿Acaba de matar al Boss final?
-        // ==========================================
+        // 1. ¿Mató al Boss Final?
         if (slayer.isBossSpawned() && killed.hasMetadata("SlayerBoss_" + player.getUniqueId().toString())) {
 
             player.sendMessage("§8=======================================");
@@ -46,7 +49,6 @@ public class SlayerListener implements Listener {
             player.sendMessage("§7Has derrotado a: §c" + slayer.getBossName());
             player.sendMessage("§8=======================================");
 
-            // Disparamos las recompensas desde la consola
             for (String cmd : slayer.getRewards()) {
                 String finalCmd = cmd.replace("%player%", player.getName());
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd);
@@ -54,47 +56,82 @@ public class SlayerListener implements Listener {
 
             player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
 
-            // Damos por terminada la misión
+            // 🌟 NUEVO: Borramos la BossBar al ganar
+            if (slayer.getBossBar() != null) {
+                slayer.getBossBar().removeAll();
+            }
+
             manager.removeActiveSlayer(player.getUniqueId());
             return;
         }
 
-        // ==========================================
-        // 2. ¿Mató a un mob normal para llenar la barra?
-        // ==========================================
+        // 2. ¿Mató a un mob normal?
         if (!slayer.isBossSpawned() && mobName.equals(slayer.getTargetMob())) {
             slayer.addKill();
 
             int current = slayer.getCurrentKills();
             int req = slayer.getRequiredKills();
 
-            // Si ya llenó la barra, ¡INVOCAMOS AL BOSS!
             if (slayer.isReadyForBoss()) {
                 player.sendTitle("§c§l¡CUIDADO!", "§7El " + slayer.getBossName() + " §7ha aparecido", 10, 70, 20);
                 player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.0f, 1.0f);
 
                 Location spawnLoc = killed.getLocation();
-                spawnLoc.getWorld().strikeLightningEffect(spawnLoc); // Efecto visual épico de rayo
+                spawnLoc.getWorld().strikeLightningEffect(spawnLoc);
 
                 try {
-                    EntityType bossType = EntityType.valueOf(slayer.getBossType());
-                    Entity boss = spawnLoc.getWorld().spawnEntity(spawnLoc, bossType);
+                    LivingEntity boss = (LivingEntity) spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.valueOf(slayer.getBossType()));
                     boss.setCustomName(slayer.getBossName());
                     boss.setCustomNameVisible(true);
-
-                    // 🌟 PROTECCIÓN: Le ponemos el UUID del jugador al Boss para que nadie más pueda robárselo
                     boss.setMetadata("SlayerBoss_" + player.getUniqueId().toString(), new FixedMetadataValue(plugin, true));
 
                     slayer.setBossSpawned(true);
 
+                    // 🌟 NUEVO: Creamos la BossBar y se la mostramos al jugador
+                    BossBar bar = Bukkit.createBossBar(slayer.getBossName(), BarColor.RED, BarStyle.SOLID);
+                    bar.addPlayer(player);
+                    slayer.setBossBar(bar);
+
                 } catch (IllegalArgumentException e) {
-                    player.sendMessage("§c[Error Interno] El tipo de Boss en el YAML es inválido.");
+                    player.sendMessage("§c[Error] El tipo de Boss en el YAML es inválido.");
                     manager.removeActiveSlayer(player.getUniqueId());
                 }
             } else {
-                // Si aún no llena la barra, le mostramos el progreso en la Action Bar
                 player.sendActionBar("§c⚔️ Progreso de Slayer: §e" + current + " §8/ §e" + req);
             }
+        }
+    }
+
+    // 🌟 NUEVO: Actualizar la barra cuando el Boss recibe daño
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onBossDamage(EntityDamageEvent event) {
+        Entity entity = event.getEntity();
+        if (!(entity instanceof LivingEntity boss)) return;
+
+        for (ActiveSlayer slayer : manager.getActiveSlayers().values()) {
+            if (slayer.isBossSpawned() && boss.hasMetadata("SlayerBoss_" + slayer.getPlayerId().toString())) {
+                if (slayer.getBossBar() != null) {
+                    double maxHealth = boss.getAttribute(Attribute.MAX_HEALTH).getValue();
+                    double currentHealth = boss.getHealth() - event.getFinalDamage();
+                    if (currentHealth < 0) currentHealth = 0;
+
+                    double progress = currentHealth / maxHealth;
+                    slayer.getBossBar().setProgress(progress);
+                }
+                break;
+            }
+        }
+    }
+
+    // 🌟 NUEVO: Castigar al jugador si se desconecta (Se cancela la misión)
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        ActiveSlayer slayer = manager.getActiveSlayer(event.getPlayer().getUniqueId());
+        if (slayer != null) {
+            if (slayer.getBossBar() != null) {
+                slayer.getBossBar().removeAll(); // Quitamos la barra
+            }
+            manager.removeActiveSlayer(event.getPlayer().getUniqueId());
         }
     }
 }

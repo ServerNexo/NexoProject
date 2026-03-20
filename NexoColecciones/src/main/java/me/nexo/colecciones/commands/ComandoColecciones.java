@@ -22,6 +22,7 @@ public class ComandoColecciones implements CommandExecutor {
             if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                 plugin.getColeccionesConfig().recargarConfig();
                 plugin.getCollectionManager().cargarDesdeConfig();
+                plugin.getSlayerManager().cargarSlayers(); // Recargamos Slayers también desde consola
                 sender.sendMessage("§a✅ [NexoColecciones] Configuración recargada con éxito desde la consola.");
             }
             return true;
@@ -40,9 +41,10 @@ public class ComandoColecciones implements CommandExecutor {
             // 2. Le decimos al Cerebro que limpie la RAM y cargue los nuevos datos
             plugin.getCollectionManager().cargarDesdeConfig();
 
+            // 3. Recargamos las misiones de Slayers
             plugin.getSlayerManager().cargarSlayers();
 
-            player.sendMessage("§a✅ ¡Configuración de Colecciones recargada con éxito!");
+            player.sendMessage("§a✅ ¡Configuración de Colecciones y Slayers recargada con éxito!");
             return true;
         }
 
@@ -51,13 +53,6 @@ public class ComandoColecciones implements CommandExecutor {
             plugin.getCollectionManager().calcularTopAsync(player, args[1]);
             return true;
         }
-
-        // ⚔️ Comando Slayer (/colecciones slayer <ID>)
-        if (args.length == 2 && args[0].equalsIgnoreCase("slayer")) {
-            plugin.getSlayerManager().iniciarSlayer(player, args[1]);
-            return true;
-        }
-
 
         // 🎒 Si solo escribe /colecciones, abrimos el Menú Principal
         ColeccionesMenu.abrirMenuPrincipal(player);

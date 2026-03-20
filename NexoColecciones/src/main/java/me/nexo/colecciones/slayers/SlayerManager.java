@@ -87,6 +87,11 @@ public class SlayerManager {
         return templates;
     }
 
+    // 🌟 NUEVO: Este es el método que le faltaba al Listener para actualizar la BossBar
+    public Map<UUID, ActiveSlayer> getActiveSlayers() {
+        return activeSlayers;
+    }
+
     // 🌟 Record súper optimizado para guardar las plantillas
     public record SlayerTemplate(String id, String name, String targetMob, int requiredKills, String bossType, String bossName, List<String> rewards) {}
 }
