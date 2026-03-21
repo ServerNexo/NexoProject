@@ -4,12 +4,16 @@ import me.nexo.clans.NexoClans;
 import me.nexo.clans.core.NexoClan;
 import me.nexo.core.NexoCore;
 import me.nexo.core.user.NexoUser;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.Optional;
+import java.util.UUID;
 
 public class ComandoClan implements CommandExecutor {
 
@@ -21,71 +25,117 @@ public class ComandoClan implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player)) {
-            sender.sendMessage("Este comando es solo para jugadores.");
-            return true;
-        }
-        Player player = (Player) sender;
+        if (!(sender instanceof Player player)) return true;
         NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
 
-        if (user == null) {
-            player.sendMessage("§cTus datos aún están cargando. Intenta de nuevo en unos segundos.");
-            return true;
-        }
+        if (user == null) { player.sendMessage("§cTus datos aún están cargando."); return true; }
 
-        // 🌟 /clan (Ver stats)
         if (args.length == 0) {
             if (user.hasClan()) {
                 Optional<NexoClan> clanOpt = plugin.getClanManager().getClanFromCache(user.getClanId());
-                if (clanOpt.isPresent()) {
-                    NexoClan clan = clanOpt.get();
-                    player.sendMessage("§8=========================");
-                    player.sendMessage("§6§l CLAN: §e" + clan.getName() + " §8[§7" + clan.getTag() + "§8]");
-                    player.sendMessage("§8=========================");
-                    player.sendMessage("§7Nivel del Monolito: §a" + clan.getMonolithLevel());
-                    player.sendMessage("§7Banco de Clan: §2$" + clan.getBankBalance());
-                    player.sendMessage("§7Tu Rango: §b" + user.getClanRole());
-                    player.sendMessage("§8=========================");
-                } else {
-                    player.sendMessage("§cCargando datos de tu clan desde la nube... Intenta de nuevo.");
-                }
+                clanOpt.ifPresentOrElse(
+                        clan -> me.nexo.clans.menu.ClanMenu.abrirMenu(player, clan, user),
+                        () -> player.sendMessage("§cCargando datos...")
+                );
             } else {
-                player.sendMessage("§cActualmente no perteneces a ningún clan.");
-                player.sendMessage("§7Usa: §e/clan create <tag> <nombre> §7para fundar uno.");
+                player.sendMessage("§cNo tienes clan. Usa /clan create <tag> <nombre>");
             }
             return true;
         }
 
-        // 🌟 /clan create <tag> <nombre>
-        if (args[0].equalsIgnoreCase("create")) {
-            if (user.hasClan()) {
-                player.sendMessage("§cYa perteneces a un clan. Primero debes abandonarlo.");
-                return true;
-            }
-            if (args.length < 3) {
-                player.sendMessage("§cUso correcto: /clan create <Tag> <Nombre>");
-                return true;
-            }
+        String subCommand = args[0].toLowerCase();
 
+        // (Mantenemos los comandos de siempre)
+        if (subCommand.equals("create")) { /* Tu lógica de create que ya estaba... copiada abreviada o usa la tuya */
+            if (user.hasClan()) { player.sendMessage("§cYa perteneces a un clan."); return true; }
+            if (args.length < 3) { player.sendMessage("§cUso: /clan create <Tag> <Nombre>"); return true; }
             String tag = args[1].toUpperCase();
-            // Juntamos el resto de los argumentos por si el nombre tiene espacios
             String nombre = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
-
-            if (tag.length() > 5) {
-                player.sendMessage("§cEl Tag no puede tener más de 5 letras.");
-                return true;
-            }
-            if (nombre.length() > 30) {
-                player.sendMessage("§cEl Nombre no puede exceder las 30 letras.");
-                return true;
-            }
-
-            player.sendMessage("§eForjando el clan en la base de datos...");
             plugin.getClanManager().crearClanAsync(player, user, tag, nombre);
             return true;
         }
 
-        player.sendMessage("§7Comando no reconocido. Sub-comandos en construcción 🏗️");
+        if (subCommand.equals("invite")) {
+            if (!user.hasClan() || (!user.getClanRole().equals("LIDER") && !user.getClanRole().equals("OFICIAL"))) return true;
+            Player target = Bukkit.getPlayerExact(args[1]);
+            if (target != null) plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> plugin.getClanManager().invitarJugador(player, target, clan));
+            return true;
+        }
+
+        if (subCommand.equals("join")) {
+            UUID inv = plugin.getClanManager().getInvitacionPendiente(player);
+            if (inv != null) plugin.getClanManager().loadClanAsync(inv, clan -> plugin.getClanManager().unirseClanAsync(player, user, clan));
+            return true;
+        }
+
+        if (subCommand.equals("leave")) {
+            if (user.hasClan() && !user.getClanRole().equals("LIDER")) plugin.getClanManager().abandonarClanAsync(player, user);
+            return true;
+        }
+
+        if (subCommand.equals("ff") || subCommand.equals("friendlyfire")) {
+            if (user.hasClan() && (user.getClanRole().equals("LIDER") || user.getClanRole().equals("OFICIAL"))) {
+                plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> plugin.getClanManager().toggleFriendlyFireAsync(clan, player, !clan.isFriendlyFire()));
+            }
+            return true;
+        }
+
+        if (subCommand.equals("kick")) {
+            if (!user.hasClan() || (!user.getClanRole().equals("LIDER") && !user.getClanRole().equals("OFICIAL"))) return true;
+            Player target = Bukkit.getPlayerExact(args[1]);
+            if (target != null) {
+                NexoUser tUser = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(target.getUniqueId());
+                if (tUser != null && tUser.getClanId().equals(user.getClanId())) plugin.getClanManager().expulsarJugadorAsync(player, target, tUser);
+            }
+            return true;
+        }
+
+        if (subCommand.equals("disband")) {
+            if (user.hasClan() && user.getClanRole().equals("LIDER")) plugin.getClanManager().disolverClanAsync(player, user, user.getClanId());
+            return true;
+        }
+
+        // 🌟 NUEVO: /clan sethome
+        if (subCommand.equals("sethome")) {
+            if (!user.hasClan() || !user.getClanRole().equals("LIDER")) {
+                player.sendMessage("§cSolo el Líder puede establecer la base del Monolito.");
+                return true;
+            }
+            plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
+                plugin.getClanManager().setClanHomeAsync(clan, player, player.getLocation());
+            });
+            return true;
+        }
+
+        // 🌟 NUEVO: /clan home
+        if (subCommand.equals("home")) {
+            if (!user.hasClan()) {
+                player.sendMessage("§cNo perteneces a ningún clan.");
+                return true;
+            }
+            plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
+                if (clan.getPublicHome() == null || clan.getPublicHome().isEmpty()) {
+                    player.sendMessage("§cTu clan aún no ha establecido una base. Dile al líder que use /clan sethome.");
+                    return;
+                }
+                try {
+                    String[] parts = clan.getPublicHome().split(";");
+                    World w = Bukkit.getWorld(parts[0]);
+                    double x = Double.parseDouble(parts[1]);
+                    double y = Double.parseDouble(parts[2]);
+                    double z = Double.parseDouble(parts[3]);
+                    float yaw = Float.parseFloat(parts[4]);
+                    float pitch = Float.parseFloat(parts[5]);
+                    player.teleport(new Location(w, x, y, z, yaw, pitch));
+                    player.sendMessage("§aTeletransportado a la base del clan. 🏛️");
+                } catch (Exception e) {
+                    player.sendMessage("§cError leyendo las coordenadas de la base.");
+                }
+            });
+            return true;
+        }
+
+        player.sendMessage("§7Sub-comandos: §ecreate, invite, join, leave, ff, kick, disband, sethome, home.");
         return true;
     }
 }

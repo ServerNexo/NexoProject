@@ -9,17 +9,15 @@ public class NexoClan {
     private String name;
     private String tag;
 
-    // Progresión
     private int monolithLevel;
     private long monolithExp;
-
-    // Economía
     private BigDecimal bankBalance;
-
-    // Turismo (Guardaremos la ubicación como un String serializado por ahora)
     private String publicHome;
 
-    public NexoClan(UUID id, String name, String tag, int monolithLevel, long monolithExp, BigDecimal bankBalance, String publicHome) {
+    // 🌟 NUEVO: Fuego Amigo
+    private boolean friendlyFire;
+
+    public NexoClan(UUID id, String name, String tag, int monolithLevel, long monolithExp, BigDecimal bankBalance, String publicHome, boolean friendlyFire) {
         this.id = id;
         this.name = name;
         this.tag = tag;
@@ -27,35 +25,20 @@ public class NexoClan {
         this.monolithExp = monolithExp;
         this.bankBalance = bankBalance;
         this.publicHome = publicHome;
+        this.friendlyFire = friendlyFire; // 🌟 Inicializamos
     }
 
-    // ==========================================
-    // 🛡️ MÉTODOS SINCRONIZADOS (Thread-Safe)
-    // ==========================================
-    public synchronized void addMonolithExp(long amount) {
-        this.monolithExp += amount;
-        // Aquí luego pondremos la lógica de subir de nivel
-    }
-
+    // Métodos Sincronizados
+    public synchronized void addMonolithExp(long amount) { this.monolithExp += amount; }
     public synchronized void depositMoney(double amount) {
-        if (amount > 0) {
-            this.bankBalance = this.bankBalance.add(BigDecimal.valueOf(amount));
-        }
+        if (amount > 0) this.bankBalance = this.bankBalance.add(BigDecimal.valueOf(amount));
     }
-
     public synchronized void withdrawMoney(double amount) {
-        if (amount > 0 && hasEnoughMoney(amount)) {
-            this.bankBalance = this.bankBalance.subtract(BigDecimal.valueOf(amount));
-        }
+        if (amount > 0 && hasEnoughMoney(amount)) this.bankBalance = this.bankBalance.subtract(BigDecimal.valueOf(amount));
     }
+    public boolean hasEnoughMoney(double amount) { return this.bankBalance.compareTo(BigDecimal.valueOf(amount)) >= 0; }
 
-    public boolean hasEnoughMoney(double amount) {
-        return this.bankBalance.compareTo(BigDecimal.valueOf(amount)) >= 0;
-    }
-
-    // ==========================================
-    // 📖 GETTERS Y SETTERS BÁSICOS
-    // ==========================================
+    // Getters y Setters
     public UUID getId() { return id; }
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -67,4 +50,8 @@ public class NexoClan {
     public BigDecimal getBankBalance() { return bankBalance; }
     public String getPublicHome() { return publicHome; }
     public void setPublicHome(String publicHome) { this.publicHome = publicHome; }
+
+    // 🌟 GETTER Y SETTER DE FUEGO AMIGO
+    public boolean isFriendlyFire() { return friendlyFire; }
+    public void setFriendlyFire(boolean friendlyFire) { this.friendlyFire = friendlyFire; }
 }

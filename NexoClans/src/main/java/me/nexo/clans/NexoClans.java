@@ -33,6 +33,9 @@ public class NexoClans extends JavaPlugin {
 
         // 🌟 3. Registramos los Listeners y Comandos
         getServer().getPluginManager().registerEvents(new ClanConnectionListener(this), this);
+        getServer().getPluginManager().registerEvents(new me.nexo.clans.listeners.ClanDamageListener(this), this);
+        // ... en tu onEnable()
+        getServer().getPluginManager().registerEvents(new me.nexo.clans.menu.ClanMenuListener(this), this);
 
         if (getCommand("clan") != null) {
             getCommand("clan").setExecutor(new ComandoClan(this));

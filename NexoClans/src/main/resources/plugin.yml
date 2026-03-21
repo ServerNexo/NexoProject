@@ -7,5 +7,6 @@ description: 'Motor de progresión cooperativa y clanes.'
 depend: [NexoCore]
 commands:
   clan:
-    description: "Comando principal del sistema de clanes"
-    aliases: [c, clanes]
+    description: Comando principal de clanes
+  c:
+    description: Chat privado del clan
