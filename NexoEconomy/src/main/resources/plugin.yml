@@ -1,0 +1,10 @@
+name: NexoEconomy
+version: 1.0-SNAPSHOT
+main: me.nexo.economy.NexoEconomy
+api-version: '1.21'
+depend: [NexoCore]
+
+commands:
+  eco:
+    description: Comando principal de economía
+    aliases: [bal, balance, money, gemas, mana]
