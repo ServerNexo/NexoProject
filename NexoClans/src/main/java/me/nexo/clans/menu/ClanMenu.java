@@ -44,9 +44,10 @@ public class ClanMenu {
         ItemMeta bankMeta = bank.getItemMeta();
         bankMeta.setDisplayName("§a§l💰 Banco del Clan");
         List<String> bankLore = new ArrayList<>();
-        bankLore.add("§7Balance: §2$" + clan.getBankBalance());
+        bankLore.add("§7Balance: §e🪙 " + clan.getBankBalance());
         bankLore.add("");
-        bankLore.add("§e▶ (Depósitos en construcción) 🏗️");
+        bankLore.add("§a▶ Escribe §e/clan deposit <cantidad>");
+        bankLore.add("§c▶ Escribe §e/clan withdraw <cantidad>");
         bankMeta.setLore(bankLore);
         bank.setItemMeta(bankMeta);
         inv.setItem(11, bank);

@@ -95,6 +95,88 @@ public class ComandoClan implements CommandExecutor {
             return true;
         }
 
+        // 🌟 NUEVO: /clan deposit <cantidad>
+        if (subCommand.equals("deposit")) {
+            if (!user.hasClan()) { player.sendMessage("§cNo perteneces a ningún clan."); return true; }
+            if (args.length < 2) { player.sendMessage("§cUso correcto: /clan deposit <cantidad>"); return true; }
+
+            try {
+                java.math.BigDecimal amount = new java.math.BigDecimal(args[1]);
+                if (amount.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                    player.sendMessage("§cLa cantidad debe ser mayor a 0."); return true;
+                }
+
+                me.nexo.economy.NexoEconomy eco = me.nexo.economy.NexoEconomy.getPlugin(me.nexo.economy.NexoEconomy.class);
+
+                // 1. Transacción Atómica: Le quitamos las monedas al jugador
+                eco.getEconomyManager().updateBalanceAsync(player.getUniqueId(), me.nexo.economy.core.NexoAccount.AccountType.PLAYER, me.nexo.economy.core.NexoAccount.Currency.COINS, amount, false).thenAccept(success -> {
+                    if (success) {
+                        // 2. Si se pudo, se lo sumamos al clan
+                        plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
+                            clan.depositMoney(amount.doubleValue());
+
+                            // Guardamos en la base de datos de clanes
+                            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                                String sql = "UPDATE nexo_clans SET bank_balance = ? WHERE id = CAST(? AS UUID)";
+                                try (java.sql.Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
+                                     java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                                    ps.setBigDecimal(1, clan.getBankBalance());
+                                    ps.setString(2, clan.getId().toString());
+                                    ps.executeUpdate();
+                                } catch (Exception e) {}
+                            });
+                            player.sendMessage("§aHas depositado §e🪙 " + amount + " §aal banco de tu clan.");
+                        });
+                    } else {
+                        player.sendMessage("§cNo tienes suficientes Monedas en tu billetera personal.");
+                    }
+                });
+            } catch (Exception e) { player.sendMessage("§cCantidad inválida."); }
+            return true;
+        }
+
+        // 🌟 NUEVO: /clan withdraw <cantidad>
+        if (subCommand.equals("withdraw")) {
+            if (!user.hasClan()) { player.sendMessage("§cNo perteneces a ningún clan."); return true; }
+            if (!user.getClanRole().equals("LIDER") && !user.getClanRole().equals("OFICIAL")) {
+                player.sendMessage("§cSolo el Líder y los Oficiales pueden retirar fondos del banco."); return true;
+            }
+            if (args.length < 2) { player.sendMessage("§cUso correcto: /clan withdraw <cantidad>"); return true; }
+
+            try {
+                java.math.BigDecimal amount = new java.math.BigDecimal(args[1]);
+                if (amount.compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                    player.sendMessage("§cLa cantidad debe ser mayor a 0."); return true;
+                }
+
+                plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
+                    if (!clan.hasEnoughMoney(amount.doubleValue())) {
+                        player.sendMessage("§cEl banco del clan no tiene suficientes fondos."); return;
+                    }
+
+                    // 1. Quitamos dinero del clan
+                    clan.withdrawMoney(amount.doubleValue());
+
+                    Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                        String sql = "UPDATE nexo_clans SET bank_balance = ? WHERE id = CAST(? AS UUID)";
+                        try (java.sql.Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
+                             java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                            ps.setBigDecimal(1, clan.getBankBalance());
+                            ps.setString(2, clan.getId().toString());
+                            ps.executeUpdate();
+                        } catch (Exception e) {}
+                    });
+
+                    // 2. Transacción Atómica: Se lo damos al jugador
+                    me.nexo.economy.NexoEconomy eco = me.nexo.economy.NexoEconomy.getPlugin(me.nexo.economy.NexoEconomy.class);
+                    eco.getEconomyManager().updateBalanceAsync(player.getUniqueId(), me.nexo.economy.core.NexoAccount.AccountType.PLAYER, me.nexo.economy.core.NexoAccount.Currency.COINS, amount, true);
+
+                    player.sendMessage("§aHas retirado §e🪙 " + amount + " §adel banco del clan.");
+                });
+            } catch (Exception e) { player.sendMessage("§cCantidad inválida."); }
+            return true;
+        }
+
         // 🌟 NUEVO: /clan sethome
         if (subCommand.equals("sethome")) {
             if (!user.hasClan() || !user.getClanRole().equals("LIDER")) {

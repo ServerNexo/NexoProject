@@ -8,3 +8,11 @@ commands:
   eco:
     description: Comando principal de economía
     aliases: [bal, balance, money, gemas, mana]
+  trade:
+    description: Inicia un intercambio seguro con otro jugador
+  bazar:
+    description: Acceso al Mercado Global
+    aliases: [ bazaar, mercado, ah ]
+  mercadonegro:
+    description: Comandos del Mercado Negro
+    aliases: [ bm, blackmarket ]
