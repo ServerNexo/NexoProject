@@ -1,0 +1,11 @@
+name: NexoClans
+version: '${project.version}'
+main: me.nexo.clans.NexoClans
+api-version: '1.21'
+author: 'Z0101'
+description: 'Motor de progresión cooperativa y clanes.'
+depend: [NexoCore]
+commands:
+  clan:
+    description: "Comando principal del sistema de clanes"
+    aliases: [c, clanes]

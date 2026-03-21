@@ -10,6 +10,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.UUID;
 
 public class DatabaseManager {
@@ -74,14 +75,15 @@ public class DatabaseManager {
     private void crearTabla() {
         if (dataSource == null) return; // Si falló la conexión, no intentamos crear tablas
 
-        // 🟢 Clean Code: Text Blocks para evitar el "+" infinito en SQL
+        // 🟢 Clean Code: Text Blocks para evitar el "+" infinito en SQL + CLANES AÑADIDOS
         String sqlJugadores = """
                 CREATE TABLE IF NOT EXISTS jugadores (
                     uuid VARCHAR(36) PRIMARY KEY, nombre VARCHAR(16) NOT NULL,
                     nexo_nivel INT DEFAULT 1, nexo_xp INT DEFAULT 0,
                     combate_nivel INT DEFAULT 1, combate_xp INT DEFAULT 0,
                     mineria_nivel INT DEFAULT 1, mineria_xp INT DEFAULT 0,
-                    agricultura_nivel INT DEFAULT 1, agricultura_xp INT DEFAULT 0
+                    agricultura_nivel INT DEFAULT 1, agricultura_xp INT DEFAULT 0,
+                    clan_id UUID DEFAULT NULL, clan_role VARCHAR(15) DEFAULT 'NONE'
                 );""";
 
         String sqlMochilas = """
@@ -141,13 +143,19 @@ public class DatabaseManager {
                     ResultSet rs = psSelect.executeQuery();
 
                     if (rs.next()) {
+                        // 🟢 LECTURA DE CLAN: Evitamos NullPointerExceptions
+                        String clanIdStr = rs.getString("clan_id");
+                        UUID clanId = (clanIdStr != null && !clanIdStr.isEmpty()) ? UUID.fromString(clanIdStr) : null;
+                        String clanRole = rs.getString("clan_role");
+
                         // 🟢 ARQUITECTURA: Creamos el objeto NexoUser con los datos de la DB
                         NexoUser user = new NexoUser(
                                 uuid, name,
                                 rs.getInt("nexo_nivel"), rs.getInt("nexo_xp"),
                                 rs.getInt("combate_nivel"), rs.getInt("combate_xp"),
                                 rs.getInt("mineria_nivel"), rs.getInt("mineria_xp"),
-                                rs.getInt("agricultura_nivel"), rs.getInt("agricultura_xp")
+                                rs.getInt("agricultura_nivel"), rs.getInt("agricultura_xp"),
+                                clanId, clanRole
                         );
 
                         // 🔴 VOLVEMOS AL MAIN THREAD para meterlo en la caché de forma segura
@@ -164,8 +172,9 @@ public class DatabaseManager {
 
                             // 🔴 VOLVEMOS AL MAIN THREAD
                             Bukkit.getScheduler().runTask(plugin, () -> {
+                                // Se crea por defecto sin clan (null, "NONE")
                                 NexoUser newUser = new NexoUser(
-                                        uuid, name, 1, 0, 1, 0, 1, 0, 1, 0
+                                        uuid, name, 1, 0, 1, 0, 1, 0, 1, 0, null, "NONE"
                                 );
                                 plugin.getUserManager().addUserToCache(newUser);
                                 plugin.getLogger().info("¡Nuevo jugador RPG registrado: " + name);
@@ -187,10 +196,12 @@ public class DatabaseManager {
         NexoUser user = plugin.getUserManager().getUserOrNull(uuid);
         if (user == null) return; // Si no está en caché, no hay nada que guardar
 
+        // 🟢 Actualizado para guardar Clan ID y Rol
         String updateSQL = """
                 UPDATE jugadores SET nexo_nivel = ?, nexo_xp = ?, nombre = ?, 
                 combate_nivel = ?, combate_xp = ?, mineria_nivel = ?, mineria_xp = ?, 
-                agricultura_nivel = ?, agricultura_xp = ? WHERE uuid = ?
+                agricultura_nivel = ?, agricultura_xp = ?, clan_id = CAST(? AS UUID), clan_role = ? 
+                WHERE uuid = ?
                 """;
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -200,7 +211,16 @@ public class DatabaseManager {
                 ps.setInt(1, user.getNexoNivel()); ps.setInt(2, user.getNexoXp()); ps.setString(3, user.getNombre());
                 ps.setInt(4, user.getCombateNivel()); ps.setInt(5, user.getCombateXp()); ps.setInt(6, user.getMineriaNivel());
                 ps.setInt(7, user.getMineriaXp()); ps.setInt(8, user.getAgriculturaNivel()); ps.setInt(9, user.getAgriculturaXp());
-                ps.setString(10, uuid.toString());
+
+                // Si no tiene clan, insertamos un NULL
+                if (user.getClanId() != null) {
+                    ps.setString(10, user.getClanId().toString());
+                } else {
+                    ps.setNull(10, Types.VARCHAR);
+                }
+
+                ps.setString(11, user.getClanRole());
+                ps.setString(12, uuid.toString());
 
                 ps.executeUpdate();
 
@@ -225,10 +245,12 @@ public class DatabaseManager {
         NexoUser user = plugin.getUserManager().getUserOrNull(uuid);
         if (user == null) return;
 
+        // 🟢 Actualizado para guardar Clan ID y Rol síncronamente
         String updateSQL = """
                 UPDATE jugadores SET nexo_nivel = ?, nexo_xp = ?, nombre = ?, 
                 combate_nivel = ?, combate_xp = ?, mineria_nivel = ?, mineria_xp = ?, 
-                agricultura_nivel = ?, agricultura_xp = ? WHERE uuid = ?
+                agricultura_nivel = ?, agricultura_xp = ?, clan_id = CAST(? AS UUID), clan_role = ? 
+                WHERE uuid = ?
                 """;
 
         try (Connection conn = getConnection();
@@ -237,7 +259,15 @@ public class DatabaseManager {
             ps.setInt(1, user.getNexoNivel()); ps.setInt(2, user.getNexoXp()); ps.setString(3, user.getNombre());
             ps.setInt(4, user.getCombateNivel()); ps.setInt(5, user.getCombateXp()); ps.setInt(6, user.getMineriaNivel());
             ps.setInt(7, user.getMineriaXp()); ps.setInt(8, user.getAgriculturaNivel()); ps.setInt(9, user.getAgriculturaXp());
-            ps.setString(10, uuid.toString());
+
+            if (user.getClanId() != null) {
+                ps.setString(10, user.getClanId().toString());
+            } else {
+                ps.setNull(10, Types.VARCHAR);
+            }
+
+            ps.setString(11, user.getClanRole());
+            ps.setString(12, uuid.toString());
 
             ps.executeUpdate();
         } catch (SQLException e) {

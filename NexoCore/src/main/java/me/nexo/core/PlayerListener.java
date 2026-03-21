@@ -22,16 +22,16 @@ public class PlayerListener implements Listener {
         Player p = event.getPlayer();
         UUID uuid = p.getUniqueId();
 
-        // 🌟 1. Creamos el perfil temporal del usuario en base a tu clase NexoUser
-        // (Nota: Si tu NexoUser pide más variables, agrégalas aquí adentro)
         // 🌟 1. Creamos el perfil temporal con Nivel 1 y 0 de XP en todo
+        // Añadimos null y "NONE" al final para el sistema de clanes
         NexoUser usuario = new NexoUser(
                 uuid,           // UUID
                 p.getName(),    // Nombre
                 1, 0,           // Nexo: Nivel 1, 0 XP
                 1, 0,           // Combate: Nivel 1, 0 XP
                 1, 0,           // Minería: Nivel 1, 0 XP
-                1, 0            // Agricultura: Nivel 1, 0 XP
+                1, 0,           // Agricultura: Nivel 1, 0 XP
+                null, "NONE"    // 🌟 NUEVO: Sin clan por defecto
         );
 
         // 🌟 2. Lo guardamos en tu ultra-rápida caché de Caffeine

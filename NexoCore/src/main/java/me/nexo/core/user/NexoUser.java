@@ -8,6 +8,10 @@ public class NexoUser {
     private final UUID uuid;
     private final String nombre;
 
+    // 🛡️ MODIFICACIÓN: Datos de Clan
+    private UUID clanId;
+    private String clanRole; // LIDER, OFICIAL, MIEMBRO, NONE
+
     // Estadísticas seguras para múltiples hilos
     private final AtomicInteger nexoNivel;
     private final AtomicInteger nexoXp;
@@ -23,9 +27,14 @@ public class NexoUser {
     private final AtomicInteger energiaExtraAccesorios;
     private String claseJugador; // Guardará el nombre de su clase RPG si tiene
 
-    public NexoUser(UUID uuid, String nombre, int nNivel, int nXp, int cNivel, int cXp, int mNivel, int mXp, int aNivel, int aXp) {
+    public NexoUser(UUID uuid, String nombre, int nNivel, int nXp, int cNivel, int cXp, int mNivel, int mXp, int aNivel, int aXp, UUID clanId, String clanRole) {
         this.uuid = uuid;
         this.nombre = nombre;
+
+        // 🏛️ Inicialización de Clan
+        this.clanId = clanId;
+        this.clanRole = (clanRole == null || clanRole.isEmpty()) ? "NONE" : clanRole;
+
         this.nexoNivel = new AtomicInteger(nNivel);
         this.nexoXp = new AtomicInteger(nXp);
         this.combateNivel = new AtomicInteger(cNivel);
@@ -40,6 +49,15 @@ public class NexoUser {
         this.energiaExtraAccesorios = new AtomicInteger(0);
         this.claseJugador = "Ninguna";
     }
+
+    // 🏛️ GETTERS Y SETTERS DE CLAN
+    public UUID getClanId() { return clanId; }
+    public void setClanId(UUID clanId) { this.clanId = clanId; }
+
+    public String getClanRole() { return clanRole; }
+    public void setClanRole(String clanRole) { this.clanRole = clanRole; }
+
+    public boolean hasClan() { return clanId != null; }
 
     // Getters básicos
     public UUID getUuid() { return uuid; }
