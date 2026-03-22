@@ -28,6 +28,7 @@
         <module>NexoClans</module>
         <module>NexoEconomy</module>
         <module>NexoProtections</module>
+        <module>NexoWar</module>
     </modules>
 
     <build>
