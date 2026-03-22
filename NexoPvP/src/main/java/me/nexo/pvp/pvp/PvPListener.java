@@ -32,14 +32,26 @@ public class PvPListener implements Listener {
         if (atacante != null && event.getEntity() instanceof Player victima) {
             if (atacante.equals(victima)) return;
 
-            // 🌟 VERIFICAR ZONA SEGURA (Conexión con NexoProtections)
+            // 🌟 VERIFICAR ZONA SEGURA (NexoProtections)
             if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
                 me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(victima.getLocation());
 
                 if (stone != null && !stone.getFlag("pvp")) {
-                    atacante.sendMessage("§cNo puedes atacar en una Zona Segura.");
-                    event.setCancelled(true);
-                    return; // Cortamos el evento antes de que entren en combate
+
+                    // 🌟 MODO HONOR: ¿Están en guerra? Si es así, IGNORAMOS la zona segura.
+                    boolean ignorarProteccion = false;
+                    if (Bukkit.getPluginManager().isPluginEnabled("NexoWar")) {
+                        ignorarProteccion = me.nexo.war.NexoWar.getPlugin(me.nexo.war.NexoWar.class).getWarManager().estanEnGuerraActiva(atacante.getUniqueId(), victima.getUniqueId());
+                    }
+
+                    if (!ignorarProteccion) {
+                        atacante.sendMessage("§cNo puedes atacar en una Zona Segura.");
+                        event.setCancelled(true);
+                        return; // Cortamos el evento antes de que entren en combate
+                    } else {
+                        // Opcional: Avisarle que está en territorio enemigo
+                        // atacante.sendMessage("§4⚔ ¡Estás derramando sangre en territorio enemigo!");
+                    }
                 }
             }
 
@@ -49,13 +61,12 @@ public class PvPListener implements Listener {
             }
 
             manager.marcarEnCombate(atacante, victima);
-            // Reducción de daño RPG al 40% (60% menos de daño)
             event.setDamage(event.getDamage() * 0.40);
         }
     }
 
     // ==========================================
-    // 🏆 SISTEMA DE HONOR Y BOUNTY
+    // 🏆 SISTEMA DE HONOR Y BOUNTY (Intacto)
     // ==========================================
     @EventHandler
     public void onMuerte(PlayerDeathEvent event) {
@@ -63,21 +74,17 @@ public class PvPListener implements Listener {
         Player asesino = victima.getKiller();
         UUID idVictima = victima.getUniqueId();
 
-        // 1. Limpiamos combate de la víctima
         manager.enCombate.remove(idVictima);
 
         if (asesino != null && manager.tienePvP(victima) && manager.tienePvP(asesino)) {
             UUID idAsesino = asesino.getUniqueId();
 
-            // 2. Dar Honor Base (+1)
             int honorActual = manager.puntosHonor.getOrDefault(idAsesino, 0) + 1;
             manager.puntosHonor.put(idAsesino, honorActual);
             asesino.sendMessage("§e⚔ ¡Has derrotado a " + victima.getName() + "! §6(+1 Honor)");
 
-            // 3. Sistema de Bounty (Cazarrecompensas)
             int rachaVictima = manager.rachaAsesinatos.getOrDefault(idVictima, 0);
 
-            // Si la víctima tenía un Bounty (Racha >= 3)
             if (rachaVictima >= 3) {
                 Bukkit.broadcastMessage("§e§l[CAZARRECOMPENSAS] §f" + asesino.getName() + " §aha cobrado la recompensa por la cabeza de §c" + victima.getName() + "§a!");
                 asesino.sendMessage("§6💎 ¡Bounty Reclamado! Ganaste +5 de Honor extra y un Diamante.");
@@ -86,11 +93,9 @@ public class PvPListener implements Listener {
                 asesino.playSound(asesino.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
             }
 
-            // 4. Aumentar Racha del Asesino
             int rachaAsesino = manager.rachaAsesinatos.getOrDefault(idAsesino, 0) + 1;
             manager.rachaAsesinatos.put(idAsesino, rachaAsesino);
 
-            // Anunciar si el asesino obtiene un Bounty
             if (rachaAsesino == 3) {
                 Bukkit.broadcastMessage("§4§l[SE BUSCA] §c" + asesino.getName() + " §7está en una racha de sangre (3 Kills). ¡Hay recompensa por su cabeza!");
             } else if (rachaAsesino > 3) {
@@ -98,7 +103,6 @@ public class PvPListener implements Listener {
             }
         }
 
-        // 5. Reiniciar Racha de la Víctima a 0
         manager.rachaAsesinatos.put(idVictima, 0);
     }
 

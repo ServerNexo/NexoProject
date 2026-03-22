@@ -5,6 +5,7 @@ api-version: '1.21'
 author: 'TuNombre'
 description: 'Sistema de combate y pasivas PvP.'
 depend: [NexoCore, NexoProtections]
+softdepend: [NexoWar]
 
 commands:
   pvp:

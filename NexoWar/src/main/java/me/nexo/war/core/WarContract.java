@@ -14,8 +14,8 @@ public record WarContract(
         int killsDefensor
 ) {
     public enum WarStatus {
-        GRACE_PERIOD, // 30 min de preparación
-        ACTIVE,       // En combate
-        FINISHED      // Terminada
+        GRACE_PERIOD, // Tiempo de preparación (5 min)
+        ACTIVE,       // En combate a muerte
+        FINISHED      // Guerra terminada
     }
 }

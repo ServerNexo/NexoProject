@@ -28,8 +28,26 @@ public class NexoClan {
         this.friendlyFire = friendlyFire; // 🌟 Inicializamos
     }
 
-    // Métodos Sincronizados
-    public synchronized void addMonolithExp(long amount) { this.monolithExp += amount; }
+    // 🌟 CORREGIDO: Ahora devuelve boolean si subió de nivel y calcula la subida
+    public synchronized boolean addMonolithExp(long amount) {
+        this.monolithExp += amount;
+        boolean levelUp = false;
+
+        // Fórmula de ejemplo: Cada nivel requiere 1000 * nivel actual
+        // Ej: Nivel 1 -> 1000 exp, Nivel 2 -> 2000 exp
+        long expRequired = this.monolithLevel * 1000L;
+
+        while (this.monolithExp >= expRequired) {
+            this.monolithExp -= expRequired;
+            this.monolithLevel++;
+            levelUp = true;
+            expRequired = this.monolithLevel * 1000L; // Recalculamos para el siguiente nivel
+        }
+
+        return levelUp;
+    }
+
+    // Métodos Sincronizados de Economía
     public synchronized void depositMoney(double amount) {
         if (amount > 0) this.bankBalance = this.bankBalance.add(BigDecimal.valueOf(amount));
     }
