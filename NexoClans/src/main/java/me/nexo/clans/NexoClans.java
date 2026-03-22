@@ -1,12 +1,13 @@
 package me.nexo.clans;
 
-import me.nexo.core.NexoCore;
-import org.bukkit.plugin.java.JavaPlugin;
-
-// 🌟 Importamos nuestras nuevas clases
+import me.nexo.clans.commands.ComandoClan;
+import me.nexo.clans.commands.ComandoChatClan; // Si tienes este comando para el chat
 import me.nexo.clans.core.ClanManager;
 import me.nexo.clans.listeners.ClanConnectionListener;
-import me.nexo.clans.commands.ComandoClan;
+import me.nexo.clans.listeners.ClanDamageListener;
+import me.nexo.clans.menu.ClanMenuListener;
+import me.nexo.core.NexoCore;
+import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoClans extends JavaPlugin {
 
@@ -31,14 +32,19 @@ public class NexoClans extends JavaPlugin {
         // 🌟 2. Inicializamos el Caché de Clanes
         this.clanManager = new ClanManager(this);
 
-        // 🌟 3. Registramos los Listeners y Comandos
+        // 🌟 3. Registramos los Listeners
         getServer().getPluginManager().registerEvents(new ClanConnectionListener(this), this);
-        getServer().getPluginManager().registerEvents(new me.nexo.clans.listeners.ClanDamageListener(this), this);
-        // ... en tu onEnable()
-        getServer().getPluginManager().registerEvents(new me.nexo.clans.menu.ClanMenuListener(this), this);
+        getServer().getPluginManager().registerEvents(new ClanDamageListener(this), this);
+        getServer().getPluginManager().registerEvents(new ClanMenuListener(this), this);
 
+        // 🌟 4. Registramos los Comandos
         if (getCommand("clan") != null) {
             getCommand("clan").setExecutor(new ComandoClan(this));
+        }
+
+        // Si tienes configurado el comando /cc (Chat de Clan) en el plugin.yml:
+        if (getCommand("cc") != null) {
+            getCommand("cc").setExecutor(new ComandoChatClan(this));
         }
 
         getLogger().info("✅ ¡NexoClans cargado exitosamente!");
@@ -51,7 +57,7 @@ public class NexoClans extends JavaPlugin {
         getLogger().info("💾 Guardando datos de clanes y apagando...");
     }
 
-    // 🌟 4. Getter para que otros archivos puedan usar la memoria RAM de clanes
+    // 🌟 5. Getter para que otros archivos puedan usar la memoria RAM de clanes
     public ClanManager getClanManager() {
         return clanManager;
     }

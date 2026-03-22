@@ -71,6 +71,7 @@ public class ActiveMinion {
         return base + bonus;
     }
 
+    // 🌟 BALANCE OFF-LINE ESTRICTO:
     public void calcularTrabajoOffline(long currentTimeMillis) {
         long tiempoPasado = currentTimeMillis - this.nextActionTime;
         if (tiempoPasado > 0) {
@@ -78,7 +79,25 @@ public class ActiveMinion {
             int trabajosPerdidos = (int) (tiempoPasado / tiempoPorAccion);
 
             int maxStorage = getRealMaxStorage();
-            this.storedItems = Math.min(maxStorage, this.storedItems + trabajosPerdidos);
+
+            // Si el minion NO tiene la mejora de cofre ("STORAGE_LINK"), se topa con su mochila y deja de producir.
+            if (!tieneMejora("STORAGE_LINK")) {
+                this.storedItems = Math.min(maxStorage, this.storedItems + trabajosPerdidos);
+
+                // Si la mochila se llenó, el minion no hizo más trabajos (así evitamos dar XP o gastar combustible de sobra)
+                if (this.storedItems >= maxStorage) {
+                    trabajosPerdidos = maxStorage - this.storedItems;
+                }
+            } else {
+                // Si tiene cofre, asume que lo guardó en el cofre (o se llenó el cofre, Bukkit manejará el sobrante)
+                // Aquí podrías añadir lógica para comprobar si el cofre offline también se llenó,
+                // pero por ahora dejaremos que fluya si tiene la mejora comprada.
+                this.storedItems += trabajosPerdidos;
+            }
+
+            this.trabajosRealizados += trabajosPerdidos;
+            consumirCombustibles(); // Le cobramos el combustible de todo lo que minó mientras dormías
+
             this.entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
 
             this.nextActionTime = currentTimeMillis + tiempoPorAccion;

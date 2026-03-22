@@ -80,11 +80,29 @@ public class MinionManager {
                 }
             }
 
+            // 🌟 NUEVO: Entregarle al jugador los ítems que el minion tenía en su mochila
+            if (minion.getStoredItems() > 0) {
+                int cantidad = minion.getStoredItems();
+                org.bukkit.Material mat = minion.getType().getTargetMaterial();
+
+                // Dividimos en stacks de 64 para no romper el inventario
+                while (cantidad > 0) {
+                    int dar = Math.min(cantidad, 64);
+                    ItemStack recompensa = new ItemStack(mat, dar);
+                    var sobrante = player.getInventory().addItem(recompensa);
+                    for (ItemStack drop : sobrante.values()) {
+                        player.getWorld().dropItemNaturally(player.getLocation(), drop);
+                    }
+                    cantidad -= dar;
+                }
+                player.sendMessage("§a📦 Has recuperado " + minion.getStoredItems() + " ítems que la Abeja tenía guardados.");
+            }
+
             if (minion.getEntity() != null) minion.getEntity().remove();
             if (minion.getHitbox() != null) minion.getHitbox().remove();
             if (minion.getHolograma() != null) minion.getHolograma().remove();
 
-            // 🚨 CORRECCIÓN CRÍTICA 2: Le devolvemos el espacio libre al VERDADERO DUEÑO
+            // 🚨 CORRECCIÓN: Le devolvemos el espacio libre al VERDADERO DUEÑO
             Player owner = org.bukkit.Bukkit.getPlayer(minion.getOwnerId());
             if (owner != null && owner.isOnline()) {
                 addPlacedMinion(owner, -1);
@@ -97,10 +115,6 @@ public class MinionManager {
                 }
             } else {
                 player.sendMessage("§c⚠️ ADVERTENCIA: El dueño del Minion está OFFLINE. Su límite de minions podría desincronizarse.");
-            }
-
-            if (minion.getStoredItems() > 0) {
-                player.sendMessage("§c⚠️ Se perdieron " + minion.getStoredItems() + " bloques porque no los extraíste del menú.");
             }
 
             plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "minion give " + player.getName() + " " + minion.getType().name() + " " + minion.getTier());
@@ -149,7 +163,7 @@ public class MinionManager {
         for (int i = 50; i >= 1; i--) {
             if (player.hasPermission("nexominions.limit." + i)) return i;
         }
-        return 5;
+        return 5; // Límite base para usuarios nuevos
     }
 
     public ConcurrentHashMap<UUID, ActiveMinion> getMinionsActivos() {

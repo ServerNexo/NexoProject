@@ -86,4 +86,50 @@ public class ClaimManager {
     public Map<UUID, ProtectionStone> getAllStones() {
         return stonesById;
     }
+
+    // =========================================================================
+    // 🌟 NUEVO MÉTODO: Cargar todas las piedras desde Supabase a la RAM
+    // =========================================================================
+    public void loadAllStonesAsync(me.nexo.core.NexoCore core) {
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            String sql = "SELECT * FROM nexo_protections";
+            try (java.sql.Connection conn = core.getDatabaseManager().getConnection();
+                 java.sql.PreparedStatement ps = conn.prepareStatement(sql);
+                 java.sql.ResultSet rs = ps.executeQuery()) {
+
+                int loaded = 0;
+                while(rs.next()) {
+                    UUID stoneId = UUID.fromString(rs.getString("stone_id"));
+                    UUID ownerId = UUID.fromString(rs.getString("owner_id"));
+                    String clanStr = rs.getString("clan_id");
+                    UUID clanId = (clanStr != null && !clanStr.isEmpty()) ? UUID.fromString(clanStr) : null;
+
+                    String world = rs.getString("world_name");
+                    int minX = rs.getInt("min_x");
+                    int minY = rs.getInt("min_y");
+                    int minZ = rs.getInt("min_z");
+                    int maxX = rs.getInt("max_x");
+                    int maxY = rs.getInt("max_y");
+                    int maxZ = rs.getInt("max_z");
+
+                    me.nexo.protections.core.ClaimBox box = new me.nexo.protections.core.ClaimBox(world, minX, minY, minZ, maxX, maxY, maxZ);
+                    ProtectionStone stone = new ProtectionStone(stoneId, ownerId, clanId, box);
+
+                    // Seteamos la energía guardada
+                    double currentEnergy = rs.getDouble("current_energy");
+                    double maxEnergy = rs.getDouble("max_energy");
+
+                    stone.drainEnergy(100000); // Vaciamos temporalmente para inyectar el valor exacto de la BD
+                    stone.setMaxEnergy(maxEnergy);
+                    stone.addEnergy(currentEnergy);
+
+                    addStoneToCache(stone);
+                    loaded++;
+                }
+                org.bukkit.Bukkit.getLogger().info("🛡️ NexoProtections: Se cargaron " + loaded + " zonas protegidas en RAM.");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
 }

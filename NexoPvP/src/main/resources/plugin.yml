@@ -4,7 +4,7 @@ main: me.nexo.pvp.NexoPvP
 api-version: '1.21'
 author: 'TuNombre'
 description: 'Sistema de combate y pasivas PvP.'
-depend: [NexoCore]
+depend: [NexoCore, NexoProtections]
 
 commands:
   pvp:

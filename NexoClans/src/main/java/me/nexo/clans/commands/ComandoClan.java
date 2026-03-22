@@ -45,8 +45,7 @@ public class ComandoClan implements CommandExecutor {
 
         String subCommand = args[0].toLowerCase();
 
-        // (Mantenemos los comandos de siempre)
-        if (subCommand.equals("create")) { /* Tu lógica de create que ya estaba... copiada abreviada o usa la tuya */
+        if (subCommand.equals("create")) {
             if (user.hasClan()) { player.sendMessage("§cYa perteneces a un clan."); return true; }
             if (args.length < 3) { player.sendMessage("§cUso: /clan create <Tag> <Nombre>"); return true; }
             String tag = args[1].toUpperCase();
@@ -217,7 +216,54 @@ public class ComandoClan implements CommandExecutor {
             return true;
         }
 
-        player.sendMessage("§7Sub-comandos: §ecreate, invite, join, leave, ff, kick, disband, sethome, home.");
+        // 🌟 NUEVO: /clan tribute (Sacrificar ítems por EXP)
+        if (subCommand.equals("tribute") || subCommand.equals("tributo")) {
+            if (!user.hasClan()) { player.sendMessage("§cNo perteneces a ningún clan."); return true; }
+
+            org.bukkit.inventory.ItemStack itemEnMano = player.getInventory().getItemInMainHand();
+            if (itemEnMano == null || itemEnMano.getType() == org.bukkit.Material.AIR) {
+                player.sendMessage("§cDebes tener un ítem en la mano para ofrecerlo como tributo.");
+                return true;
+            }
+
+            // Calculamos cuánta XP da el ítem (Puedes balancear esto después)
+            long expPorItem = 1;
+            String tipo = itemEnMano.getType().name();
+            if (tipo.contains("DIAMOND") || tipo.contains("EMERALD")) expPorItem = 50;
+            if (tipo.contains("IRON") || tipo.contains("GOLD")) expPorItem = 10;
+            if (itemEnMano.hasItemMeta() && itemEnMano.getItemMeta().hasDisplayName()) expPorItem = 100; // Ítems de NexoItems o Custom
+
+            long expTotal = expPorItem * itemEnMano.getAmount();
+
+            plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
+                boolean subioNivel = clan.addMonolithExp(expTotal);
+                player.getInventory().setItemInMainHand(null); // Consumimos el ítem
+
+                player.sendMessage("§d🔮 Has sacrificado tus ítems y el Monolito ha ganado §5" + expTotal + " EXP§d.");
+
+                if (subioNivel) {
+                    Bukkit.broadcastMessage("§8========================================");
+                    Bukkit.broadcastMessage("§6§l🏛️ ¡EL CLAN " + clan.getName() + " HA EVOLUCIONADO!");
+                    Bukkit.broadcastMessage("§eSu Monolito ha alcanzado el Nivel §a" + clan.getMonolithLevel() + "§e.");
+                    Bukkit.broadcastMessage("§8========================================");
+                }
+
+                // Guardamos en la BD asíncronamente
+                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                    String sql = "UPDATE nexo_clans SET monolith_exp = ?, monolith_level = ? WHERE id = CAST(? AS UUID)";
+                    try (java.sql.Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
+                         java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                        ps.setLong(1, clan.getMonolithExp());
+                        ps.setInt(2, clan.getMonolithLevel());
+                        ps.setString(3, clan.getId().toString());
+                        ps.executeUpdate();
+                    } catch (Exception e) {}
+                });
+            });
+            return true;
+        }
+
+        player.sendMessage("§7Sub-comandos: §ecreate, invite, join, leave, ff, kick, disband, sethome, home, deposit, withdraw, tribute.");
         return true;
     }
 }

@@ -271,4 +271,21 @@ public class ClanManager {
     }
 
     public Optional<NexoClan> getClanFromCache(UUID clanId) { return Optional.ofNullable(clanCache.getIfPresent(clanId)); }
+
+    // ==========================================
+    // 🌟 NUEVO: Guardar el Banco del Clan Asíncronamente
+    // ==========================================
+    public void saveBankAsync(NexoClan clan) {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            String sql = "UPDATE nexo_clans SET bank_balance = ? WHERE id = CAST(? AS UUID)";
+            try (Connection conn = core.getDatabaseManager().getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setBigDecimal(1, clan.getBankBalance());
+                ps.setString(2, clan.getId().toString());
+                ps.executeUpdate();
+            } catch (Exception e) {
+                plugin.getLogger().severe("Error guardando el banco del clan: " + e.getMessage());
+            }
+        });
+    }
 }

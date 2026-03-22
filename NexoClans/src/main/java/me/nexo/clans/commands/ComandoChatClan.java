@@ -1,5 +1,6 @@
 package me.nexo.clans.commands;
 
+import me.nexo.clans.NexoClans;
 import me.nexo.core.NexoCore;
 import me.nexo.core.user.NexoUser;
 import org.bukkit.Bukkit;
@@ -9,6 +10,14 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 public class ComandoChatClan implements CommandExecutor {
+
+    // 🌟 Añadimos la variable del plugin
+    private final NexoClans plugin;
+
+    // 🌟 Añadimos el constructor que Java te estaba pidiendo
+    public ComandoChatClan(NexoClans plugin) {
+        this.plugin = plugin;
+    }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -22,7 +31,7 @@ public class ComandoChatClan implements CommandExecutor {
         }
 
         if (args.length == 0) {
-            player.sendMessage("§cUso correcto: /c <mensaje>");
+            player.sendMessage("§cUso correcto: /cc <mensaje>");
             return true;
         }
 

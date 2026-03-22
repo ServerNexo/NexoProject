@@ -32,6 +32,17 @@ public class PvPListener implements Listener {
         if (atacante != null && event.getEntity() instanceof Player victima) {
             if (atacante.equals(victima)) return;
 
+            // 🌟 VERIFICAR ZONA SEGURA (Conexión con NexoProtections)
+            if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
+                me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(victima.getLocation());
+
+                if (stone != null && !stone.getFlag("pvp")) {
+                    atacante.sendMessage("§cNo puedes atacar en una Zona Segura.");
+                    event.setCancelled(true);
+                    return; // Cortamos el evento antes de que entren en combate
+                }
+            }
+
             if (!manager.tienePvP(atacante) || !manager.tienePvP(victima)) {
                 event.setCancelled(true);
                 return;
