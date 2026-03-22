@@ -2,7 +2,7 @@ name: NexoEconomy
 version: 1.0-SNAPSHOT
 main: me.nexo.economy.NexoEconomy
 api-version: '1.21'
-depend: [NexoCore]
+depend: [NexoCore, NexoItems]
 
 commands:
   eco:

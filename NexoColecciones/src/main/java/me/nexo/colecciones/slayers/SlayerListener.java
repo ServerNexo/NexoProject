@@ -1,6 +1,8 @@
 package me.nexo.colecciones.slayers;
 
 import me.nexo.colecciones.NexoColecciones;
+import me.nexo.economy.NexoEconomy; // 🌟 IMPORT ECONOMÍA
+import me.nexo.economy.core.NexoAccount; // 🌟 IMPORT DIVISAS
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -19,6 +21,8 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.metadata.FixedMetadataValue;
+
+import java.math.BigDecimal; // 🌟 IMPORT PARA LOS NÚMEROS EXACTOS
 
 public class SlayerListener implements Listener {
 
@@ -49,6 +53,7 @@ public class SlayerListener implements Listener {
             player.sendMessage("§7Has derrotado a: §c" + slayer.getBossName());
             player.sendMessage("§8=======================================");
 
+            // Ejecutamos los comandos de recompensa normales del YAML
             for (String cmd : slayer.getRewards()) {
                 String finalCmd = cmd.replace("%player%", player.getName());
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd);
@@ -60,6 +65,16 @@ public class SlayerListener implements Listener {
             if (slayer.getBossBar() != null) {
                 slayer.getBossBar().removeAll();
             }
+
+            // 💎 INYECCIÓN DE ECONOMÍA: Recompensar con Gemas
+            BigDecimal recompensaGemas = new BigDecimal("5"); // 5 Gemas por Boss
+            NexoEconomy.getPlugin(NexoEconomy.class).getEconomyManager()
+                    .updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.GEMS, recompensaGemas, true)
+                    .thenAccept(success -> {
+                        if (success) {
+                            player.sendMessage("§a💎 ¡Has obtenido " + recompensaGemas + " Gemas por derrotar al Slayer!");
+                        }
+                    });
 
             manager.removeActiveSlayer(player.getUniqueId());
             return;
@@ -87,7 +102,7 @@ public class SlayerListener implements Listener {
 
                     slayer.setBossSpawned(true);
 
-                    // 🌟 NUEVO: Creamos la BossBar y se la mostramos al jugador
+                    // Creamos la BossBar y se la mostramos al jugador
                     BossBar bar = Bukkit.createBossBar(slayer.getBossName(), BarColor.RED, BarStyle.SOLID);
                     bar.addPlayer(player);
                     slayer.setBossBar(bar);
@@ -102,7 +117,7 @@ public class SlayerListener implements Listener {
         }
     }
 
-    // 🌟 NUEVO: Actualizar la barra cuando el Boss recibe daño
+    // Actualizar la barra cuando el Boss recibe daño
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBossDamage(EntityDamageEvent event) {
         Entity entity = event.getEntity();
@@ -123,7 +138,7 @@ public class SlayerListener implements Listener {
         }
     }
 
-    // 🌟 NUEVO: Castigar al jugador si se desconecta (Se cancela la misión)
+    // Castigar al jugador si se desconecta (Se cancela la misión)
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         ActiveSlayer slayer = manager.getActiveSlayer(event.getPlayer().getUniqueId());

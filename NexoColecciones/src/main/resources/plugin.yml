@@ -4,7 +4,7 @@ main: me.nexo.colecciones.NexoColecciones
 api-version: '1.21'
 author: 'TuNombre'
 description: 'Sistema de Slayers y farmeo progresivo.'
-depend: [NexoCore]
+depend: [NexoCore, NexoEconomy]
 softdepend: [PlaceholderAPI]
 commands:
   colecciones:

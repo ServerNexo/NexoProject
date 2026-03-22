@@ -4,4 +4,4 @@ main: me.nexo.mechanics.NexoMechanics
 api-version: '1.21'
 author: 'TuNombre'
 description: 'Mecanicas adicionales y minijuegos.'
-depend: [NexoCore]
+depend: [NexoCore, NexoEconomy]

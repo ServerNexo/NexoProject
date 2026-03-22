@@ -2,6 +2,7 @@ package me.nexo.economy.blackmarket;
 
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
+import me.nexo.items.managers.ItemManager; // 🌟 IMPORTANTE: Conexión con NexoItems
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -27,31 +28,56 @@ public class BlackMarketManager {
     }
 
     private void cargarLootPool() {
-        // 🚧 Aquí puedes integrar tu Addon NexoItems para traer Artefactos reales.
-        // Por ahora, pondremos ejemplos genéricos con altos costos de Gemas y Maná.
+        // ====================================================
+        // 🌟 CATÁLOGO OSCURO (CONECTADO A NEXO ITEMS)
+        // ====================================================
 
+        // 1. Artefacto Custom: Hoja del Vacío
         possibleLootPool.add(new BlackMarketItem(
-                "corrupted_sword",
-                crearItemMagico(Material.NETHERITE_SWORD, "§5⚔️ Espada Corrupta del Vacío", "§7Un arma prohibida."),
-                new BigDecimal("500"), NexoAccount.Currency.GEMS
+                "hoja_vacio",
+                ItemManager.crearHojaVacio(),
+                new BigDecimal("1500"), NexoAccount.Currency.MANA
         ));
 
+        // 2. Material de Mejora: 16x Polvo Estelar
+        ItemStack polvos = ItemManager.crearPolvoEstelar();
+        polvos.setAmount(16);
         possibleLootPool.add(new BlackMarketItem(
-                "dragon_soul",
-                crearItemMagico(Material.DRAGON_BREATH, "§d🐉 Alma de Dragón", "§7Contiene poder puro."),
-                new BigDecimal("1000"), NexoAccount.Currency.MANA
+                "polvo_estelar_x16",
+                polvos,
+                new BigDecimal("400"), NexoAccount.Currency.GEMS
         ));
 
+        // 3. Libro de Encantamiento Custom (Ejemplo: Vampirismo III)
+        // Usamos try-catch por si el ID del encantamiento aún no existe en tu YAML
+        try {
+            ItemStack libroMagico = ItemManager.generarLibroEncantamiento("vampirismo", 3);
+            if (libroMagico != null && libroMagico.getType() != Material.BOOK) {
+                possibleLootPool.add(new BlackMarketItem(
+                        "libro_vampirismo",
+                        libroMagico,
+                        new BigDecimal("800"), NexoAccount.Currency.GEMS
+                ));
+            }
+        } catch (Exception ignored) {}
+
+        // 4. Arma RPG Oculta (Ejemplo genérico, puedes cambiar "guadana_oscura" por un ID de tu armas.yml)
+        try {
+            ItemStack armaProhibida = ItemManager.generarArmaRPG("guadana_oscura");
+            if (armaProhibida != null && armaProhibida.getType() != Material.WOODEN_SWORD) {
+                possibleLootPool.add(new BlackMarketItem(
+                        "arma_rpg_oculta",
+                        armaProhibida,
+                        new BigDecimal("2500"), NexoAccount.Currency.MANA
+                ));
+            }
+        } catch (Exception ignored) {}
+
+        // 5. Relleno vainilla para dar variedad
         possibleLootPool.add(new BlackMarketItem(
                 "forbidden_apple",
-                crearItemMagico(Material.ENCHANTED_GOLDEN_APPLE, "§c🍎 Manzana Prohibida", "§7Te otorga vida eterna... temporalmente."),
+                crearItemMagico(Material.ENCHANTED_GOLDEN_APPLE, "§c🍎 Manzana Prohibida", "§7Fruta del inframundo."),
                 new BigDecimal("150"), NexoAccount.Currency.GEMS
-        ));
-
-        possibleLootPool.add(new BlackMarketItem(
-                "shadow_cloak",
-                crearItemMagico(Material.LEATHER_CHESTPLATE, "§8🦇 Capa de Sombras", "§7Te vuelve indetectable."),
-                new BigDecimal("800"), NexoAccount.Currency.MANA
         ));
     }
 
@@ -64,7 +90,6 @@ public class BlackMarketManager {
         this.isMarketOpen = true;
         this.currentStock.clear();
 
-        // Mezclamos el loot pool y tomamos 3 ítems al azar para esta rotación
         List<BlackMarketItem> shuffled = new ArrayList<>(possibleLootPool);
         Collections.shuffle(shuffled);
 
@@ -98,7 +123,6 @@ public class BlackMarketManager {
         return currentStock;
     }
 
-    // Utilidad rápida para crear ítems de prueba
     private ItemStack crearItemMagico(Material mat, String nombre, String lore) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();

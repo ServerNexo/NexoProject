@@ -1,6 +1,8 @@
 package me.nexo.mechanics.minigames;
 
 import me.nexo.mechanics.NexoMechanics;
+import me.nexo.economy.NexoEconomy; // 🌟 IMPORT ECONOMÍA
+import me.nexo.economy.core.NexoAccount; // 🌟 IMPORT DIVISAS
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -15,6 +17,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.math.BigDecimal; // 🌟 IMPORT BIGDECIMAL
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -54,6 +57,15 @@ public class MiningMinigameManager implements Listener {
                 // Simulamos que el bloque desapareció - CORREGIDO PARA 1.21
                 p.sendBlockChange(b.getLocation(), Bukkit.createBlockData(Material.AIR));
                 vetasActivas.remove(id);
+
+                // 🪙 INYECCIÓN DE ECONOMÍA: Recompensar con Monedas
+                int monedasRandom = (int) (Math.random() * 40) + 10; // Aleatorio entre 10 y 50
+                BigDecimal recompensaMonedas = new BigDecimal(monedasRandom);
+
+                NexoEconomy.getPlugin(NexoEconomy.class).getEconomyManager()
+                        .updateBalanceAsync(p.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, recompensaMonedas, true);
+
+                p.sendActionBar("§e🪙 +" + monedasRandom + " Monedas");
 
                 // Reacción en cadena: Volvemos a invocar otra veta cercana
                 generarVetaContigua(p, b);
