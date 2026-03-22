@@ -2,10 +2,11 @@ package me.nexo.economy;
 
 import me.nexo.core.NexoCore;
 import me.nexo.economy.bazar.BazaarManager;
-import me.nexo.economy.blackmarket.BlackMarketManager; // 🌑 NUEVO IMPORT
+import me.nexo.economy.blackmarket.BlackMarketManager;
 import me.nexo.economy.commands.ComandoBazar;
 import me.nexo.economy.commands.ComandoEco;
 import me.nexo.economy.commands.ComandoTrade;
+import me.nexo.economy.commands.ComandoMercadoNegro; // 🌑 NUEVO IMPORT
 import me.nexo.economy.core.EconomyManager;
 import me.nexo.economy.listeners.EconomyListener;
 import me.nexo.economy.trade.TradeManager;
@@ -16,7 +17,7 @@ public class NexoEconomy extends JavaPlugin {
     private EconomyManager economyManager;
     private TradeManager tradeManager;
     private BazaarManager bazaarManager;
-    private BlackMarketManager blackMarketManager; // 🌑 NUEVA VARIABLE
+    private BlackMarketManager blackMarketManager;
 
     @Override
     public void onEnable() {
@@ -33,11 +34,12 @@ public class NexoEconomy extends JavaPlugin {
         this.economyManager = new EconomyManager(this);
         this.tradeManager = new TradeManager(this);
         this.bazaarManager = new BazaarManager(this);
-        this.blackMarketManager = new BlackMarketManager(this); // 🌑 Levantamos las sombras
+        this.blackMarketManager = new BlackMarketManager(this);
 
         // Registramos Listeners
         getServer().getPluginManager().registerEvents(new EconomyListener(this), this);
         getServer().getPluginManager().registerEvents(new me.nexo.economy.listeners.TradeListener(this), this);
+        getServer().getPluginManager().registerEvents(new me.nexo.economy.blackmarket.BlackMarketListener(this), this); // 🌑 LISTENER MERCADO NEGRO
 
         // Registramos Comandos
         if (getCommand("eco") != null) {
@@ -48,9 +50,13 @@ public class NexoEconomy extends JavaPlugin {
             getCommand("trade").setExecutor(new ComandoTrade(this));
         }
 
-        // 📈 Registramos el Bazar
         if (getCommand("bazar") != null) {
             getCommand("bazar").setExecutor(new ComandoBazar(this));
+        }
+
+        // 🌑 COMANDO MERCADO NEGRO
+        if (getCommand("mercadonegro") != null) {
+            getCommand("mercadonegro").setExecutor(new ComandoMercadoNegro(this));
         }
 
         getLogger().info("✅ ¡NexoEconomy cargado y operativo!");
@@ -69,7 +75,6 @@ public class NexoEconomy extends JavaPlugin {
         return bazaarManager;
     }
 
-    // 🌑 NUEVO GETTER
     public BlackMarketManager getBlackMarketManager() {
         return blackMarketManager;
     }
