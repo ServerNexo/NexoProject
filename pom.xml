@@ -27,6 +27,7 @@
         <module>NexoMinions</module>
         <module>NexoClans</module>
         <module>NexoEconomy</module>
+        <module>NexoProtections</module>
     </modules>
 
     <build>
