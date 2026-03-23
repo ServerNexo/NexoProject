@@ -43,8 +43,8 @@ public class ProtectionListener implements Listener {
         Block block = event.getBlock();
         ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
 
-        // ¿Está intentando romper el bloque central (La Piedra)?
-        if (stone != null && block.getType() == Material.SPONGE) {
+        // 🌟 ¿Está intentando romper el bloque central (El Faro / Nexo)?
+        if (stone != null && block.getType() == Material.BEACON) {
             // Solo el DUEÑO de la piedra puede desmantelarla
             if (stone.getOwnerId().equals(player.getUniqueId())) {
                 claimManager.removeStoneFromCache(stone); // Borrar de la RAM
@@ -59,6 +59,7 @@ public class ProtectionListener implements Listener {
                 });
 
                 player.sendMessage("§aHas desmantelado tu Protección exitosamente.");
+                // Opcional: Podrías dropear el ítem del Nexo aquí para que lo recupere.
                 return;
             }
         }
@@ -82,8 +83,19 @@ public class ProtectionListener implements Listener {
             return;
         }
 
-        // 🌟 ¿Está colocando una NUEVA Piedra? (Usamos Esponja como ítem base temporal)
-        if (event.getItemInHand().getType() == Material.SPONGE) {
+        // 🌟 ¿Está colocando una NUEVA Piedra (Faro de Nexo)?
+        ItemStack itemInHand = event.getItemInHand();
+        if (itemInHand.getType() == Material.BEACON && itemInHand.hasItemMeta()) {
+
+            // Verificamos de forma segura que sea nuestro ítem especial y no un faro normal
+            String displayName = itemInHand.getItemMeta().getDisplayName();
+            if (displayName == null || !displayName.contains("Nexo de Protección")) {
+                return; // Es un faro normal, dejamos que lo coloque sin crear protección
+            }
+
+            // Clonamos el ítem por si tenemos que devolvérselo
+            ItemStack refundItem = itemInHand.clone();
+            refundItem.setAmount(1);
 
             // Consultamos la BD asíncronamente para ver si no ha superado el límite
             limitManager.canPlaceNewStone(player).thenAccept(canPlace -> {
@@ -91,7 +103,7 @@ public class ProtectionListener implements Listener {
                     // Si alcanzó el límite, cancelamos el bloque en el hilo principal de Bukkit
                     Bukkit.getScheduler().runTask(NexoProtections.getPlugin(NexoProtections.class), () -> {
                         block.setType(Material.AIR);
-                        player.getInventory().addItem(new ItemStack(Material.SPONGE));
+                        player.getInventory().addItem(refundItem);
                         player.sendMessage("§cHas alcanzado el límite máximo de protecciones.");
                     });
                     return;
@@ -110,7 +122,7 @@ public class ProtectionListener implements Listener {
                 // Insertamos en la RAM en el hilo principal
                 Bukkit.getScheduler().runTask(NexoProtections.getPlugin(NexoProtections.class), () -> {
                     claimManager.addStoneToCache(newStone);
-                    player.sendMessage("§a¡Piedra de Protección establecida! Protegiendo un radio de " + radius + " bloques.");
+                    player.sendMessage("§a¡Nexo de Protección establecido! Protegiendo un radio de " + radius + " bloques.");
                 });
 
                 // Guardamos en Supabase en el hilo secundario
@@ -145,8 +157,8 @@ public class ProtectionListener implements Listener {
         Player player = event.getPlayer();
 
         if (stone != null) {
-            // 🌟 NUEVO: ¿Le dio Shift + Clic Derecho a la piedra central (Esponja)?
-            if (block.getType() == Material.SPONGE && player.isSneaking() && event.getAction().isRightClick()) {
+            // 🌟 NUEVO: ¿Le dio Shift + Clic Derecho a la piedra central (Faro)?
+            if (block.getType() == Material.BEACON && player.isSneaking() && event.getAction().isRightClick()) {
                 event.setCancelled(true);
 
                 // Solo el dueño o un miembro del clan con permisos puede abrir el menú
