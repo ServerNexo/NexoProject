@@ -5,3 +5,4 @@ api-version: '1.21'
 author: 'TuNombre'
 description: 'Mecanicas adicionales y minijuegos.'
 depend: [NexoCore, NexoEconomy]
+softdepend: [NexoProtections]

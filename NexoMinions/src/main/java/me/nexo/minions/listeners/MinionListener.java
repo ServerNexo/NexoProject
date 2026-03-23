@@ -3,6 +3,10 @@ package me.nexo.minions.listeners;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
+import me.nexo.protections.NexoProtections; // 🌟 IMPORT AÑADIDO
+import me.nexo.protections.core.ProtectionStone; // 🌟 IMPORT AÑADIDO
+import me.nexo.protections.core.ClaimAction; // 🌟 IMPORT AÑADIDO
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
@@ -42,14 +46,24 @@ public class MinionListener implements Listener {
 
         if (meta.getPersistentDataContainer().has(keyType, PersistentDataType.STRING)) {
             event.setCancelled(true);
+            Player player = event.getPlayer();
+
+            // 🌟 INTEGRACIÓN: Verificar derechos de propiedad territorial ANTES de hacer nada
+            if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
+                ProtectionStone stone = NexoProtections.getClaimManager().getStoneAt(event.getClickedBlock().getLocation());
+                if (stone != null && !stone.hasPermission(player.getUniqueId(), ClaimAction.BUILD)) {
+                    player.sendMessage(ChatColor.RED + "🛡️ ¡No puedes establecer minions en territorio enemigo!");
+                    player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                    return; // 🛑 Cortamos el flujo
+                }
+            }
 
             String typeStr = meta.getPersistentDataContainer().get(keyType, PersistentDataType.STRING);
             Integer tier = meta.getPersistentDataContainer().get(keyTier, PersistentDataType.INTEGER);
 
             if (typeStr != null && tier != null) {
                 try {
-                    // 🌟 NUEVO: Verificamos los límites ANTES de spawnear
-                    Player player = event.getPlayer();
+                    // Verificamos los límites de minions del jugador
                     int maxMinions = plugin.getMinionManager().getMaxMinions(player);
                     int placedMinions = plugin.getMinionManager().getPlacedMinions(player);
 
@@ -59,13 +73,13 @@ public class MinionListener implements Listener {
                         return; // 🛑 Detenemos el código aquí
                     }
 
-                    // Si tiene espacio, lo spawneamos
+                    // Si tiene espacio y permiso de tierra, lo spawneamos
                     MinionType type = MinionType.valueOf(typeStr);
                     Location spawnLoc = event.getClickedBlock().getLocation().add(0.5, 1.0, 0.5);
 
                     plugin.getMinionManager().spawnMinion(spawnLoc, player.getUniqueId(), type, tier);
 
-                    // 🌟 NUEVO: Registramos que el jugador gastó 1 espacio
+                    // Registramos que el jugador gastó 1 espacio
                     plugin.getMinionManager().addPlacedMinion(player, 1);
 
                     item.setAmount(item.getAmount() - 1);

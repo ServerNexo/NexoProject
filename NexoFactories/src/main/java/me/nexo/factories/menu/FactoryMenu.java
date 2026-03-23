@@ -4,6 +4,7 @@ import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.core.ProtectionStone;
+import me.nexo.items.NexoItems; // 🌟 IMPORT AÑADIDO
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -48,7 +49,7 @@ public class FactoryMenu implements Listener {
         info.setItemMeta(infoMeta);
         inv.setItem(11, info);
 
-        // 🌟 NUEVO: MÓDULO CATALIZADOR (Slot 13)
+        // 🌟 MÓDULO CATALIZADOR (Slot 13)
         ItemStack catalyst = new ItemStack(Material.LODESTONE);
         ItemMeta catMeta = catalyst.getItemMeta();
         catMeta.setDisplayName("§b§lMódulo de Mejora");
@@ -122,10 +123,30 @@ public class FactoryMenu implements Listener {
             }
 
             int amount = factory.getStoredOutput();
+
+            // 🌟 INTEGRACIÓN: Conectar la industria con tu catálogo de Ítems
+            ItemStack reward = null;
+            String nexoItemId = factory.getFactoryType() + "_OUTPUT"; // Ej: MINA_T1_OUTPUT
+
+            try {
+                // Intentamos sacar el ítem custom desde el motor visual Nexo (Oraxen)
+                if (com.nexomc.nexo.api.NexoItems.itemFromId(nexoItemId) != null) {
+                    reward = com.nexomc.nexo.api.NexoItems.itemFromId(nexoItemId).build();
+                }
+            } catch (NoClassDefFoundError | Exception ignored) {
+                // Fallback silencioso por si Nexo (Oraxen) no está cargado
+            }
+
+            // Fallback de seguridad: Si no existe el ítem custom, damos Hierro Vanilla
+            if (reward == null) {
+                reward = new ItemStack(Material.IRON_INGOT);
+            }
+
+            reward.setAmount(amount);
+
             factory.clearOutput();
             plugin.getFactoryManager().saveFactoryStatusAsync(factory);
 
-            ItemStack reward = new ItemStack(Material.IRON_INGOT, amount);
             HashMap<Integer, ItemStack> left = player.getInventory().addItem(reward);
             if (!left.isEmpty()) {
                 player.getWorld().dropItemNaturally(player.getLocation(), left.get(0));

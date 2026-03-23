@@ -9,12 +9,16 @@ import org.bukkit.block.data.Ageable;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import me.nexo.protections.NexoProtections;
+import me.nexo.protections.core.ProtectionStone;
+import me.nexo.protections.core.ClaimAction;
 
 import java.util.Map;
 import java.util.UUID;
@@ -32,12 +36,22 @@ public class FarmingMinigameManager implements Listener {
         this.plugin = plugin;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void alCosechar(BlockBreakEvent event) {
+        Player p = event.getPlayer();
+
+        // 🌟 INTEGRACIÓN: Prevenir invocación de entidades en granjas enemigas
+        if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
+            me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(event.getBlock().getLocation());
+            if (stone != null && !stone.hasPermission(p.getUniqueId(), me.nexo.protections.core.ClaimAction.BREAK)) {
+                return; // Cortamos el flujo: No se invocan plagas en territorio ajeno
+            }
+        }
+
         if (event.getBlock().getBlockData() instanceof Ageable cultivo) {
             // Solo si está maduro y tiene 1% de probabilidad
             if (cultivo.getAge() == cultivo.getMaximumAge() && Math.random() <= 0.01) {
-                invocarPlagaMutante(event.getPlayer(), event.getBlock().getLocation().add(0.5, 0, 0.5));
+                invocarPlagaMutante(p, event.getBlock().getLocation().add(0.5, 0, 0.5));
             }
         }
     }
@@ -85,7 +99,7 @@ public class FarmingMinigameManager implements Listener {
         }.runTaskTimer(plugin, 0L, 10L); // Salta cada medio segundo
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void alGolpearPlaga(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof ArmorStand plaga && plagasActivas.containsKey(plaga.getUniqueId())) {
             event.setCancelled(true); // Evitamos que el jugador rompa el ArmorStand a la primera

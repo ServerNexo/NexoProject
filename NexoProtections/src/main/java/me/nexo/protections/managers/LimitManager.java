@@ -7,6 +7,7 @@ import me.nexo.core.user.NexoUser;
 import me.nexo.protections.NexoProtections;
 
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 public class LimitManager {
 
@@ -46,5 +47,28 @@ public class LimitManager {
                 .count();
 
         return currentBases < getMaxProtections(playerId);
+    }
+
+    // ========================================================================
+    // 🌟 MÉTODOS FALTANTES QUE EL PROTECTION LISTENER NECESITABA (EL CAMBIO 1)
+    // ========================================================================
+
+    public CompletableFuture<Boolean> canPlaceNewStone(org.bukkit.entity.Player player) {
+        // Envolvemos la revisión síncrona en una Promesa asíncrona para no congelar el servidor
+        return CompletableFuture.supplyAsync(() -> canClaimMore(player.getUniqueId()));
+    }
+
+    public int getProtectionRadius(org.bukkit.entity.Player player) {
+        NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
+
+        // 🌟 Escala dinámica: Clanes más grandes = Bases más grandes
+        if (user != null && user.hasClan()) {
+            NexoClan clan = NexoClans.getPlugin(NexoClans.class).getClanManager().getClanFromCache(user.getClanId()).orElse(null);
+            if (clan != null) {
+                // Radio base 15, expande +5 bloques por cada nivel del monolito del clan
+                return 15 + (clan.getMonolithLevel() * 5);
+            }
+        }
+        return 15; // Radio base para jugadores solitarios
     }
 }

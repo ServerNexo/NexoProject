@@ -14,6 +14,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.inventory.ItemStack;
+import me.nexo.protections.NexoProtections;
+import me.nexo.protections.core.ProtectionStone;
+import me.nexo.protections.core.ClaimAction;
+
 
 import java.util.Map;
 import java.util.UUID;
@@ -37,6 +41,14 @@ public class WoodcuttingMinigameManager implements Listener {
         Player p = event.getPlayer();
         Block b = event.getBlock();
         UUID id = p.getUniqueId();
+
+        // 🌟 INTEGRACIÓN: Prevenir grifeo mágico en bases enemigas
+        if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
+            me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(b.getLocation());
+            if (stone != null && !stone.hasPermission(id, me.nexo.protections.core.ClaimAction.BREAK)) {
+                return; // Cortamos el flujo: No se activan minijuegos en territorio ajeno
+            }
+        }
 
         // 1. Verificar si está golpeando el Núcleo de Ámbar activo
         if (nucleos.containsKey(id)) {
