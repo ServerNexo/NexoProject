@@ -30,6 +30,7 @@
         <module>NexoProtections</module>
         <module>NexoWar</module>
         <module>NexoFactories</module>
+        <module>NexoDungeons</module>
     </modules>
 
     <build>

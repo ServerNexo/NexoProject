@@ -1,0 +1,11 @@
+name: NexoDungeons
+version: '1.0'
+main: me.nexo.dungeons.NexoDungeons
+api-version: '1.21'
+authors: [Arquitecto]
+description: Motor Híbrido de Mazmorras y Puzzles Data-Driven.
+depend: [NexoCore, NexoEconomy, FastAsyncWorldEdit, MythicMobs]
+commands:
+  dungeons:
+    description: "Abre el menú principal de Nexo Dungeons."
+    aliases: [dungeon, mazmorras]
