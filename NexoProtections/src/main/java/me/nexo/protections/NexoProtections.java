@@ -1,6 +1,7 @@
 package me.nexo.protections;
 
 import me.nexo.core.NexoCore;
+import me.nexo.protections.commands.ComandoProteccion; // 🌟 IMPORT AÑADIDO
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoProtections extends JavaPlugin {
@@ -25,7 +26,9 @@ public class NexoProtections extends JavaPlugin {
 
         // 🌟 INICIALIZAMOS LOS MOTORES DE RAM Y LÍMITES
         claimManager = new me.nexo.protections.managers.ClaimManager();
-        me.nexo.protections.managers.LimitManager limitManager = new me.nexo.protections.managers.LimitManager();
+
+        // 🌟 CORRECCIÓN: Ahora le pasamos 'this' al LimitManager como lo programamos
+        me.nexo.protections.managers.LimitManager limitManager = new me.nexo.protections.managers.LimitManager(this);
 
         // 🌟 CARGAR PIEDRAS DE SUPABASE A LA RAM AL ENCENDER
         NexoCore core = NexoCore.getPlugin(NexoCore.class);
@@ -38,6 +41,13 @@ public class NexoProtections extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new me.nexo.protections.listeners.ProtectionListener(claimManager, limitManager), this);
         getServer().getPluginManager().registerEvents(new me.nexo.protections.listeners.ProtectionMenuListener(claimManager), this);
         getServer().getPluginManager().registerEvents(new me.nexo.protections.listeners.EnvironmentListener(claimManager), this);
+
+        // 🌟 NUEVO: REGISTRAMOS EL COMANDO PARA DAR LA PIEDRA
+        if (getCommand("nexo") != null) {
+            getCommand("nexo").setExecutor(new ComandoProteccion(this));
+        } else {
+            getLogger().warning("⚠️ El comando 'nexo' no está registrado en el plugin.yml de NexoProtections.");
+        }
 
         getLogger().info("✅ ¡NexoProtections cargado y operativo!");
         getLogger().info("========================================");

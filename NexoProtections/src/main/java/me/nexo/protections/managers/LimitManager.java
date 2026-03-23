@@ -1,70 +1,50 @@
 package me.nexo.protections.managers;
 
+import me.nexo.clans.NexoClans;
+import me.nexo.clans.core.NexoClan;
 import me.nexo.core.NexoCore;
 import me.nexo.core.user.NexoUser;
-import org.bukkit.entity.Player;
+import me.nexo.protections.NexoProtections;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.util.concurrent.CompletableFuture;
+import java.util.UUID;
 
 public class LimitManager {
 
-    private final NexoCore core;
+    private final NexoProtections plugin;
 
-    public LimitManager() {
-        this.core = NexoCore.getPlugin(NexoCore.class);
+    public LimitManager(NexoProtections plugin) {
+        this.plugin = plugin;
     }
 
-    // 🌟 Retorna un Future para no congelar el servidor mientras lee la base de datos
-    public CompletableFuture<Boolean> canPlaceNewStone(Player player) {
-        return CompletableFuture.supplyAsync(() -> {
-            NexoUser user = core.getUserManager().getUserOrNull(player.getUniqueId());
-            if (user == null) return false;
+    /**
+     * Calcula el límite máximo de bases que puede tener un jugador o su clan.
+     */
+    public int getMaxProtections(UUID playerId) {
+        NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(playerId);
+        if (user == null) return 2; // Límite base por si falla
 
-            try (Connection conn = core.getDatabaseManager().getConnection()) {
-                if (user.hasClan()) {
-                    // LÍMITE DE CLAN: (Nivel / 5) + 1
-                    int clanLevel = 1;
-                    String sqlClan = "SELECT monolith_level FROM nexo_clans WHERE id = CAST(? AS UUID)";
-                    try (PreparedStatement ps = conn.prepareStatement(sqlClan)) {
-                        ps.setString(1, user.getClanId().toString());
-                        ResultSet rs = ps.executeQuery();
-                        if (rs.next()) clanLevel = rs.getInt("monolith_level");
-                    }
+        // 🌟 LÓGICA DE CLANES (Escala con el Monolito)
+        if (user.hasClan()) {
+            // Buscamos el clan en la caché de NexoClans extrayéndolo del Optional de forma segura
+            NexoClan clan = NexoClans.getPlugin(NexoClans.class).getClanManager().getClanFromCache(user.getClanId()).orElse(null);
 
-                    int maxStones = (clanLevel / 5) + 1;
-
-                    String sqlCount = "SELECT COUNT(*) FROM nexo_protections WHERE clan_id = CAST(? AS UUID)";
-                    try (PreparedStatement ps = conn.prepareStatement(sqlCount)) {
-                        ps.setString(1, user.getClanId().toString());
-                        ResultSet rs = ps.executeQuery();
-                        if (rs.next()) return rs.getInt(1) < maxStones;
-                    }
-                } else {
-                    // LÍMITE SOLITARIO: Máximo 2
-                    String sqlCount = "SELECT COUNT(*) FROM nexo_protections WHERE owner_id = CAST(? AS UUID) AND clan_id IS NULL";
-                    try (PreparedStatement ps = conn.prepareStatement(sqlCount)) {
-                        ps.setString(1, player.getUniqueId().toString());
-                        ResultSet rs = ps.executeQuery();
-                        if (rs.next()) return rs.getInt(1) < 2;
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (clan != null) {
+                // Nivel 1 = 2 Bases | Nivel 5 = 10 Bases (O el escalado que decidas)
+                return 2 + (clan.getMonolithLevel() * 2);
             }
-            return false;
-        });
+        }
+
+        // 🌟 LÓGICA SOLITARIO (Límite estricto de 2 piedras)
+        // TODO: Comprobar si el jugador tiene rango VIP para darle +1
+        return 2;
     }
 
-    public int getProtectionRadius(Player player) {
-        NexoUser user = core.getUserManager().getUserOrNull(player.getUniqueId());
-        if (user != null && user.hasClan()) {
-            // Piedra de Clan: Por ahora dejaremos un Radio de 25 bloques (51x51)
-            return 25;
-        }
-        // Piedra Solitaria: Radio de 7 bloques (15x15)
-        return 7;
+    public boolean canClaimMore(UUID playerId) {
+        // Contamos cuántas piedras le pertenecen a este jugador iterando la caché RAM ultra rápida
+        long currentBases = plugin.getClaimManager().getAllStones().values().stream()
+                .filter(stone -> stone.getOwnerId().equals(playerId))
+                .count();
+
+        return currentBases < getMaxProtections(playerId);
     }
 }

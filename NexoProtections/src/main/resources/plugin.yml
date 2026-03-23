@@ -6,3 +6,7 @@ authors: [ Arquitecto ]
 description: Motor Híbrido de Protecciones de NexoNetwork
 depend: [ NexoCore, NexoClans ]
 softdepend: [ NexoItems ]
+commands:
+  nexo:
+    description: "Comando principal de protecciones y factorías."
+    permission: nexo.admin
