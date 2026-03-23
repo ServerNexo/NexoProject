@@ -7,6 +7,7 @@ import me.nexo.protections.core.ProtectionStone;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -33,7 +34,7 @@ public class FactoryMenu implements Listener {
         ProtectionStone stone = NexoProtections.getClaimManager().getStoneById(factory.getStoneId());
         String energyStatus = (stone != null) ? "§a" + stone.getCurrentEnergy() + " ⚡" : "§cDesconectada";
 
-        // 📊 PANEL DE INFORMACIÓN
+        // 📊 PANEL DE INFORMACIÓN (Slot 11)
         ItemStack info = new ItemStack(Material.REPEATER);
         ItemMeta infoMeta = info.getItemMeta();
         infoMeta.setDisplayName("§e§l" + factory.getFactoryType());
@@ -47,7 +48,23 @@ public class FactoryMenu implements Listener {
         info.setItemMeta(infoMeta);
         inv.setItem(11, info);
 
-        // 📦 ALMACENAMIENTO DE PRODUCCIÓN
+        // 🌟 NUEVO: MÓDULO CATALIZADOR (Slot 13)
+        ItemStack catalyst = new ItemStack(Material.LODESTONE);
+        ItemMeta catMeta = catalyst.getItemMeta();
+        catMeta.setDisplayName("§b§lMódulo de Mejora");
+        String catName = factory.getCatalystItem().equals("NONE") ? "§cNinguno" : "§a" + factory.getCatalystItem();
+        catMeta.setLore(Arrays.asList(
+                "§7Inserta una Tarjeta Lógica para",
+                "§7aumentar el rendimiento.",
+                " ",
+                "§fInstalado: " + catName,
+                " ",
+                "§e(Próximamente: Inserción de ítems)"
+        ));
+        catalyst.setItemMeta(catMeta);
+        inv.setItem(13, catalyst);
+
+        // 📦 ALMACENAMIENTO DE PRODUCCIÓN (Slot 15)
         ItemStack output = new ItemStack(Material.CHEST);
         ItemMeta outputMeta = output.getItemMeta();
         outputMeta.setDisplayName("§6§lProducción Almacenada");
@@ -59,6 +76,19 @@ public class FactoryMenu implements Listener {
         output.setItemMeta(outputMeta);
         inv.setItem(15, output);
 
+        // 💻 BOTÓN DEL TERMINAL LÓGICO (Slot 22)
+        ItemStack logicBtn = new ItemStack(Material.COMMAND_BLOCK);
+        ItemMeta logicMeta = logicBtn.getItemMeta();
+        logicMeta.setDisplayName("§d§lTerminal de Lógica");
+        logicMeta.setLore(Arrays.asList(
+                "§7Automatiza esta factoría",
+                "§7creando reglas y condiciones.",
+                " ",
+                "§e¡Clic para programar!"
+        ));
+        logicBtn.setItemMeta(logicMeta);
+        inv.setItem(22, logicBtn);
+
         player.openInventory(inv);
     }
 
@@ -66,6 +96,7 @@ public class FactoryMenu implements Listener {
         return switch (status) {
             case "ACTIVE" -> "§a§lPRODUCIENDO";
             case "NO_ENERGY" -> "§c§lSIN ENERGÍA";
+            case "SCRIPT_PAUSED" -> "§e§lEN ESPERA (SCRIPT)";
             default -> "§8§lAPAGADA";
         };
     }
@@ -77,9 +108,8 @@ public class FactoryMenu implements Listener {
 
         Player player = (Player) event.getWhoClicked();
 
-        // Si hizo clic en Recolectar (Slot 15)
+        // 1. Recolectar Producción
         if (event.getSlot() == 15) {
-            // Buscamos la fábrica que está mirando usando su Target Block (O una sesión caché)
             Block target = player.getTargetBlockExact(5);
             if (target == null) return;
 
@@ -95,8 +125,6 @@ public class FactoryMenu implements Listener {
             factory.clearOutput();
             plugin.getFactoryManager().saveFactoryStatusAsync(factory);
 
-            // Entregamos los ítems (Placeholder: Lingotes de Hierro)
-            // 🚧 Aquí conectaremos con tu NexoItems más adelante para dar el ítem exacto
             ItemStack reward = new ItemStack(Material.IRON_INGOT, amount);
             HashMap<Integer, ItemStack> left = player.getInventory().addItem(reward);
             if (!left.isEmpty()) {
@@ -106,6 +134,17 @@ public class FactoryMenu implements Listener {
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
             player.sendMessage("§a§l¡RECOLECCIÓN EXITOSA! §7Has obtenido §e" + amount + " ítems§7.");
             player.closeInventory();
+        }
+
+        // 2. Abrir Terminal de Lógica
+        else if (event.getSlot() == 22) {
+            Block target = player.getTargetBlockExact(5);
+            if (target == null) return;
+
+            ActiveFactory factory = plugin.getFactoryManager().getFactoryAt(target.getLocation());
+            if (factory == null) return;
+
+            plugin.getLogicMenu().openMenu(player, factory);
         }
     }
 }

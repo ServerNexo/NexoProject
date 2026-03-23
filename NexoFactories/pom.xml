@@ -22,6 +22,10 @@
             <id>papermc</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
         </repository>
+        <repository>
+            <id>aurelium-repo</id>
+            <url>https://repo.aurelium.dev/releases</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -36,6 +40,12 @@
             <groupId>com.github.ben-manes.caffeine</groupId>
             <artifactId>caffeine</artifactId>
             <version>3.1.8</version>
+        </dependency>
+        <dependency>
+            <groupId>dev.aurelium</groupId>
+            <artifactId>auraskills-api</artifactId>
+            <version>2.2.0</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>

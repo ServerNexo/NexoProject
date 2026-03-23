@@ -151,7 +151,10 @@ public class BlueprintManager implements Listener {
                     template.getFactoryType(),
                     1, // Nivel 1 por defecto
                     "OFFLINE",
-                    0
+                    0,
+                    coreLoc, // 🌟 Coordenadas del núcleo
+                    "NONE",  // 🌟 Catalizador vacío por defecto
+                    "NONE"   // 🌟 Script lógico vacío por defecto
             );
             plugin.getFactoryManager().createFactoryAsync(factory);
 

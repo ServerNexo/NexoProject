@@ -5,6 +5,7 @@ import me.nexo.factories.listeners.FactoryInteractListener;
 import me.nexo.factories.managers.BlueprintManager;
 import me.nexo.factories.managers.FactoryManager;
 import me.nexo.factories.menu.FactoryMenu;
+import me.nexo.factories.menu.LogicMenu; // 🌟 IMPORT AÑADIDO
 import me.nexo.factories.tasks.ProductionCycleTask;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -12,6 +13,7 @@ public class NexoFactories extends JavaPlugin {
 
     private FactoryManager factoryManager;
     private BlueprintManager blueprintManager;
+    private LogicMenu logicMenu; // 🌟 NUEVA VARIABLE
 
     @Override
     public void onEnable() {
@@ -32,9 +34,12 @@ public class NexoFactories extends JavaPlugin {
         // Registramos Listeners base
         getServer().getPluginManager().registerEvents(blueprintManager, this);
 
-        // 🌟 NUEVO: Inicializamos y registramos el Menú y el Detector de Clics
+        // 🌟 NUEVO: Inicializamos y registramos los Menús y el Detector de Clics
         FactoryMenu factoryMenu = new FactoryMenu(this);
+        this.logicMenu = new LogicMenu(this); // 🌟 Inicializamos el menú de programación visual
+
         getServer().getPluginManager().registerEvents(factoryMenu, this);
+        getServer().getPluginManager().registerEvents(this.logicMenu, this); // 🌟 Registramos el nuevo menú
         getServer().getPluginManager().registerEvents(new FactoryInteractListener(this, factoryMenu), this);
 
         // Registramos Comandos
@@ -57,4 +62,5 @@ public class NexoFactories extends JavaPlugin {
 
     public FactoryManager getFactoryManager() { return factoryManager; }
     public BlueprintManager getBlueprintManager() { return blueprintManager; }
+    public LogicMenu getLogicMenu() { return logicMenu; } // 🌟 NUEVO GETTER
 }

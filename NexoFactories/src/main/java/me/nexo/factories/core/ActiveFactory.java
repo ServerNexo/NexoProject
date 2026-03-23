@@ -12,9 +12,13 @@ public class ActiveFactory {
     private int level;
     private String currentStatus;
     private int storedOutput;
-    private final Location coreLocation; // 🌟 NUEVO
+    private final Location coreLocation;
 
-    public ActiveFactory(UUID id, UUID stoneId, UUID ownerId, String factoryType, int level, String currentStatus, int storedOutput, Location coreLocation) {
+    // 🌟 NUEVAS VARIABLES DE AUTOMATIZACIÓN (Logic Engine)
+    private String catalystItem;
+    private String jsonLogic;
+
+    public ActiveFactory(UUID id, UUID stoneId, UUID ownerId, String factoryType, int level, String currentStatus, int storedOutput, Location coreLocation, String catalystItem, String jsonLogic) {
         this.id = id;
         this.stoneId = stoneId;
         this.ownerId = ownerId;
@@ -23,6 +27,8 @@ public class ActiveFactory {
         this.currentStatus = currentStatus;
         this.storedOutput = storedOutput;
         this.coreLocation = coreLocation;
+        this.catalystItem = catalystItem; // 🌟 Inicializado
+        this.jsonLogic = jsonLogic;       // 🌟 Inicializado
     }
 
     public synchronized void addOutput(int amount) { this.storedOutput += amount; }
@@ -37,5 +43,11 @@ public class ActiveFactory {
     public String getCurrentStatus() { return currentStatus; }
     public void setCurrentStatus(String currentStatus) { this.currentStatus = currentStatus; }
     public int getStoredOutput() { return storedOutput; }
-    public Location getCoreLocation() { return coreLocation; } // 🌟 NUEVO
+    public Location getCoreLocation() { return coreLocation; }
+
+    // 🌟 GETTERS Y SETTERS LÓGICOS
+    public String getCatalystItem() { return catalystItem; }
+    public void setCatalystItem(String catalystItem) { this.catalystItem = catalystItem; }
+    public String getJsonLogic() { return jsonLogic; }
+    public void setJsonLogic(String jsonLogic) { this.jsonLogic = jsonLogic; }
 }
