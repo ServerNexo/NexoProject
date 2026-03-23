@@ -29,6 +29,7 @@
         <module>NexoEconomy</module>
         <module>NexoProtections</module>
         <module>NexoWar</module>
+        <module>NexoFactories</module>
     </modules>
 
     <build>
