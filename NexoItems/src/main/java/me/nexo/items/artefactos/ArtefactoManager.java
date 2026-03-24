@@ -5,6 +5,7 @@ import me.nexo.items.NexoItems;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
 import org.bukkit.*;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.Ageable;
@@ -169,13 +170,13 @@ public class ArtefactoManager {
             p.getWorld().spawnParticle(Particle.HEART, impacto, 20, 2, 1, 2);
             p.playSound(impacto, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 0.5f);
 
-            double healAmount = p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue() * 0.05;
-            p.setHealth(Math.min(p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue(), p.getHealth() + healAmount));
+            double healAmount = p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.05;
+            p.setHealth(Math.min(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue(), p.getHealth() + healAmount));
 
             impacto.getWorld().getNearbyEntities(impacto, 4, 4, 4).stream()
                     .filter(e -> e instanceof Player && e != p)
                     .map(e -> (Player) e)
-                    .forEach(ally -> ally.setHealth(Math.min(ally.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue(), ally.getHealth() + healAmount)));
+                    .forEach(ally -> ally.setHealth(Math.min(ally.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue(), ally.getHealth() + healAmount)));
             return true;
         });
 

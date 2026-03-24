@@ -3,6 +3,7 @@ package me.nexo.items.managers;
 import me.nexo.items.dtos.*;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier.Operation;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -174,13 +175,13 @@ public class ItemManager {
         NamespacedKey dmgKey = new NamespacedKey(pluginMemoria, "nexo_dmg_" + dto.id());
         org.bukkit.attribute.AttributeModifier dmgMod = new org.bukkit.attribute.AttributeModifier(
                 dmgKey, dto.danioBase(), Operation.ADD_NUMBER, org.bukkit.inventory.EquipmentSlotGroup.MAINHAND);
-        meta.addAttributeModifier(org.bukkit.attribute.Attribute.ATTACK_DAMAGE, dmgMod);
+        meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, dmgMod);
 
         NamespacedKey spdKey = new NamespacedKey(pluginMemoria, "nexo_spd_" + dto.id());
         double speedOffset = dto.velocidadAtaque() - 4.0;
         org.bukkit.attribute.AttributeModifier spdMod = new org.bukkit.attribute.AttributeModifier(
                 spdKey, speedOffset, Operation.ADD_NUMBER, org.bukkit.inventory.EquipmentSlotGroup.MAINHAND);
-        meta.addAttributeModifier(org.bukkit.attribute.Attribute.ATTACK_SPEED, spdMod);
+        meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, spdMod);
 
         meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ATTRIBUTES);
         item.setItemMeta(meta);
@@ -338,20 +339,20 @@ public class ItemManager {
 
         // 4. APLICAR ATRIBUTOS DE COMBATE (Si es arma o da daño)
         if (esArma || reforge.danioExtra() > 0) {
-            meta.removeAttributeModifier(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);
-            meta.removeAttributeModifier(org.bukkit.attribute.Attribute.ATTACK_SPEED);
+            meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE);
+            meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_SPEED);
 
             double danioTotal = danioOriginal + reforge.danioExtra();
             NamespacedKey dmgKey = new NamespacedKey(pluginMemoria, "nexo_dmg_" + idBase);
             org.bukkit.attribute.AttributeModifier dmgMod = new org.bukkit.attribute.AttributeModifier(
                     dmgKey, danioTotal, Operation.ADD_NUMBER, org.bukkit.inventory.EquipmentSlotGroup.MAINHAND);
-            meta.addAttributeModifier(org.bukkit.attribute.Attribute.ATTACK_DAMAGE, dmgMod);
+            meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, dmgMod);
 
             double velocidadTotal = (velOriginal - 4.0) + reforge.velocidadAtaqueExtra();
             NamespacedKey spdKey = new NamespacedKey(pluginMemoria, "nexo_spd_" + idBase);
             org.bukkit.attribute.AttributeModifier spdMod = new org.bukkit.attribute.AttributeModifier(
                     spdKey, velocidadTotal, Operation.ADD_NUMBER, org.bukkit.inventory.EquipmentSlotGroup.MAINHAND);
-            meta.addAttributeModifier(org.bukkit.attribute.Attribute.ATTACK_SPEED, spdMod);
+            meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, spdMod);
         }
 
         // 5. APLICAR BONOS DE PROFESIÓN (FORTUNA)

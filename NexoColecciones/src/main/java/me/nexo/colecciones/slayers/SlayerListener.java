@@ -126,7 +126,7 @@ public class SlayerListener implements Listener {
         for (ActiveSlayer slayer : manager.getActiveSlayers().values()) {
             if (slayer.isBossSpawned() && boss.hasMetadata("SlayerBoss_" + slayer.getPlayerId().toString())) {
                 if (slayer.getBossBar() != null) {
-                    double maxHealth = boss.getAttribute(Attribute.MAX_HEALTH).getValue();
+                    double maxHealth = boss.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                     double currentHealth = boss.getHealth() - event.getFinalDamage();
                     if (currentHealth < 0) currentHealth = 0;
 

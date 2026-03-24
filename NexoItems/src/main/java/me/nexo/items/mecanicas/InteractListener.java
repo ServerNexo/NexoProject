@@ -9,6 +9,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -161,7 +162,7 @@ public class InteractListener implements Listener {
                     }
                 }
                 if (curacionTotal > 0) {
-                    double maxHp = jugador.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
+                    double maxHp = jugador.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                     jugador.setHealth(Math.min(maxHp, jugador.getHealth() + curacionTotal));
                     jugador.getWorld().spawnParticle(Particle.HEART, jugador.getLocation().add(0, 2, 0), (int) curacionTotal);
                 }

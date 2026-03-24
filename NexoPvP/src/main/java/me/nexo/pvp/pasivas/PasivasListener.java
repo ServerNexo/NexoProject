@@ -13,6 +13,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Monster;
@@ -62,7 +63,7 @@ public class PasivasListener implements Listener {
 
             // Lvl 25: Ejecutor
             if (nivel >= 25 && event.getEntity() instanceof org.bukkit.entity.LivingEntity victima) {
-                double hpPercent = victima.getHealth() / victima.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
+                double hpPercent = victima.getHealth() / victima.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                 if (hpPercent <= 0.20) {
                     event.setDamage(event.getDamage() * 1.20);
                 }
@@ -71,7 +72,7 @@ public class PasivasListener implements Listener {
             // Lvl 10: Sed de Sangre
             if (nivel >= 10) {
                 double cura = event.getFinalDamage() * 0.05;
-                double maxHp = atacante.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
+                double maxHp = atacante.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                 atacante.setHealth(Math.min(maxHp, atacante.getHealth() + cura));
             }
         }

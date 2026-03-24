@@ -136,7 +136,7 @@ public class ArmorListener implements Listener {
         // 3. APLICAR VIDA Y EFECTOS FINALES
         // ==========================================
         double total = 20.0 + extraVida;
-        var healthAttr = p.getAttribute(Attribute.MAX_HEALTH);
+        var healthAttr = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
 
         if (healthAttr != null && healthAttr.getBaseValue() != total) {
             if (p.getHealth() > total) p.setHealth(total);

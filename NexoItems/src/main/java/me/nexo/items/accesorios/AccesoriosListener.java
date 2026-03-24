@@ -99,10 +99,10 @@ public class AccesoriosListener implements Listener {
         Map<AccessoryDTO.StatType, Double> stats = event.getStats();
 
         // 1. Aplicamos Atributos Nativos de Bukkit
-        aplicarAtributo(p, Attribute.MAX_HEALTH, keyVida, stats.getOrDefault(AccessoryDTO.StatType.VIDA, 0.0));
-        aplicarAtributo(p, Attribute.ATTACK_DAMAGE, keyFuerza, stats.getOrDefault(AccessoryDTO.StatType.FUERZA, 0.0));
-        aplicarAtributo(p, Attribute.MOVEMENT_SPEED, keyVelocidad, stats.getOrDefault(AccessoryDTO.StatType.VELOCIDAD, 0.0));
-        aplicarAtributo(p, Attribute.ARMOR, keyArmadura, stats.getOrDefault(AccessoryDTO.StatType.ARMADURA, 0.0));
+        aplicarAtributo(p, Attribute.GENERIC_MAX_HEALTH, keyVida, stats.getOrDefault(AccessoryDTO.StatType.VIDA, 0.0));
+        aplicarAtributo(p, Attribute.GENERIC_ATTACK_DAMAGE, keyFuerza, stats.getOrDefault(AccessoryDTO.StatType.FUERZA, 0.0));
+        aplicarAtributo(p, Attribute.GENERIC_MOVEMENT_SPEED, keyVelocidad, stats.getOrDefault(AccessoryDTO.StatType.VELOCIDAD, 0.0));
+        aplicarAtributo(p, Attribute.GENERIC_ARMOR, keyArmadura, stats.getOrDefault(AccessoryDTO.StatType.ARMADURA, 0.0));
 
         // 2. 🟢 ARQUITECTURA LIMPIA: Guardamos la energía extra en el NexoUser
         int energiaExtra = stats.getOrDefault(AccessoryDTO.StatType.ENERGIA_CUSTOM, 0.0).intValue();
@@ -150,7 +150,7 @@ public class AccesoriosListener implements Listener {
                     event.setCancelled(false);
                     cooldownCorazon.put(p.getUniqueId(), ahora);
 
-                    p.setHealth(p.getAttribute(Attribute.MAX_HEALTH).getValue() * 0.5); // Revive con 50% HP
+                    p.setHealth(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.5); // Revive con 50% HP
                     p.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, p.getLocation(), 150);
                     p.playSound(p.getLocation(), Sound.ITEM_TOTEM_USE, 1f, 0.5f);
                     p.sendTitle("§b§lMILAGRO CÓSMICO", "§7El Corazón del Nexo te ha salvado", 10, 60, 10);

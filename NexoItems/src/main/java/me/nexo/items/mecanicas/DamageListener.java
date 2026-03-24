@@ -9,6 +9,7 @@ import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
@@ -149,7 +150,7 @@ public class DamageListener implements Listener {
                     String idEjecutor = "ejecutor";
                     org.bukkit.NamespacedKey keyEjecutor = new org.bukkit.NamespacedKey(plugin, "nexo_enchant_" + idEjecutor);
                     if (pdc.has(keyEjecutor, PersistentDataType.INTEGER)) {
-                        double maxHp = victima.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
+                        double maxHp = victima.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                         if ((victima.getHealth() / maxHp) <= 0.20) { // Si tiene menos del 20% de vida
                             EnchantDTO ench = plugin.getFileManager().getEnchantDTO(idEjecutor);
                             if (ench != null) {
@@ -216,7 +217,7 @@ public class DamageListener implements Listener {
                         if (ench != null) {
                             double porcentaje = ench.getValorPorNivel(pdc.get(keyVamp, PersistentDataType.INTEGER));
                             double cura = dañoFinal * (porcentaje / 100.0);
-                            double maxVidaJugador = jugador.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
+                            double maxVidaJugador = jugador.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 
                             jugador.setHealth(Math.min(maxVidaJugador, jugador.getHealth() + cura));
                             jugador.getWorld().spawnParticle(org.bukkit.Particle.HEART, jugador.getLocation().add(0, 1, 0), 1);

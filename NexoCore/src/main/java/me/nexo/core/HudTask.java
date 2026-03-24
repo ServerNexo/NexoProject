@@ -3,6 +3,7 @@ package me.nexo.core;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
 import org.bukkit.Bukkit;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -50,7 +51,7 @@ public class HudTask extends BukkitRunnable {
             } catch (Exception ignored) {}
 
             int hpActual = (int) Math.ceil(p.getHealth());
-            int hpMax = (int) p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH).getValue();
+            int hpMax = (int) p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
 
             String hud = "§c❤ " + hpActual + "/" + hpMax + "  §b💧 " + manaActual + "/" + maxMana + "  §e⚡ " + energiaActual + "/" + maxEnergia;
 

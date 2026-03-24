@@ -90,14 +90,14 @@ public class WaveArena {
         // 📈 ESCALADO MATEMÁTICO: Salud = Base * (1.2 ^ (Oleada - 1))
         double multiplier = Math.pow(1.2, Math.max(0, currentWave - 1));
 
-        AttributeInstance healthAttr = mob.getAttribute(Attribute.MAX_HEALTH);
+        AttributeInstance healthAttr = mob.getAttribute(Attribute.GENERIC_MAX_HEALTH);
         if (healthAttr != null) {
             double newHealth = healthAttr.getBaseValue() * multiplier;
             healthAttr.setBaseValue(newHealth);
             mob.setHealth(newHealth);
         }
 
-        AttributeInstance damageAttr = mob.getAttribute(Attribute.ATTACK_DAMAGE);
+        AttributeInstance damageAttr = mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
         if (damageAttr != null) {
             double newDamage = damageAttr.getBaseValue() * multiplier;
             damageAttr.setBaseValue(newDamage);
