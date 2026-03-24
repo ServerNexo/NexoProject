@@ -21,33 +21,36 @@ public class ComandoClan implements CommandExecutor {
     private final NexoClans plugin;
 
     // 🎨 PALETA HEX - CONSTANTES DE TEXTO (Errores)
-    private static final String ERR_DATA_LOADING = "&#ff4b2bTus datos aún están cargando. Aguarda un instante.";
-    private static final String ERR_NO_CLAN = "&#ff4b2bNo perteneces a ningún clan. Usa /clan create <tag> <nombre>";
-    private static final String ERR_ALREADY_IN_CLAN = "&#ff4b2bYa perteneces a una estructura de clan.";
-    private static final String ERR_CREATE_USAGE = "&#ff4b2bUso industrial: /clan create <Tag> <Nombre>";
-    private static final String ERR_DEPOSIT_USAGE = "&#ff4b2bUso logístico: /clan deposit <cantidad>";
-    private static final String ERR_WITHDRAW_USAGE = "&#ff4b2bUso logístico: /clan withdraw <cantidad>";
-    private static final String ERR_INVALID_AMOUNT = "&#ff4b2bLa cantidad monetaria debe ser mayor a 0.";
-    private static final String ERR_INSUFFICIENT_FUNDS = "&#ff4b2bNo tienes suficientes fondos en tu cuenta personal.";
-    private static final String ERR_CLAN_FUNDS = "&#ff4b2bEl banco del clan no tiene los fondos requeridos.";
-    private static final String ERR_NO_PERM_OFFICIAL = "&#ff4b2bAcceso Denegado: Requiere rango de LÍDER u OFICIAL.";
-    private static final String ERR_NO_PERM_LEADER = "&#ff4b2bAcceso Denegado: Requiere rango de LÍDER.";
-    private static final String ERR_NO_HOME = "&#ff4b2bFallo de red: El clan no posee un Monolito Base (/clan sethome).";
-    private static final String ERR_HOME_COORD = "&#ff4b2bError crítico leyendo las coordenadas del servidor.";
-    private static final String ERR_NO_ITEM = "&#ff4b2bDebes sostener un material físico para iniciar la extracción.";
+    private static final String ERR_DATA_LOADING = "&#ff4b2b[!] Tus datos aún están cargando. Aguarda un instante.";
+    private static final String ERR_NO_CLAN = "&#ff4b2b[!] No perteneces a ninguna estructura corporativa. Usa /clan create <tag> <nombre>";
+    private static final String ERR_ALREADY_IN_CLAN = "&#ff4b2b[!] Ya estás enlazado a un clan.";
+    private static final String ERR_CREATE_USAGE = "&#ff4b2b[!] Sintaxis inválida. Uso: /clan create <Tag> <Nombre>";
+    private static final String ERR_TAG_INVALID = "&#ff4b2b[!] El Tag debe tener entre 2 y 4 caracteres alfanuméricos (Sin colores).";
+    private static final String ERR_NAME_LENGTH = "&#ff4b2b[!] El nombre real del clan (sin contar los códigos de color) no puede superar los 16 caracteres.";
+    private static final String ERR_NAME_INVALID = "&#ff4b2b[!] El nombre contiene símbolos no autorizados.";
+    private static final String ERR_DEPOSIT_USAGE = "&#ff4b2b[!] Uso logístico: /clan deposit <cantidad>";
+    private static final String ERR_WITHDRAW_USAGE = "&#ff4b2b[!] Uso logístico: /clan withdraw <cantidad>";
+    private static final String ERR_INVALID_AMOUNT = "&#ff4b2b[!] La cifra monetaria debe ser mayor a 0.";
+    private static final String ERR_INSUFFICIENT_FUNDS = "&#ff4b2b[!] Fondos insuficientes en tu cuenta personal.";
+    private static final String ERR_CLAN_FUNDS = "&#ff4b2b[!] La tesorería del clan no tiene los fondos requeridos.";
+    private static final String ERR_NO_PERM_OFFICIAL = "&#ff4b2b[!] Acceso Denegado: Requiere autorización de LÍDER u OFICIAL.";
+    private static final String ERR_NO_PERM_LEADER = "&#ff4b2b[!] Acceso Denegado: Rango insuficiente. Requiere LÍDER.";
+    private static final String ERR_NO_HOME = "&#ff4b2b[!] Fallo de red: La corporación no posee un Monolito Base (/clan sethome).";
+    private static final String ERR_HOME_COORD = "&#ff4b2b[!] Error crítico leyendo las coordenadas espaciales.";
+    private static final String ERR_NO_ITEM = "&#ff4b2b[!] Debes sostener un material físico para iniciar la extracción.";
 
     // 🎨 PALETA HEX - CONSTANTES DE TEXTO (Éxito e Info)
-    private static final String MSG_LOADING = "&#fbd72bCargando interfaz de clan...";
-    private static final String MSG_DEPOSIT_SUCCESS = "&#a8ff78Transferencia completada. Depositaste &#fbd72b🪙 %amount% &#a8ff78al banco del clan.";
-    private static final String MSG_WITHDRAW_SUCCESS = "&#a8ff78Retiro autorizado. Obtuviste &#fbd72b🪙 %amount% &#a8ff78del banco del clan.";
-    private static final String MSG_HOME_SUCCESS = "&#00fbff[✓] Enlace establecido. Bienvenido a la Base. 🏛️";
-    private static final String MSG_TRIBUTE_SUCCESS = "&#00fbff[✓] Extracción completada. El Monolito ha absorbido &#a8ff78%exp% EXP&#00fbff.";
-    private static final String MSG_HELP = "&#434343Sistemas de Comando: &#fbd72bcreate, invite, join, leave, ff, kick, disband, sethome, home, deposit, withdraw, tribute.";
+    private static final String MSG_LOADING = "&#00E5FFConectando con la base de datos del clan...";
+    private static final String MSG_DEPOSIT_SUCCESS = "&#55FF55[✓] Transferencia completada. Depositaste &#FFAA00🪙 %amount% &#55FF55a la tesorería.";
+    private static final String MSG_WITHDRAW_SUCCESS = "&#55FF55[✓] Retiro autorizado. Extrajiste &#FFAA00🪙 %amount% &#55FF55de la tesorería.";
+    private static final String MSG_HOME_SUCCESS = "&#00E5FF[✓] Enlace establecido. Bienvenido al Monolito Central. 🏛️";
+    private static final String MSG_TRIBUTE_SUCCESS = "&#00E5FF[✓] Extracción completada. El Monolito absorbió &#FFAA00%exp% EXP&#00E5FF.";
+    private static final String MSG_HELP = "&#AAAAAASistemas de Comando: &#FFAA00create, invite, join, leave, friendlyfire, kick, disband, sethome, home, deposit, withdraw, tribute.";
 
     // 🎨 ALERTAS GLOBALES
-    private static final String BC_DIVIDER = "&#434343========================================";
-    private static final String BC_LEVEL_UP_TITLE = "&#fbd72b<bold>🏛️ ¡SISTEMA EVOLUCIONADO: %clan%!</bold>";
-    private static final String BC_LEVEL_UP_DESC = "&#e0e0e0Su Monolito industrial ha alcanzado el Nivel &#a8ff78%level%&#e0e0e0.";
+    private static final String BC_DIVIDER = "&#555555========================================";
+    private static final String BC_LEVEL_UP_TITLE = "&#FFAA00<bold>🏛️ ¡EVOLUCIÓN ESTRUCTURAL: %clan%!</bold>";
+    private static final String BC_LEVEL_UP_DESC = "&#AAAAAASu Monolito Central ha alcanzado el Nivel &#00E5FF%level%&#AAAAAA.";
 
     public ComandoClan(NexoClans plugin) {
         this.plugin = plugin;
@@ -78,9 +81,29 @@ public class ComandoClan implements CommandExecutor {
         if (subCommand.equals("create")) {
             if (user.hasClan()) { player.sendMessage(NexoColor.parse(ERR_ALREADY_IN_CLAN)); return true; }
             if (args.length < 3) { player.sendMessage(NexoColor.parse(ERR_CREATE_USAGE)); return true; }
+
             String tag = args[1].toUpperCase();
-            String nombre = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
-            plugin.getClanManager().crearClanAsync(player, user, tag, nombre);
+            // 🛡️ VALIDACIÓN 1: Tag estricto (Máx 4 caracteres, solo letras/números)
+            if (tag.length() < 2 || tag.length() > 4 || !tag.matches("^[A-Z0-9]+$")) {
+                player.sendMessage(NexoColor.parse(ERR_TAG_INVALID)); return true;
+            }
+
+            String nombreRaw = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
+
+            // 🛡️ VALIDACIÓN 2: Filtro de Longitud Inteligente (Ignorando códigos HEX)
+            String nombreLimpio = nombreRaw.replaceAll("&#[a-fA-F0-9]{6}", "").replaceAll("&[0-9a-fk-orA-FK-OR]", "");
+
+            if (nombreLimpio.length() < 3 || nombreLimpio.length() > 16) {
+                player.sendMessage(NexoColor.parse(ERR_NAME_LENGTH)); return true;
+            }
+
+            // 🛡️ VALIDACIÓN 3: Símbolos raros bloqueados (Pero permite códigos de color y espacios)
+            if (!nombreLimpio.matches("^[a-zA-Z0-9 ]+$")) {
+                player.sendMessage(NexoColor.parse(ERR_NAME_INVALID)); return true;
+            }
+
+            // Si pasa todo, se manda a crear con el nombre crudo (que incluye el HEX)
+            plugin.getClanManager().crearClanAsync(player, user, tag, nombreRaw);
             return true;
         }
 
@@ -266,7 +289,7 @@ public class ComandoClan implements CommandExecutor {
                 player.sendMessage(NexoColor.parse(MSG_TRIBUTE_SUCCESS.replace("%exp%", String.valueOf(expTotal))));
 
                 if (subioNivel) {
-                    // 🌟 Usamos Bukkit.broadcast() en lugar de broadcastMessage() para que acepte Components
+                    // 🌟 Usamos NexoColor.parse con el nombre del Clan que ya está pintado
                     Bukkit.broadcast(NexoColor.parse(BC_DIVIDER));
                     Bukkit.broadcast(NexoColor.parse(BC_LEVEL_UP_TITLE.replace("%clan%", clan.getName())));
                     Bukkit.broadcast(NexoColor.parse(BC_LEVEL_UP_DESC.replace("%level%", String.valueOf(clan.getMonolithLevel()))));

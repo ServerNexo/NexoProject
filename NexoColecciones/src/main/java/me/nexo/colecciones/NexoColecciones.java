@@ -35,6 +35,9 @@ public class NexoColecciones extends JavaPlugin {
         this.collectionManager = new CollectionManager(this);
         this.slayerManager = new SlayerManager(this); // 🌟 Inicializamos Slayers
 
+        // 🌟 CORRECCIÓN CRÍTICA: Cargar el YML a la RAM al prender el servidor
+        this.collectionManager.cargarDesdeConfig();
+
         // ==========================================
         // 2. REGISTRAR EVENTOS Y COMANDOS
         // ==========================================

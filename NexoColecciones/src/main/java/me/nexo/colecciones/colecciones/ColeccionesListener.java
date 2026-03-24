@@ -49,8 +49,17 @@ public class ColeccionesListener implements Listener {
     // ==========================================
     // ⛏️ TALA, MINERÍA Y FARMING
     // ==========================================
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    // 🌟 CORRECCIÓN: Quitamos ignoreCancelled=true para que NexoItems pueda sumar progreso
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreak(BlockBreakEvent event) {
+        // Si el evento fue cancelado, revisamos si estamos en "Mina"
+        // (ya que NexoItems cancela ahí los bloques intencionalmente para dar drops custom)
+        if (event.isCancelled()) {
+            if (!event.getPlayer().getWorld().getName().equalsIgnoreCase("Mina")) {
+                return; // Si lo canceló otra cosa (ej. WorldGuard) en otro mundo, lo ignoramos.
+            }
+        }
+
         Block block = event.getBlock();
         String blockId = block.getType().name();
 
@@ -95,7 +104,6 @@ public class ColeccionesListener implements Listener {
     // ==========================================
     // 🧪 ALQUIMIA (POCIONES)
     // ==========================================
-    // 1. Guardamos quién fue el último en abrir el soporte para pociones
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onInventoryOpen(InventoryOpenEvent event) {
         if (event.getInventory().getType() == InventoryType.BREWING) {
@@ -105,7 +113,6 @@ public class ColeccionesListener implements Listener {
         }
     }
 
-    // 2. Cuando la poción termina de hervir, le damos el punto al jugador por el ingrediente que usó
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBrew(BrewEvent event) {
         if (event.getBlock().hasMetadata(BREWER_KEY)) {
@@ -128,11 +135,9 @@ public class ColeccionesListener implements Listener {
     public void onEnchant(EnchantItemEvent event) {
         Player player = event.getEnchanter();
 
-        // Suma progreso a Lapislázuli (la cantidad exacta que costó el encantamiento)
-        int lapisUsado = event.whichButton() + 1; // Botón 0 = 1 lapis, Botón 1 = 2 lapis, Botón 2 = 3 lapis
+        int lapisUsado = event.whichButton() + 1;
         manager.addProgress(player, "LAPIS_LAZULI", lapisUsado);
 
-        // Si lo que encantó fue un Libro, le damos puntos a la colección de Libros
         if (event.getItem().getType() == Material.BOOK) {
             manager.addProgress(player, "BOOK", 1);
         }
@@ -152,7 +157,6 @@ public class ColeccionesListener implements Listener {
         UUID uuid = event.getPlayer().getUniqueId();
         CollectionProfile profile = manager.getProfile(uuid);
 
-        // Si el jugador tiene datos sin guardar, los subimos a Supabase en un hilo secundario
         if (profile != null && profile.isNeedsFlush()) {
             var dataSource = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getDataSource();
 
@@ -173,8 +177,6 @@ public class ColeccionesListener implements Listener {
                 }
             });
         }
-
-        // Una vez enviada la orden de guardado, ahora SÍ lo borramos de la RAM de forma segura
         manager.removeProfile(uuid);
     }
 }

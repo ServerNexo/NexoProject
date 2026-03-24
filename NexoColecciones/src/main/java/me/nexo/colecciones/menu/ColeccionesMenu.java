@@ -18,10 +18,9 @@ import java.util.stream.Collectors;
 
 public class ColeccionesMenu {
 
-    // 🎨 CONSTANTES PARA EL LISTENER Y TÍTULOS
-    public static final String TITLE_MAIN = "&#434343<bold>»</bold> &#fbd72bCategorías de Colecciones";
-    public static final String TITLE_SUBMENU_PREFIX = "&#434343<bold>»</bold> &#00fbffColecciones: &#fbd72b";
-    private static final String ERR_LOADING = "&#ff4b2b[!] Tus datos aún están sincronizándose con la red.";
+    public static final String TITLE_MAIN = "&#434343<bold>»</bold> &#FFAA00Categorías de Colecciones";
+    public static final String TITLE_SUBMENU_PREFIX = "&#434343<bold>»</bold> &#00E5FFColecciones: &#FFAA00";
+    private static final String ERR_LOADING = "&#FF5555[!] Tus datos aún están sincronizándose con la red.";
 
     // 🌟 1. MENÚ PRINCIPAL
     public static void abrirMenuPrincipal(Player player) {
@@ -38,16 +37,31 @@ public class ColeccionesMenu {
         player.openInventory(inv);
     }
 
+    // 🌟 TRADUCTOR VISUAL (Para que el jugador lea en Español)
+    private static String obtenerNombreCategoria(CollectionCategory cat) {
+        return switch (cat) {
+            case FARMING -> "Agricultura";
+            case FISHING -> "Pesca";
+            case FIGHTING -> "Combate";
+            case MINA -> "Minería";
+            case TALA -> "Tala";
+            case ALQUIMIA -> "Alquimia";
+            case ENCANTAMIENTOS -> "Encantamientos";
+            default -> cat.name();
+        };
+    }
+
     private static ItemStack crearIconoCategoria(Material mat, CollectionCategory cat) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            // 🌟 USAMOS EL SERIALIZADOR PARA VOLVER AL FORMATO SEGURO DE BUKKIT
-            meta.setDisplayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#a8ff78<bold>" + cat.name() + "</bold>")));
+            // Obtenemos el nombre traducido
+            String nombreBonito = obtenerNombreCategoria(cat);
+            meta.setDisplayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#55FF55<bold>" + nombreBonito + "</bold>")));
 
             List<String> lore = new ArrayList<>();
-            lore.add(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#434343Haz clic para explorar la")));
-            lore.add(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#434343base de datos de esta rama.")));
+            lore.add(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#AAAAAAHaz clic para explorar la")));
+            lore.add(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#AAAAAAbase de datos de esta rama.")));
             meta.setLore(lore);
 
             item.setItemMeta(meta);
@@ -57,7 +71,10 @@ public class ColeccionesMenu {
 
     // 🌟 2. SUB-MENÚ (Por Categoría)
     public static void abrirSubMenu(Player player, CollectionManager manager, CollectionCategory categoria) {
-        Inventory inv = Bukkit.createInventory(null, 54, NexoColor.parse(TITLE_SUBMENU_PREFIX + categoria.name()));
+        // También traducimos el título del sub-menú
+        String nombreCategoriaBonito = obtenerNombreCategoria(categoria);
+        Inventory inv = Bukkit.createInventory(null, 54, NexoColor.parse(TITLE_SUBMENU_PREFIX + nombreCategoriaBonito));
+
         CollectionProfile profile = manager.getProfile(player.getUniqueId());
 
         if (profile == null) {
@@ -77,29 +94,29 @@ public class ColeccionesMenu {
             ItemStack icono = new ItemStack(mat);
             ItemMeta meta = icono.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#fbd72b<bold>" + item.displayName() + "</bold>")));
+                meta.setDisplayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FFAA00<bold>" + item.displayName() + "</bold>")));
 
                 int cantidad = profile.getProgress(item.itemId());
                 int nivel = manager.calcularNivel(cantidad);
 
                 List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                lore.add(NexoColor.parse("&#434343ID de Registro: " + item.itemId()));
+                lore.add(NexoColor.parse("&#AAAAAAID de Registro: " + item.itemId()));
                 lore.add(NexoColor.parse(" "));
-                lore.add(NexoColor.parse("&#434343Nivel Actual: &#00fbff" + nivel));
+                lore.add(NexoColor.parse("&#AAAAAANivel Actual: &#00E5FF" + nivel));
 
                 if (nivel < CollectionManager.TIERS.length) {
                     int siguienteMeta = CollectionManager.TIERS[nivel];
-                    lore.add(NexoColor.parse("&#434343Progreso: &#fbd72b" + cantidad + " &#434343/ &#fbd72b" + siguienteMeta));
+                    lore.add(NexoColor.parse("&#AAAAAAProgreso: &#FFAA00" + cantidad + " &#AAAAAA/ &#FFAA00" + siguienteMeta));
                     lore.add(NexoColor.parse(" "));
-                    lore.add(NexoColor.parse("&#a8ff78¡Producción requerida para mejorar!"));
+                    lore.add(NexoColor.parse("&#55FF55¡Producción requerida para mejorar!"));
                 } else {
-                    lore.add(NexoColor.parse("&#434343Progreso: &#fbd72b" + cantidad));
+                    lore.add(NexoColor.parse("&#AAAAAAProgreso: &#FFAA00" + cantidad));
                     lore.add(NexoColor.parse(" "));
-                    lore.add(NexoColor.parse("&#fbd72b<bold>¡MÁXIMA EFICIENCIA ALCANZADA!</bold>"));
+                    lore.add(NexoColor.parse("&#FFAA00<bold>¡MÁXIMA EFICIENCIA ALCANZADA!</bold>"));
                 }
                 lore.add(NexoColor.parse(" "));
-                lore.add(NexoColor.parse("&#434343Usa &#fbd72b/col top " + item.itemId()));
-                lore.add(NexoColor.parse("&#434343para ver a los mejores del mundo."));
+                lore.add(NexoColor.parse("&#AAAAAAUsa &#FFAA00/col top " + item.itemId()));
+                lore.add(NexoColor.parse("&#AAAAAApara ver a los mejores del servidor."));
 
                 meta.lore(lore);
                 icono.setItemMeta(meta);
@@ -111,7 +128,7 @@ public class ColeccionesMenu {
         ItemStack volver = new ItemStack(Material.ARROW);
         ItemMeta volverMeta = volver.getItemMeta();
         if (volverMeta != null) {
-            volverMeta.displayName(NexoColor.parse("&#ff4b2bRegresar al Directorio Central"));
+            volverMeta.displayName(NexoColor.parse("&#FF5555Regresar al Directorio Central"));
             volver.setItemMeta(volverMeta);
         }
         inv.setItem(49, volver);
