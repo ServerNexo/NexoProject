@@ -1,7 +1,10 @@
 package me.nexo.items.estaciones;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.NexoItems;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -15,44 +18,53 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.List;
+import java.util.Arrays;
 import java.util.Random;
 
 public class HerreriaListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Usamos la clase principal de NexoItems
     private final NexoItems plugin;
-    private final String TITULO_MENU = "§8⚒ Herrería del Nexo";
     private final Random random = new Random();
+
+    // 🎨 Títulos y prefijos limpios y corporativos
+    public static final String TITLE_PLAIN = "» Herrería del Nexo";
+    public static final String MENU_TITLE = "&#555555<bold>»</bold> &#FFAA00Herrería del Nexo";
 
     public HerreriaListener(NexoItems plugin) {
         this.plugin = plugin;
     }
 
-    // Método para abrir el menú
-    public void abrirMenu(Player jugador) {
-        Inventory inv = Bukkit.createInventory(null, 27, TITULO_MENU);
+    private String serialize(String hex) {
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
+    }
 
-        // Decoración de cristal negro
+    public void abrirMenu(Player jugador) {
+        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
+
         ItemStack cristal = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta metaCristal = cristal.getItemMeta();
-        metaCristal.setDisplayName(" ");
-        cristal.setItemMeta(metaCristal);
+        if (metaCristal != null) {
+            metaCristal.setDisplayName(serialize(" "));
+            cristal.setItemMeta(metaCristal);
+        }
 
         for (int i = 0; i < 27; i++) {
             inv.setItem(i, cristal);
         }
 
-        // Dejamos 2 huecos vacíos: Slot 11 (Arma) y Slot 15 (Material)
         inv.setItem(11, new ItemStack(Material.AIR));
         inv.setItem(15, new ItemStack(Material.AIR));
 
-        // El Botón de Forjar (Slot 13)
         ItemStack yunque = new ItemStack(Material.ANVIL);
         ItemMeta metaYunque = yunque.getItemMeta();
-        metaYunque.setDisplayName("§a§lFORJAR MEJORA");
-        metaYunque.setLore(List.of("§7Haz clic para intentar mejorar tu arma.", "§eRequiere: §f1x Polvo Estelar"));
-        yunque.setItemMeta(metaYunque);
+        if (metaYunque != null) {
+            metaYunque.setDisplayName(serialize("&#55FF55<bold>FORJAR MEJORA</bold>"));
+            metaYunque.setLore(Arrays.asList(
+                    serialize("&#AAAAAAHaz clic para intentar mejorar tu activo."),
+                    serialize("&#FFAA00Requiere: &#FFFFFF1x Polvo Estelar")
+            ));
+            yunque.setItemMeta(metaYunque);
+        }
         inv.setItem(13, yunque);
 
         jugador.openInventory(inv);
@@ -60,21 +72,20 @@ public class HerreriaListener implements Listener {
 
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals(TITULO_MENU)) return;
+        // 🌟 CORRECCIÓN 1.21: Validación segura del título del menú
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!tituloLimpio.equals(TITLE_PLAIN)) return;
 
         Player jugador = (Player) event.getWhoClicked();
         int slot = event.getRawSlot();
 
-        // Si hacen clic en su propio inventario, les dejamos mover sus cosas
         if (slot >= 27) return;
 
-        // Si hacen clic en los cristales, cancelamos
         if (slot != 11 && slot != 15 && slot != 13) {
             event.setCancelled(true);
             return;
         }
 
-        // SI HACEN CLIC EN EL BOTÓN DE FORJAR
         if (slot == 13) {
             event.setCancelled(true);
             Inventory inv = event.getInventory();
@@ -82,41 +93,38 @@ public class HerreriaListener implements Listener {
             ItemStack material = inv.getItem(15);
 
             if (arma == null || arma.getType() == Material.AIR) {
-                jugador.sendMessage("§cPon un arma en la ranura izquierda.");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Inserta un activo en la bahía izquierda."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             if (material == null || !material.hasItemMeta() ||
                     !material.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveMaterialMejora, PersistentDataType.BYTE)) {
-                jugador.sendMessage("§cNecesitas §ePolvo Estelar §cen la ranura derecha.");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Necesitas &#FFAA00Polvo Estelar &#FF5555en la bahía derecha."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
-            // Leemos el nivel actual del arma
             ItemMeta metaArma = arma.getItemMeta();
             if (!metaArma.getPersistentDataContainer().has(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER)) {
-                jugador.sendMessage("§cEsta arma no se puede mejorar.");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Este activo no soporta mejoras de herrería estelar."));
                 return;
             }
 
-            int nivelActual = metaArma.getPersistentDataContainer().get(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER);
+            int nivelActual = metaArma.getPersistentDataContainer().getOrDefault(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, 0);
 
             if (nivelActual >= 10) {
-                jugador.sendMessage("§c¡Tu arma ya está al nivel máximo!");
+                jugador.sendMessage(NexoColor.parse("&#FFAA00[!] ¡El activo ya ha alcanzado la mejora máxima (+10)!"));
                 return;
             }
 
-            // GASTAMOS 1 POLVO ESTELAR
+            // Consumimos 1 Polvo Estelar
             material.setAmount(material.getAmount() - 1);
 
-            // MATEMÁTICAS DE PROBABILIDAD (RNG)
             int chanceExito = 100 - (nivelActual * 10);
             int tiro = random.nextInt(100) + 1;
 
             if (tiro <= chanceExito) {
-                // ¡ÉXITO!
                 nivelActual++;
                 metaArma.getPersistentDataContainer().set(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, nivelActual);
 
@@ -126,20 +134,19 @@ public class HerreriaListener implements Listener {
 
                 arma.setItemMeta(metaArma);
 
-                jugador.sendMessage("§a§l¡ÉXITO! §7Tu arma subió a nivel §e+" + nivelActual);
+                jugador.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>¡FORJA EXITOSA!</bold> El activo ascendió a Nivel +" + nivelActual));
                 jugador.playSound(jugador.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1f);
             } else {
-                // ¡FALLO!
-                jugador.sendMessage("§c§l¡FALLO! §7La mejora no funcionó y el polvo se destruyó.");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] <bold>¡FORJA FALLIDA!</bold> La integridad del polvo estelar colapsó."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_ITEM_BREAK, 1f, 1f);
             }
         }
     }
 
-    // ANTI-DUPE: Devolver ítems al cerrar el menú
     @EventHandler
     public void alCerrar(InventoryCloseEvent event) {
-        if (!event.getView().getTitle().equals(TITULO_MENU)) return;
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!tituloLimpio.equals(TITLE_PLAIN)) return;
 
         Player jugador = (Player) event.getPlayer();
         Inventory inv = event.getInventory();

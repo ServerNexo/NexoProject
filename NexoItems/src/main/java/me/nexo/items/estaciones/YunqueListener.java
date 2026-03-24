@@ -1,8 +1,11 @@
 package me.nexo.items.estaciones;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.EnchantDTO;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -11,30 +14,34 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.List;
+import java.util.Arrays;
 
 public class YunqueListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos la clase principal de NexoItems
     private final NexoItems plugin;
-    private final String TITULO_MENU = "§8🪄 Yunque Mágico";
+
+    public static final String TITLE_PLAIN = "» Yunque Mágico";
+    public static final String MENU_TITLE = "&#555555<bold>»</bold> &#FF55FFYunque Mágico";
 
     public YunqueListener(NexoItems plugin) {
         this.plugin = plugin;
     }
 
     public void abrirMenu(Player jugador) {
-        Inventory inv = Bukkit.createInventory(null, 27, TITULO_MENU);
+        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
 
-        ItemStack cristal = new ItemStack(Material.MAGENTA_STAINED_GLASS_PANE);
+        ItemStack cristal = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta metaCristal = cristal.getItemMeta();
-        metaCristal.setDisplayName(" ");
-        cristal.setItemMeta(metaCristal);
+        if (metaCristal != null) {
+            metaCristal.setDisplayName(serialize(" "));
+            cristal.setItemMeta(metaCristal);
+        }
 
         for (int i = 0; i < 27; i++) inv.setItem(i, cristal);
 
@@ -43,9 +50,14 @@ public class YunqueListener implements Listener {
 
         ItemStack yunque = new ItemStack(Material.ANVIL);
         ItemMeta metaYunque = yunque.getItemMeta();
-        metaYunque.setDisplayName("§d§lFUSIONAR MAGIA");
-        metaYunque.setLore(List.of("§7Aplica el encantamiento del libro", "§7a tu arma, herramienta o armadura."));
-        yunque.setItemMeta(metaYunque);
+        if (metaYunque != null) {
+            metaYunque.setDisplayName(serialize("&#FF55FF<bold>FUSIONAR MAGIA</bold>"));
+            metaYunque.setLore(Arrays.asList(
+                    serialize("&#AAAAAAAplica el encantamiento del libro"),
+                    serialize("&#AAAAAAa tu arma, herramienta o armadura.")
+            ));
+            yunque.setItemMeta(metaYunque);
+        }
         inv.setItem(13, yunque);
 
         jugador.openInventory(inv);
@@ -53,7 +65,8 @@ public class YunqueListener implements Listener {
 
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals(TITULO_MENU)) return;
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!plainTitle.equals(TITLE_PLAIN)) return;
 
         Player jugador = (Player) event.getWhoClicked();
         int slot = event.getRawSlot();
@@ -72,54 +85,52 @@ public class YunqueListener implements Listener {
             ItemStack libro = inv.getItem(15);
 
             if (itemObj == null || itemObj.getType() == Material.AIR) {
-                jugador.sendMessage("§cPon un arma, herramienta o armadura en la ranura izquierda.");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Inserta un arma, herramienta o armadura en la bahía izquierda."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             if (libro == null || !libro.hasItemMeta() || !libro.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveEnchantId, PersistentDataType.STRING)) {
-                jugador.sendMessage("§cNecesitas un §dLibro de Encantamiento §cen la ranura derecha.");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Necesitas un Módulo de Encantamiento válido en la bahía derecha."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             var pdcItem = itemObj.getItemMeta().getPersistentDataContainer();
-            // Verificamos de qué tipo de ítem se trata
+
             boolean esArma = pdcItem.has(ItemManager.llaveWeaponId, PersistentDataType.STRING);
             boolean esHerramienta = pdcItem.has(ItemManager.llaveHerramientaId, PersistentDataType.STRING);
             boolean esArmadura = pdcItem.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING);
 
             if (!esArma && !esHerramienta && !esArmadura) {
-                jugador.sendMessage("§cEse ítem no soporta encantamientos del Nexo.");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Este activo no soporta encantamientos corporativos."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             String idEnchant = libro.getItemMeta().getPersistentDataContainer().get(ItemManager.llaveEnchantId, PersistentDataType.STRING);
-            int nivel = libro.getItemMeta().getPersistentDataContainer().get(ItemManager.llaveEnchantNivel, PersistentDataType.INTEGER);
+            int nivel = libro.getItemMeta().getPersistentDataContainer().getOrDefault(ItemManager.llaveEnchantNivel, PersistentDataType.INTEGER, 1);
             EnchantDTO enchantDTO = plugin.getFileManager().getEnchantDTO(idEnchant);
 
-            // Determinamos el tipo para validarlo con el DTO
-            String tipoItem = "Desconocido";
-            if (esArma) tipoItem = "Arma";
-            else if (esHerramienta) tipoItem = "Herramienta";
-            else if (esArmadura) tipoItem = "Armadura";
+            String tipoItem = esArma ? "Arma" : (esHerramienta ? "Herramienta" : "Armadura");
 
-            // Asegúrate de que tu EnchantDTO tiene este método, o cambia la lógica si no lo tiene.
-            // Asumiendo que `esCompatible` verifica si la lista `aplicaA` contiene el tipo.
-            // Si te da error aquí, es porque en EnchantDTO no creaste el método `esCompatible`.
-            if (enchantDTO != null && !enchantDTO.esCompatible(tipoItem)) {
-                jugador.sendMessage("§cEl encantamiento " + enchantDTO.nombre() + " §cno se puede aplicar a " + tipoItem + "s.");
+            // Validamos que el libro sea compatible con la pieza
+            if (enchantDTO != null && !enchantDTO.aplicaA().contains(tipoItem) && !enchantDTO.aplicaA().contains("Cualquiera")) {
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Incompatibilidad: " + enchantDTO.nombre() + " no puede aplicarse a " + tipoItem + "s."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             // ¡Magia aplicada!
             ItemStack itemEncantado = ItemManager.aplicarEncantamiento(itemObj, idEnchant, nivel);
+
+            // 🌟 FASE 5 EVOLUCIÓN CÉNIT: Sincronizamos para que actualice la estética sin perder Nivel
+            ItemManager.sincronizarItemAsync(itemEncantado);
+
             inv.setItem(11, itemEncantado);
             inv.setItem(15, new ItemStack(Material.AIR)); // Consumir el libro
 
-            jugador.sendMessage("§a§l¡ÉXITO! §7Has aplicado " + org.bukkit.ChatColor.translateAlternateColorCodes('&', enchantDTO.nombre()) + " §7a tu ítem.");
+            jugador.sendMessage(NexoColor.parse("&#55FF55[✓] FUSIÓN EXITOSA. Módulo " + enchantDTO.nombre() + " inyectado en el activo."));
             jugador.playSound(jugador.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1f, 1f);
             jugador.playSound(jugador.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 2f);
         }
@@ -127,7 +138,9 @@ public class YunqueListener implements Listener {
 
     @EventHandler
     public void alCerrar(InventoryCloseEvent event) {
-        if (!event.getView().getTitle().equals(TITULO_MENU)) return;
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!plainTitle.equals(TITLE_PLAIN)) return;
+
         Player jugador = (Player) event.getPlayer();
         Inventory inv = event.getInventory();
 
@@ -136,5 +149,33 @@ public class YunqueListener implements Listener {
 
         if (item != null && item.getType() != Material.AIR) jugador.getInventory().addItem(item);
         if (libro != null && libro.getType() != Material.AIR) jugador.getInventory().addItem(libro);
+    }
+
+    // 🌟 PROTECCIÓN ANTI-CORRUPCIÓN (Bloqueo Yunque Vanilla)
+    @EventHandler
+    public void onAnvilPrepare(PrepareAnvilEvent event) {
+        ItemStack item1 = event.getInventory().getItem(0);
+        ItemStack result = event.getResult();
+
+        if (item1 != null && item1.hasItemMeta() && result != null && result.hasItemMeta()) {
+            ItemMeta meta1 = item1.getItemMeta();
+
+            // Si el ítem es del Nexo, bloqueamos el renombrado
+            if (meta1.getPersistentDataContainer().has(ItemManager.llaveWeaponId, PersistentDataType.STRING) ||
+                    meta1.getPersistentDataContainer().has(ItemManager.llaveHerramientaId, PersistentDataType.STRING) ||
+                    meta1.getPersistentDataContainer().has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
+
+                String oldName = meta1.getDisplayName();
+                String newName = result.getItemMeta().getDisplayName();
+
+                if (!oldName.equals(newName)) {
+                    event.setResult(null);
+                }
+            }
+        }
+    }
+
+    private String serialize(String hex) {
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
     }
 }

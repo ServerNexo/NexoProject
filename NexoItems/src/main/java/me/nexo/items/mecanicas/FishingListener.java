@@ -2,6 +2,7 @@ package me.nexo.items.mecanicas;
 
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.skill.Skills;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.ArmorDTO;
@@ -18,7 +19,6 @@ import java.util.Random;
 
 public class FishingListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos NexoItems
     private final NexoItems plugin;
     private final Random random = new Random();
 
@@ -32,7 +32,7 @@ public class FishingListener implements Listener {
 
         // 1. Escaneamos la armadura (Desde la RAM de NexoItems)
         double probCriaturaTotal = 0.0;
-        double velocidadPescaTotal = 0.0;
+        double velocidadPescaTotal = 0.0; // Aunque no se usa en este snippet, la dejamos lista
 
         for (ItemStack item : p.getInventory().getArmorContents()) {
             if (item == null || !item.hasItemMeta()) continue;
@@ -57,11 +57,11 @@ public class FishingListener implements Listener {
                 }
                 spawnearMonstruoMarino(p);
 
-                p.sendActionBar("§3§l¡UNA CRIATURA ABISAL HA EMERGIDO! §3🦑");
+                p.sendActionBar(NexoColor.parse("&#FF5555<bold>¡ALERTA DE SEGURIDAD! ENTIDAD ABISAL DETECTADA</bold> 🦑"));
                 p.playSound(p.getLocation(), Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.5f, 1.5f);
             } else {
                 // Si no sale bicho, damos recompensa normal pero con sonido satisfactorio
-                p.sendActionBar("§b✨ ¡PESCA EXITOSA! §b✨");
+                p.sendActionBar(NexoColor.parse("&#00E5FF✨ ¡EXTRACCIÓN ACUÁTICA EXITOSA! ✨"));
                 p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, 2.0f);
             }
         }
@@ -74,13 +74,13 @@ public class FishingListener implements Listener {
             nivelPesca = (int) AuraSkillsApi.get().getUser(p.getUniqueId()).getSkillLevel(Skills.FISHING);
         } catch (Exception ignored) {}
 
-        // Lógica simple de escalado
+        // Lógica simple de escalado con nombres en paleta Hexagonal
         if (nivelPesca < 10) {
-            p.getWorld().spawnEntity(p.getLocation(), EntityType.ZOMBIE).setCustomName("§7Ahogado de las Mareas");
+            p.getWorld().spawnEntity(p.getLocation(), EntityType.ZOMBIE).customName(NexoColor.parse("&#AAAAAAAhogado de las Mareas"));
         } else if (nivelPesca < 25) {
-            p.getWorld().spawnEntity(p.getLocation(), EntityType.GUARDIAN).setCustomName("§bGuardián de la Fosa");
+            p.getWorld().spawnEntity(p.getLocation(), EntityType.GUARDIAN).customName(NexoColor.parse("&#00E5FFGuardián de la Fosa"));
         } else {
-            p.getWorld().spawnEntity(p.getLocation(), EntityType.ELDER_GUARDIAN).setCustomName("§3§lLEVIATÁN DEL NEXO");
+            p.getWorld().spawnEntity(p.getLocation(), EntityType.ELDER_GUARDIAN).customName(NexoColor.parse("&#FF5555<bold>LEVIATÁN DEL NEXO</bold>"));
         }
     }
 }

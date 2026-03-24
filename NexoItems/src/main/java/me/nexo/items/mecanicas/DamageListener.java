@@ -1,5 +1,6 @@
 package me.nexo.items.mecanicas;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.ArmorDTO;
@@ -7,6 +8,7 @@ import me.nexo.items.dtos.EnchantDTO;
 import me.nexo.items.dtos.WeaponDTO;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
@@ -23,7 +25,6 @@ import org.bukkit.potion.PotionEffectType;
 
 public class DamageListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos NexoItems
     private final NexoItems plugin;
 
     public DamageListener(NexoItems plugin) {
@@ -50,7 +51,6 @@ public class DamageListener implements Listener {
                 if (pdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
                     ArmorDTO dto = plugin.getFileManager().getArmorDTO(pdc.get(ItemManager.llaveArmaduraId, PersistentDataType.STRING));
                     if (dto != null) {
-                        // Por cada 10 puntos de "Vida Extra" que da la armadura, reducimos 1 punto de daño real
                         defensaExtra += (dto.vidaExtra() / 10.0);
                     }
                 }
@@ -75,13 +75,13 @@ public class DamageListener implements Listener {
             // Aplicar Evasión Mágica
             if (probEvasion > 0 && Math.random() * 100 <= probEvasion) {
                 event.setCancelled(true);
-                victima.sendMessage("§f§l¡EVASIÓN!");
+                victima.sendMessage(NexoColor.parse("&#00E5FF<bold>¡EVASIÓN PERFECTA!</bold>"));
                 victima.playSound(victima.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1f, 2f);
                 return;
             }
 
             // Aplicar Mitigación de Daño
-            double danioReducido = Math.max(1.0, event.getDamage() - defensaExtra); // Nunca baja de 1 de daño
+            double danioReducido = Math.max(1.0, event.getDamage() - defensaExtra);
             event.setDamage(danioReducido);
 
             // Aplicar Coraza Espinosa
@@ -107,7 +107,6 @@ public class DamageListener implements Listener {
 
                 if (dto != null) {
 
-                    // 🟢 ARQUITECTURA LIMPIA: Obtenemos el usuario de la caché
                     NexoUser user = NexoAPI.getInstance().getUserLocal(jugador.getUniqueId());
 
                     String claseJugador = "Ninguna";
@@ -120,7 +119,7 @@ public class DamageListener implements Listener {
 
                     // 1. RESTRICCIONES (Clase y Nivel de Combate)
                     if (!dto.claseRequerida().equalsIgnoreCase("Cualquiera") && !dto.claseRequerida().equalsIgnoreCase(claseJugador)) {
-                        jugador.sendMessage("§c§l⚠ §cTu clase (" + claseJugador + ") no puede usar esta arma.");
+                        jugador.sendMessage(NexoColor.parse("&#FF5555[!] Incompatibilidad Neural: Tu clase (" + claseJugador + ") no puede empuñar este activo."));
                         jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
                         event.setDamage(1.0); // Daño de castigo
                         return;
@@ -128,15 +127,21 @@ public class DamageListener implements Listener {
 
                     if (nivelCombate < dto.nivelRequerido()) {
                         event.setCancelled(true);
-                        jugador.sendMessage("§c§l⚠ ARMA PESADA §8| §7Necesitas Nivel de Combate §e" + dto.nivelRequerido());
+                        jugador.sendMessage(NexoColor.parse("&#FF5555[!] Activo Bloqueado. Requiere Autorización de Combate Nivel " + dto.nivelRequerido()));
                         jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
                         return;
                     }
 
-                    // 2. DAÑO BASE (Ya viene calculado gracias a la 1.21.11)
+                    // 2. DAÑO BASE
                     double dañoFinal = event.getDamage();
 
-                    // 3. MULTIPLICADOR DE PRESTIGIO
+                    // 🌟 3. EVOLUCIÓN CÉNIT (Módulo 5)
+                    int nivelEvolucion = pdc.getOrDefault(ItemManager.llaveNivelEvolucion, PersistentDataType.INTEGER, 1);
+                    double escaladoNivel = 1.0 + (nivelEvolucion * 0.05); // +5% Daño por Nivel Cénit
+
+                    dañoFinal *= escaladoNivel;
+
+                    // 4. MULTIPLICADOR DE PRESTIGIO
                     int prestigio = pdc.getOrDefault(ItemManager.llaveWeaponPrestige, PersistentDataType.INTEGER, 0);
                     if (prestigio > 0 && dto.permitePrestigio()) {
                         dañoFinal += (dañoFinal * (prestigio * dto.multiPrestigio()));
@@ -150,12 +155,14 @@ public class DamageListener implements Listener {
                     String idEjecutor = "ejecutor";
                     org.bukkit.NamespacedKey keyEjecutor = new org.bukkit.NamespacedKey(plugin, "nexo_enchant_" + idEjecutor);
                     if (pdc.has(keyEjecutor, PersistentDataType.INTEGER)) {
-                        double maxHp = victima.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-                        if ((victima.getHealth() / maxHp) <= 0.20) { // Si tiene menos del 20% de vida
-                            EnchantDTO ench = plugin.getFileManager().getEnchantDTO(idEjecutor);
-                            if (ench != null) {
-                                double bono = ench.getValorPorNivel(pdc.get(keyEjecutor, PersistentDataType.INTEGER));
-                                dañoFinal += (dañoFinal * (bono / 100.0));
+                        if (victima.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
+                            double maxHp = victima.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+                            if ((victima.getHealth() / maxHp) <= 0.20) {
+                                EnchantDTO ench = plugin.getFileManager().getEnchantDTO(idEjecutor);
+                                if (ench != null) {
+                                    double bono = ench.getValorPorNivel(pdc.get(keyEjecutor, PersistentDataType.INTEGER));
+                                    dañoFinal += (dañoFinal * (bono / 100.0));
+                                }
                             }
                         }
                     }
@@ -182,8 +189,8 @@ public class DamageListener implements Listener {
                         }
                     }
 
-                    // 4. DAÑO Y EFECTOS ELEMENTALES
-                    String elementoLimpio = ChatColor.stripColor(dto.elemento()).toUpperCase();
+                    // 5. DAÑO Y EFECTOS ELEMENTALES
+                    String elementoLimpio = ChatColor.stripColor(LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(dto.elemento()))).toUpperCase();
                     String nombreMob = victima.getCustomName() != null ? ChatColor.stripColor(victima.getCustomName()).toUpperCase() : "";
                     double multElemental = 1.0;
 
@@ -203,18 +210,18 @@ public class DamageListener implements Listener {
                     dañoFinal *= multElemental;
 
                     if (multElemental > 1.0) {
-                        jugador.sendMessage("§a§l¡GOLPE CRÍTICO ELEMENTAL!");
+                        jugador.sendMessage(NexoColor.parse("&#55FF55<bold>¡GOLPE CRÍTICO ELEMENTAL!</bold>"));
                     }
 
                     // APLICAR EL DAÑO FINAL
                     event.setDamage(dañoFinal);
 
-                    // 5. VAMPIRISMO (Se calcula con el daño final real)
+                    // 6. VAMPIRISMO (Se calcula con el daño final real)
                     String idVamp = "vampirismo";
                     org.bukkit.NamespacedKey keyVamp = new org.bukkit.NamespacedKey(plugin, "nexo_enchant_" + idVamp);
                     if (pdc.has(keyVamp, PersistentDataType.INTEGER)) {
                         EnchantDTO ench = plugin.getFileManager().getEnchantDTO(idVamp);
-                        if (ench != null) {
+                        if (ench != null && jugador.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
                             double porcentaje = ench.getValorPorNivel(pdc.get(keyVamp, PersistentDataType.INTEGER));
                             double cura = dañoFinal * (porcentaje / 100.0);
                             double maxVidaJugador = jugador.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();

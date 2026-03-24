@@ -1,5 +1,6 @@
 package me.nexo.items.mecanicas;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.NexoItems;
 import org.bukkit.Sound;
@@ -26,7 +27,7 @@ public class PlayerItemListener implements Listener {
         // 🎁 Entrega del arma inicial si es su primera vez
         if (!jugador.hasPlayedBefore()) {
             jugador.getInventory().addItem(ItemManager.generarArmaRPG("baculo_manantial_t1"));
-            jugador.sendMessage("§6§lNEXO §8| §7¡Bienvenido! Te hemos entregado tu primera arma.");
+            jugador.sendMessage(NexoColor.parse("&#FFAA00<bold>NEXO</bold> &#555555| &#AAAAAA¡Bienvenido al sistema! Tu primer activo de combate ha sido asignado a tu inventario."));
         }
     }
 
@@ -40,7 +41,7 @@ public class PlayerItemListener implements Listener {
         // Revisamos si el ítem tiene la llave invisible "Soulbound"
         if (item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveSoulbound, PersistentDataType.BYTE)) {
             event.setCancelled(true); // Cancelamos que lo tire
-            event.getPlayer().sendMessage("§c§l🔒 No puedes tirar un objeto ligado a tu alma.");
+            event.getPlayer().sendMessage(NexoColor.parse("&#FF5555<bold>[🔒] RESTRICCIÓN BIOMÉTRICA:</bold> &#AAAAAANo puedes descartar un objeto enlazado permanentemente a tu firma neuronal."));
             event.getPlayer().playSound(event.getPlayer().getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
         }
     }

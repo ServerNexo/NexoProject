@@ -9,14 +9,14 @@ public record ArtefactoDTO(
         HabilidadType type,
         double power
 ) {
-    // Definimos las rarezas con sus respectivos colores según tu prompt
+    // Definimos las rarezas con sus respectivos colores Ciberpunk
     public enum Rareza {
-        COMUN("§7"),       // Gris
-        RARO("§9"),        // Azul
-        EPICO("§5"),       // Púrpura
-        LEGENDARIO("§6"),  // Oro
-        MITICO("§c"),      // Rojo
-        COSMICO("§b");     // Aqua/Celeste
+        COMUN("&#AAAAAA"),       // Gris Plomo
+        RARO("&#5555FF"),        // Azul Neón
+        EPICO("&#AA00AA"),       // Púrpura Profundo
+        LEGENDARIO("&#FFAA00"),  // Naranja/Dorado Corporativo
+        MITICO("&#FF5555"),      // Rojo Alerta
+        COSMICO("&#00E5FF");     // Cian Ciberpunk
 
         private final String color;
 

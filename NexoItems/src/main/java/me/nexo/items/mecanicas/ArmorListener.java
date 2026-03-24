@@ -3,6 +3,7 @@ package me.nexo.items.mecanicas;
 import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.skill.Skills;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.ArmorDTO;
@@ -28,7 +29,6 @@ public class ArmorListener implements Listener {
         this.plugin = plugin;
 
         // 🌟 EL HEARTBEAT (Latido): Escanea silenciosamente a todos cada 2 segundos.
-        // Esto evita que un jugador retenga armaduras si le bajan el nivel o le cambian de clase.
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 evaluarArmadura(p);
@@ -93,7 +93,7 @@ public class ArmorListener implements Listener {
                     if (!dto.claseRequerida().equalsIgnoreCase("Cualquiera") &&
                             !dto.claseRequerida().equalsIgnoreCase("Ninguna") &&
                             !dto.claseRequerida().equalsIgnoreCase(claseDominante)) {
-                        razonFallo = "Choque de Clases (" + dto.claseRequerida() + ")";
+                        razonFallo = "Choque de Matrices (" + dto.claseRequerida() + ")";
                         cumpleRequisitos = false;
                     }
 
@@ -128,7 +128,7 @@ public class ArmorListener implements Listener {
                 }
             }
             else if (pdc.has(ItemManager.llaveVidaExtra, PersistentDataType.DOUBLE)) {
-                extraVida += pdc.get(ItemManager.llaveVidaExtra, PersistentDataType.DOUBLE);
+                extraVida += pdc.getOrDefault(ItemManager.llaveVidaExtra, PersistentDataType.DOUBLE, 0.0);
             }
         }
 
@@ -150,13 +150,11 @@ public class ArmorListener implements Listener {
         gestionarEfecto(p, PotionEffectType.SPEED, (int) (velMovimiento / 20), velMovimiento > 0);
     }
 
-    // 🌟 HELPER: Actualiza pociones sin parpadeos visuales
     private void gestionarEfecto(Player p, PotionEffectType tipo, int nivel, boolean aplicar) {
         if (aplicar) {
             boolean necesitaActualizar = true;
             PotionEffect efectoActual = p.getPotionEffect(tipo);
 
-            // Si ya tiene el efecto al mismo nivel y le queda mucho tiempo, no lo sobrescribimos
             if (efectoActual != null && efectoActual.getAmplifier() == nivel && efectoActual.getDuration() > 100) {
                 necesitaActualizar = false;
             }
@@ -181,7 +179,7 @@ public class ArmorListener implements Listener {
             p.getWorld().dropItem(p.getLocation(), clon);
         }
 
-        p.sendMessage("§c§l⚠ NO ERES DIGNO §7| Requisito: §e" + razon);
+        p.sendMessage(NexoColor.parse("&#FF5555[!] <bold>INCOMPATIBILIDAD NEURAL</bold> | La armadura ha sido rechazada por tu sistema. Requisito: &#FFAA00" + razon));
         p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
     }
 }

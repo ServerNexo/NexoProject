@@ -1,6 +1,6 @@
 package me.nexo.items.artefactos;
 
-// 🟢 Importamos tu nueva clase principal
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.NexoItems;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -16,7 +16,6 @@ import org.bukkit.persistence.PersistentDataType;
 
 public class ArtefactoListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos NexoItems
     private final NexoItems plugin;
     private final ArtefactoManager manager;
     public static NamespacedKey llaveArtefactoId;
@@ -75,7 +74,7 @@ public class ArtefactoListener implements Listener {
         if (event.getDamager() instanceof Player p) {
             if (manager.invulnerables.contains(p.getUniqueId())) {
                 event.setCancelled(true);
-                p.sendMessage("§cNo puedes atacar mientras la Capa Espectral esté activa.");
+                p.sendMessage(NexoColor.parse("&#FF5555[!] Sistemas ofensivos bloqueados mientras la Capa Espectral esté activa."));
             }
         }
     }

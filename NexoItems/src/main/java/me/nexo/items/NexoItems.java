@@ -4,12 +4,12 @@ import me.nexo.items.estaciones.DesguaceListener;
 import me.nexo.items.estaciones.HerreriaListener;
 import me.nexo.items.estaciones.ReforjaListener;
 import me.nexo.items.estaciones.YunqueListener;
+import me.nexo.items.estaciones.UpgradeListener;
 import me.nexo.items.managers.FileManager;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.mecanicas.*;
 import org.bukkit.plugin.java.JavaPlugin;
 
-// 🟢 Importamos todos tus nuevos sistemas purificados
 import me.nexo.items.accesorios.AccesoriosManager;
 import me.nexo.items.accesorios.AccesoriosListener;
 import me.nexo.items.accesorios.ComandoAccesorios;
@@ -27,8 +27,12 @@ import me.nexo.items.mochilas.ComandoPV;
 
 public class NexoItems extends JavaPlugin {
 
-    // 🟢 Agregamos el FileManager
+    // 🌟 DECLARACIÓN GLOBAL DE MANAGERS
     private FileManager fileManager;
+    private AccesoriosManager accesoriosManager;
+    private ArtefactoManager artefactoManager;
+    private GuardarropaManager guardarropaManager;
+    private MochilaManager mochilaManager;
 
     @Override
     public void onEnable() {
@@ -45,13 +49,12 @@ public class NexoItems extends JavaPlugin {
         // ==========================================
         // 2. INICIALIZACIÓN DE MANAGERS (Sub-sistemas)
         // ==========================================
-        AccesoriosManager accesoriosManager = new AccesoriosManager(this);
-        ArtefactoManager artefactoManager = new ArtefactoManager(this);
-        GuardarropaManager wardrobeManager = new GuardarropaManager(this);
-        MochilaManager mochilaManager = new MochilaManager(this);
+        this.accesoriosManager = new AccesoriosManager(this);
+        this.artefactoManager = new ArtefactoManager(this);
+        this.guardarropaManager = new GuardarropaManager(this);
+        this.mochilaManager = new MochilaManager(this);
 
-        // El listener del guardarropa se instancia aquí porque el comando lo necesita
-        GuardarropaListener wardrobeListener = new GuardarropaListener(wardrobeManager);
+        GuardarropaListener wardrobeListener = new GuardarropaListener(this.guardarropaManager);
 
         // ==========================================
         // 3. REGISTRO DE EVENTOS (Listeners)
@@ -65,7 +68,10 @@ public class NexoItems extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new YunqueListener(this), this);
         getServer().getPluginManager().registerEvents(new ItemProtectionListener(this), this);
 
-        // 🟢 REGISTRAMOS TODOS LOS LISTENERS QUE MUDAMOS DEL CORE
+        // 🌟 NUEVO SISTEMA: MESA DE EVOLUCIÓN CÉNIT (FASE 5)
+        getServer().getPluginManager().registerEvents(new UpgradeListener(this), this);
+
+        // Sistemas Mudados del Core
         getServer().getPluginManager().registerEvents(new BlockBreakListener(this), this);
         getServer().getPluginManager().registerEvents(new FishingListener(this), this);
         getServer().getPluginManager().registerEvents(new DamageListener(this), this);
@@ -74,34 +80,35 @@ public class NexoItems extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new VanillaStationsListener(this), this);
 
         // Nuevos Sistemas Modulares
-        getServer().getPluginManager().registerEvents(new AccesoriosListener(this, accesoriosManager), this);
-        getServer().getPluginManager().registerEvents(new ArtefactoListener(this, artefactoManager), this);
+        getServer().getPluginManager().registerEvents(new AccesoriosListener(this, this.accesoriosManager), this);
+        getServer().getPluginManager().registerEvents(new ArtefactoListener(this, this.artefactoManager), this);
         getServer().getPluginManager().registerEvents(wardrobeListener, this);
-        getServer().getPluginManager().registerEvents(new MochilaListener(mochilaManager), this);
+        getServer().getPluginManager().registerEvents(new MochilaListener(this.mochilaManager), this);
 
         // ==========================================
         // 4. REGISTRO DE COMANDOS
         // ==========================================
-        if (getCommand("desguace") != null) getCommand("desguace").setExecutor(new ComandoDesguace(this));
-        if (getCommand("accesorios") != null) getCommand("accesorios").setExecutor(new ComandoAccesorios(accesoriosManager));
+        if (getCommand("desguace") != null) getCommand("desguace").setExecutor(new ComandoDesguace());
+        if (getCommand("accesorios") != null) getCommand("accesorios").setExecutor(new ComandoAccesorios(this));
+
+        // 🌟 CORRECCIÓN: Le pasamos el 'wardrobeListener' en lugar de 'this'
         if (getCommand("wardrobe") != null) getCommand("wardrobe").setExecutor(new ComandoWardrobe(wardrobeListener));
-        if (getCommand("pv") != null) getCommand("pv").setExecutor(new ComandoPV(mochilaManager));
 
-        // 🟢 REGISTRAMOS EL COMANDO DE PRUEBAS QUE MUDAMOS
-        if (getCommand("test") != null) getCommand("test").setExecutor(new ComandoTest(this));
-
-        getLogger().info("========================================");
+        if (getCommand("pv") != null) getCommand("pv").setExecutor(new ComandoPV(this));
     }
 
     @Override
     public void onDisable() {
-        // 🟢 RESTAURAMOS LOS BLOQUES DE LAS HABILIDADES ANTES DE APAGAR (Failsafe)
         BlockBreakListener.restaurarBloquesRotos();
         getLogger().info("🗡️ NexoItems apagado y desconectado.");
     }
 
-    // 🟢 Getter para que las demás clases puedan pedirle datos al FileManager
-    public FileManager getFileManager() {
-        return fileManager;
-    }
+    // ==========================================
+    // 🌟 GETTERS DE MANAGERS (Faltaban estos)
+    // ==========================================
+    public FileManager getFileManager() { return fileManager; }
+    public AccesoriosManager getAccesoriosManager() { return accesoriosManager; }
+    public ArtefactoManager getArtefactoManager() { return artefactoManager; }
+    public GuardarropaManager getGuardarropaManager() { return guardarropaManager; }
+    public MochilaManager getMochilaManager() { return mochilaManager; }
 }

@@ -1,9 +1,11 @@
 package me.nexo.items.accesorios;
 
-// 🟢 Importamos el nuevo jefe
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.NexoItems;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
@@ -25,10 +27,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AccesoriosListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos NexoItems
     private final NexoItems plugin;
     private final AccesoriosManager manager;
-    private final String TITULO_BOLSA = "§8💍 Accessory Bag";
+
+    // 🎨 Títulos y prefijos limpios y seguros
+    public static final String TITLE_PLAIN = "» Bolsa de Accesorios";
 
     // Cooldown del Corazón del Nexo (1 Hora)
     private final Map<UUID, Long> cooldownCorazon = new ConcurrentHashMap<>();
@@ -48,12 +51,17 @@ public class AccesoriosListener implements Listener {
         this.keyArmadura = new NamespacedKey(plugin, "accesorio_armadura");
     }
 
+    private String serialize(String hex) {
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
+    }
+
     // ==========================================
     // 🔒 PROTECCIÓN Y GUARDADO DEL INVENTARIO
     // ==========================================
     @EventHandler
     public void alCerrarBolsa(InventoryCloseEvent event) {
-        if (event.getView().getTitle().equals(TITULO_BOLSA)) {
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (tituloLimpio.equals(TITLE_PLAIN)) {
             manager.procesarYGuardarBolsa((Player) event.getPlayer(), event.getInventory());
             ((Player) event.getPlayer()).playSound(event.getPlayer().getLocation(), Sound.ITEM_ARMOR_EQUIP_LEATHER, 1f, 1.2f);
         }
@@ -61,7 +69,8 @@ public class AccesoriosListener implements Listener {
 
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
-        if (event.getView().getTitle().equals(TITULO_BOLSA)) {
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (tituloLimpio.equals(TITLE_PLAIN)) {
             ItemStack currentItem = event.getCurrentItem();
 
             // PROTECCIÓN 1: Evitar clics directos sobre los cristales de bloqueo
@@ -111,7 +120,7 @@ public class AccesoriosListener implements Listener {
             user.setEnergiaExtraAccesorios(energiaExtra);
         }
 
-        p.sendMessage("§b✨ El Poder del Nexo de tus accesorios resuena: §l" + event.getNexoPower() + " PX");
+        p.sendMessage(NexoColor.parse("&#00E5FF✨ Enlace de Hardware Estable. Poder de Red: &#FFAA00<bold>" + event.getNexoPower() + " PX</bold>"));
     }
 
     private void aplicarAtributo(Player p, Attribute atributo, NamespacedKey key, double valor) {
@@ -153,7 +162,12 @@ public class AccesoriosListener implements Listener {
                     p.setHealth(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.5); // Revive con 50% HP
                     p.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, p.getLocation(), 150);
                     p.playSound(p.getLocation(), Sound.ITEM_TOTEM_USE, 1f, 0.5f);
-                    p.sendTitle("§b§lMILAGRO CÓSMICO", "§7El Corazón del Nexo te ha salvado", 10, 60, 10);
+
+                    p.sendTitle(
+                            serialize("&#00E5FF<bold>MILAGRO DE HARDWARE</bold>"),
+                            serialize("&#AAAAAAEl Corazón del Nexo ha purgado tus fallos vitales."),
+                            10, 60, 10
+                    );
                 }
             }
         }

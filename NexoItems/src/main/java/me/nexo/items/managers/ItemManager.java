@@ -1,39 +1,37 @@
 package me.nexo.items.managers;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.dtos.*;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier.Operation;
+import org.bukkit.inventory.EquipmentSlotGroup;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
 
 public class ItemManager {
 
     // Llaves Universales y Materiales
     public static NamespacedKey llaveNivelMejora, llaveMaterialMejora, llaveVidaExtra, llaveElemento, llaveSoulbound;
-
-    // Llaves Antiguas (Profesiones/Stats)
     public static NamespacedKey llaveSuerteMinera, llaveVelocidadMineria, llaveSuerteAgricola, llaveVelocidadMovimiento, llaveSuerteTala, llaveFuerzaHacha, llaveVelocidadPesca, llaveCriaturaMarina;
 
     // 🚀 NUEVAS LLAVES DTO OPTIMIZADAS
-    public static NamespacedKey llaveArmaduraId;
-    public static NamespacedKey llaveWeaponId;
-    public static NamespacedKey llaveWeaponPrestige;
-    public static NamespacedKey llaveHerramientaId;
-    public static NamespacedKey llaveBloquesRotos;
-    public static NamespacedKey llaveReforja;
-    public static NamespacedKey llaveEnchantId;
-    public static NamespacedKey llaveEnchantNivel;
+    public static NamespacedKey llaveArmaduraId, llaveWeaponId, llaveWeaponPrestige, llaveHerramientaId, llaveBloquesRotos, llaveReforja, llaveEnchantId, llaveEnchantNivel;
 
-    // Llaves Antiguas de Armas (Las mantenemos por compatibilidad)
+    // 🚀 LLAVES EVOLUCIÓN CÉNIT (FASE 5)
+    public static NamespacedKey llaveNivelEvolucion, llaveEsencia, llaveFragmento;
+
+    // Llaves Antiguas de Armas
     public static NamespacedKey llaveArmaClase, llaveArmaReqCombate, llaveArmaDanioBase, llaveArmaMitica;
 
-    // 🟢 ARQUITECTURA: Usamos nuestra clase principal especificando el paquete para evitar choque con Nexo API
     public static me.nexo.items.NexoItems pluginMemoria;
 
     public static void init(me.nexo.items.NexoItems plugin) {
@@ -53,7 +51,6 @@ public class ItemManager {
         llaveVelocidadPesca = new NamespacedKey(plugin, "nexo_velocidad_pesca");
         llaveCriaturaMarina = new NamespacedKey(plugin, "nexo_criatura_marina");
 
-        // DTOs
         llaveArmaduraId = new NamespacedKey(plugin, "nexo_armadura_id");
         llaveWeaponId = new NamespacedKey(plugin, "nexo_weapon_id");
         llaveWeaponPrestige = new NamespacedKey(plugin, "nexo_weapon_prestige");
@@ -61,16 +58,82 @@ public class ItemManager {
         llaveBloquesRotos = new NamespacedKey(plugin, "nexo_bloques_rotos");
         llaveReforja = new NamespacedKey(plugin, "nexo_reforja");
 
-        // ⬇️ NUEVAS LLAVES DE ENCANTAMIENTOS ⬇️
         llaveEnchantId = new NamespacedKey(plugin, "nexo_enchant_id");
         llaveEnchantNivel = new NamespacedKey(plugin, "nexo_enchant_nivel");
 
-        // Compatibilidad armas viejas
+        llaveNivelEvolucion = new NamespacedKey(plugin, "nexo_nivel_evolucion");
+        llaveEsencia = new NamespacedKey(plugin, "nexo_esencia");
+        llaveFragmento = new NamespacedKey(plugin, "nexo_fragmento");
+
         llaveArmaClase = new NamespacedKey(plugin, "nexo_arma_clase");
         llaveArmaReqCombate = new NamespacedKey(plugin, "nexo_arma_req_combate");
         llaveArmaDanioBase = new NamespacedKey(plugin, "nexo_arma_danio_base");
         llaveArmaMitica = new NamespacedKey(plugin, "nexo_arma_mitica");
     }
+
+    private static String serialize(String hexString) {
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hexString));
+    }
+
+    // ====================================================
+    // 🔄 MÓDULO 1: SINCRONIZACIÓN Y LEGADO CÉNIT (VIRTUAL THREADS)
+    // ====================================================
+    public static void sincronizarItemAsync(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return;
+
+        CompletableFuture.runAsync(() -> {
+            ItemMeta meta = item.getItemMeta();
+            String weaponId = meta.getPersistentDataContainer().get(llaveWeaponId, PersistentDataType.STRING);
+            String toolId = meta.getPersistentDataContainer().get(llaveHerramientaId, PersistentDataType.STRING);
+
+            int nivelEvolucion = meta.getPersistentDataContainer().getOrDefault(llaveNivelEvolucion, PersistentDataType.INTEGER, 1);
+            String reforja = meta.getPersistentDataContainer().getOrDefault(llaveReforja, PersistentDataType.STRING, "");
+
+            org.bukkit.Bukkit.getScheduler().runTask(pluginMemoria, () -> {
+                if (weaponId != null) {
+                    // 🌟 CORRECCIÓN: Cambiamos getWeapon por getWeaponDTO
+                    WeaponDTO dto = pluginMemoria.getFileManager().getWeaponDTO(weaponId);
+                    if (dto != null) aplicarEvolucionVisual(item, dto.nombre(), dto.danioBase(), nivelEvolucion, reforja);
+                } else if (toolId != null) {
+                    ToolDTO dto = pluginMemoria.getFileManager().getToolDTO(toolId);
+                    if (dto != null) aplicarEvolucionVisual(item, dto.nombre(), 0, nivelEvolucion, reforja);
+                }
+            });
+        }, Executors.newVirtualThreadPerTaskExecutor());
+    }
+
+    private static void aplicarEvolucionVisual(ItemStack item, String nombreBase, double danioBase, int nivel, String reforja) {
+        ItemMeta meta = item.getItemMeta();
+
+        String prefijoReforja = reforja.isEmpty() ? "" : "&#FFAA00" + reforja + " ";
+        String nombreFinal = prefijoReforja + nombreBase + " &#AAAAAA[Nv. " + nivel + "]";
+        meta.setDisplayName(serialize(nombreFinal));
+
+        if (danioBase > 0) {
+            meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE);
+            org.bukkit.attribute.AttributeModifier mod = new org.bukkit.attribute.AttributeModifier(llaveWeaponId, danioBase, Operation.ADD_NUMBER, EquipmentSlotGroup.MAINHAND);
+            meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, mod);
+        }
+
+        List<String> nuevoLore = new ArrayList<>();
+        nuevoLore.add(serialize("&#555555Estadísticas de Evolución:"));
+        nuevoLore.add(serialize("&#AAAAAANivel Cénit: &#FFAA00" + nivel + "&#AAAAAA/60"));
+
+        if (meta.hasLore()) {
+            for (String linea : meta.getLore()) {
+                if (linea.contains("✦") || linea.contains("Nivel Cénit")) continue;
+                nuevoLore.add(linea);
+            }
+        }
+
+        meta.setLore(nuevoLore);
+        item.setItemMeta(meta);
+
+        if (nivel >= 10 && nivel < 20) {
+            // Ejemplo para cambiar de skin cuando sube a nivel 10 usando la API de Nexo/Oraxen
+        }
+    }
+
 
     // ==========================================
     // ⛏️ FÁBRICA DE HERRAMIENTAS (NexoCore + Nexo RP)
@@ -86,7 +149,6 @@ public class ItemManager {
         ItemStack item;
 
         try {
-            // 🟢 FIX CHOQUE DE NOMBRES: Usamos la ruta completa para referirnos al plugin de texturas
             if (nexoId != null && com.nexomc.nexo.api.NexoItems.itemFromId(nexoId) != null) {
                 item = com.nexomc.nexo.api.NexoItems.itemFromId(nexoId).build();
             } else {
@@ -103,24 +165,26 @@ public class ItemManager {
         ItemMeta meta = item.getItemMeta();
         List<String> lore = new ArrayList<>();
 
-        meta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', dto.nombre()));
+        meta.setDisplayName(serialize(dto.nombre()));
 
-        lore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', dto.rareza()));
-        lore.add("§7Profesión: " + dto.profesion());
-        lore.add("§7Tier: " + dto.tier());
-        lore.add("");
-        lore.add("§7Velocidad Base: §e+" + dto.velocidadBase());
-        lore.add("§7Bonus Drops: §b+" + dto.multiplicadorFortuna() + "%");
-        lore.add("");
-        lore.add("§7Bloques Rotos: §e0");
-        lore.add("");
-        lore.add("§fRequisito de " + dto.profesion() + ": Nivel " + dto.nivelRequerido());
+        lore.add(serialize(dto.rareza()));
+        lore.add(serialize("&#AAAAAAProfesión: &#FFAA00" + dto.profesion()));
+        lore.add(serialize("&#AAAAAATier: &#FFAA00" + dto.tier()));
+        lore.add(" ");
+        lore.add(serialize("&#AAAAAAVelocidad Base: &#55FF55+" + dto.velocidadBase()));
+        lore.add(serialize("&#AAAAAABonus Drops: &#00E5FF+" + dto.multiplicadorFortuna() + "%"));
+        lore.add(" ");
+        lore.add(serialize("&#AAAAAABloques Rotos: &#FFAA000"));
+        lore.add(" ");
+        lore.add(serialize("&#FFFFFFRequisito de " + dto.profesion() + ": Nivel " + dto.nivelRequerido()));
 
         meta.setLore(lore);
         meta.setUnbreakable(true);
 
         meta.getPersistentDataContainer().set(llaveHerramientaId, PersistentDataType.STRING, dto.id());
         meta.getPersistentDataContainer().set(llaveBloquesRotos, PersistentDataType.INTEGER, 0);
+        meta.getPersistentDataContainer().set(llaveNivelEvolucion, PersistentDataType.INTEGER, 1);
+
         item.setItemMeta(meta);
 
         if (dto.esTaladro()) {
@@ -130,6 +194,7 @@ public class ItemManager {
             meta.setTool(tool);
         }
 
+        sincronizarItemAsync(item);
         return item;
     }
 
@@ -151,26 +216,27 @@ public class ItemManager {
         ItemMeta meta = item.getItemMeta();
         List<String> lore = new ArrayList<>();
 
-        meta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', dto.nombre()) + " §8[§e+0§8]");
+        meta.setDisplayName(serialize(dto.nombre()) + serialize(" &#555555[&#FFAA00+0&#555555]"));
 
-        lore.add("§7Clase: " + dto.claseRequerida());
-        lore.add("§7Elemento: " + org.bukkit.ChatColor.translateAlternateColorCodes('&', dto.elemento()));
-        lore.add("");
-        lore.add("§7Daño Base: §c" + dto.danioBase() + " ⚔");
-        lore.add("§7Velocidad: §e" + dto.velocidadAtaque() + " ⚡");
-        lore.add("");
+        lore.add(serialize("&#AAAAAAClase: &#FFAA00" + dto.claseRequerida()));
+        lore.add(serialize("&#AAAAAAElemento: " + dto.elemento()));
+        lore.add(" ");
+        lore.add(serialize("&#AAAAAADaño Base: &#FF5555" + dto.danioBase() + " ⚔"));
+        lore.add(serialize("&#AAAAAAVelocidad: &#FFAA00" + dto.velocidadAtaque() + " ⚡"));
+        lore.add(" ");
 
         if (!dto.habilidadId().equalsIgnoreCase("ninguna")) {
-            lore.add("§6✦ Habilidad: §f" + dto.habilidadId().toUpperCase() + " §e§l(CLIC DERECHO)");
-            lore.add("");
+            lore.add(serialize("&#FFAA00✦ Habilidad: &#FFFFFF" + dto.habilidadId().toUpperCase() + " &#FFAA00<bold>(CLIC DERECHO)</bold>"));
+            lore.add(" ");
         }
 
-        lore.add("§fRequisito de Combate: Nivel " + dto.nivelRequerido());
+        lore.add(serialize("&#FFFFFFRequisito de Combate: Nivel " + dto.nivelRequerido()));
         meta.setLore(lore);
         meta.setUnbreakable(true);
 
         meta.getPersistentDataContainer().set(llaveWeaponId, PersistentDataType.STRING, dto.id());
         meta.getPersistentDataContainer().set(llaveWeaponPrestige, PersistentDataType.INTEGER, 0);
+        meta.getPersistentDataContainer().set(llaveNivelEvolucion, PersistentDataType.INTEGER, 1);
 
         NamespacedKey dmgKey = new NamespacedKey(pluginMemoria, "nexo_dmg_" + dto.id());
         org.bukkit.attribute.AttributeModifier dmgMod = new org.bukkit.attribute.AttributeModifier(
@@ -185,6 +251,8 @@ public class ItemManager {
 
         meta.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_ATTRIBUTES);
         item.setItemMeta(meta);
+
+        sincronizarItemAsync(item);
         return item;
     }
 
@@ -213,35 +281,35 @@ public class ItemManager {
 
         String etiquetaPieza = "";
         switch (tipoPieza.toUpperCase()) {
-            case "HELMET": etiquetaPieza = " §8(Casco)"; break;
-            case "CHESTPLATE": etiquetaPieza = " §8(Peto)"; break;
-            case "LEGGINGS": etiquetaPieza = " §8(Pantalones)"; break;
-            case "BOOTS": etiquetaPieza = " §8(Botas)"; break;
+            case "HELMET": etiquetaPieza = " &#555555(Casco)"; break;
+            case "CHESTPLATE": etiquetaPieza = " &#555555(Peto)"; break;
+            case "LEGGINGS": etiquetaPieza = " &#555555(Pantalones)"; break;
+            case "BOOTS": etiquetaPieza = " &#555555(Botas)"; break;
         }
-        meta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', dto.nombre()) + etiquetaPieza);
+        meta.setDisplayName(serialize(dto.nombre() + etiquetaPieza));
 
-        lore.add("§7Clase: " + dto.claseRequerida());
-        lore.add("");
+        lore.add(serialize("&#AAAAAAClase: &#FFAA00" + dto.claseRequerida()));
+        lore.add(" ");
 
-        if (dto.vidaExtra() > 0) lore.add("§7Vida Extra: §c+" + dto.vidaExtra() + " ❤");
-        if (dto.velocidadMovimiento() > 0) lore.add("§7Velocidad: §f+" + dto.velocidadMovimiento() + " 🍃");
-        if (dto.suerteMinera() > 0) lore.add("§7Fortuna Minera: §b+" + dto.suerteMinera() + "% ✨");
-        if (dto.velocidadMineria() > 0) lore.add("§7Prisa Minera: §e+" + dto.velocidadMineria() + " ⚡");
-        if (dto.suerteAgricola() > 0) lore.add("§7Fortuna Agrícola: §a+" + dto.suerteAgricola() + "% 🌾");
-        if (dto.suerteTala() > 0) lore.add("§7Doble Caída (Tala): §2+" + dto.suerteTala() + "% 🪓");
-        if (dto.criaturaMarina() > 0) lore.add("§7Prob. Criatura Marina: §3+" + dto.criaturaMarina() + "% 🦑");
-        if (dto.velocidadPesca() > 0) lore.add("§7Velocidad Pesca: §9+" + dto.velocidadPesca() + "% 🎣");
+        if (dto.vidaExtra() > 0) lore.add(serialize("&#AAAAAAVida Extra: &#FF5555+" + dto.vidaExtra() + " ❤"));
+        if (dto.velocidadMovimiento() > 0) lore.add(serialize("&#AAAAAAVelocidad: &#FFFFFF+" + dto.velocidadMovimiento() + " 🍃"));
+        if (dto.suerteMinera() > 0) lore.add(serialize("&#AAAAAAFortuna Minera: &#00E5FF+" + dto.suerteMinera() + "% ✨"));
+        if (dto.velocidadMineria() > 0) lore.add(serialize("&#AAAAAAPrisa Minera: &#FFAA00+" + dto.velocidadMineria() + " ⚡"));
+        if (dto.suerteAgricola() > 0) lore.add(serialize("&#AAAAAAFortuna Agrícola: &#55FF55+" + dto.suerteAgricola() + "% 🌾"));
+        if (dto.suerteTala() > 0) lore.add(serialize("&#AAAAAADoble Caída (Tala): &#55FF55+" + dto.suerteTala() + "% 🪓"));
+        if (dto.criaturaMarina() > 0) lore.add(serialize("&#AAAAAAProb. Criatura Marina: &#00E5FF+" + dto.criaturaMarina() + "% 🦑"));
+        if (dto.velocidadPesca() > 0) lore.add(serialize("&#AAAAAAVelocidad Pesca: &#00E5FF+" + dto.velocidadPesca() + "% 🎣"));
 
         List<String> loreCustom = pluginMemoria.getFileManager().getArmaduras().getStringList("armaduras_profesion." + id_yml + ".lore_custom");
         if (loreCustom != null && !loreCustom.isEmpty()) {
-            lore.add("");
+            lore.add(" ");
             for (String linea : loreCustom) {
-                lore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', linea));
+                lore.add(serialize(linea));
             }
         }
 
-        lore.add("");
-        lore.add("§fRequisito de " + dto.skillRequerida() + ": Nivel " + dto.nivelRequerido());
+        lore.add(" ");
+        lore.add(serialize("&#FFFFFFRequisito de " + dto.skillRequerida() + ": Nivel " + dto.nivelRequerido()));
 
         meta.setLore(lore);
         meta.setUnbreakable(true);
@@ -256,7 +324,7 @@ public class ItemManager {
     public static ItemStack crearPolvoEstelar() {
         ItemStack item = new ItemStack(Material.GLOWSTONE_DUST);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName("§e✨ Polvo Estelar");
+        meta.setDisplayName(serialize("&#FFAA00✨ Polvo Estelar"));
         meta.getPersistentDataContainer().set(llaveMaterialMejora, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
         return item;
@@ -265,13 +333,13 @@ public class ItemManager {
     public static ItemStack crearHojaVacio() {
         ItemStack item = new ItemStack(Material.DIAMOND_SWORD);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName("§d🌌 Hoja del Vacío");
+        meta.setDisplayName(serialize("&#FF55FF🌌 Hoja del Vacío"));
         List<String> lore = new ArrayList<>();
-        lore.add("§7Artefacto de Utilidad");
-        lore.add("");
-        lore.add("§eHabilidad: Transmisión Instantánea §e§l(CLIC DERECHO)");
-        lore.add("§8Costo: §e40 Energía ⚡");
-        lore.add("§c🔒 Ligado al Alma");
+        lore.add(serialize("&#AAAAAAArtefacto de Utilidad"));
+        lore.add(" ");
+        lore.add(serialize("&#FFAA00Habilidad: Transmisión Instantánea <bold>(CLIC DERECHO)</bold>"));
+        lore.add(serialize("&#555555Costo: &#FFAA0040 Energía ⚡"));
+        lore.add(serialize("&#FF5555🔒 Ligado al Alma"));
         meta.setLore(lore);
         meta.setUnbreakable(true);
         meta.getPersistentDataContainer().set(llaveSoulbound, PersistentDataType.BYTE, (byte) 1);
@@ -291,17 +359,12 @@ public class ItemManager {
         ItemMeta meta = item.getItemMeta();
         var pdc = meta.getPersistentDataContainer();
 
-        // 1. Detección automática: ¿Es arma o es herramienta?
         boolean esArma = pdc.has(llaveWeaponId, PersistentDataType.STRING);
         boolean esHerramienta = pdc.has(llaveHerramientaId, PersistentDataType.STRING);
 
-        if (!esArma && !esHerramienta) return item; // Si no es ninguna, abortamos.
+        if (!esArma && !esHerramienta) return item;
 
         String claseOriginal = "Cualquiera";
-        String nombreOriginal = "Ítem";
-        double danioOriginal = 1.0;
-        double velOriginal = 1.0;
-        double fortunaOriginal = 0.0;
         String idBase = "";
 
         if (esArma) {
@@ -309,89 +372,22 @@ public class ItemManager {
             WeaponDTO arma = pluginMemoria.getFileManager().getWeaponDTO(idBase);
             if (arma == null) return item;
             claseOriginal = arma.claseRequerida();
-            nombreOriginal = arma.nombre();
-            danioOriginal = arma.danioBase();
-            velOriginal = arma.velocidadAtaque();
         } else {
             idBase = pdc.get(llaveHerramientaId, PersistentDataType.STRING);
             ToolDTO tool = pluginMemoria.getFileManager().getToolDTO(idBase);
             if (tool == null) return item;
-            claseOriginal = tool.profesion(); // Ej: "Minería", "Tala"
-            nombreOriginal = tool.nombre();
-            fortunaOriginal = tool.multiplicadorFortuna();
+            claseOriginal = tool.profesion();
         }
 
-        // 2. Comprobamos compatibilidad (Ej: ¿Es Magnético para Minería?)
         if (!reforge.aplicaAClase(claseOriginal) && !reforge.aplicaAClase("Cualquiera")) {
             return item;
         }
 
-        // Guardamos la reforja
         pdc.set(llaveReforja, PersistentDataType.STRING, reforge.id());
 
-        // 3. CAMBIAR EL NOMBRE (Con su nivel de mejora si es que tiene)
-        String nombreBase = org.bukkit.ChatColor.translateAlternateColorCodes('&', nombreOriginal);
-        int nivelMejora = pdc.getOrDefault(llaveNivelMejora, PersistentDataType.INTEGER, 0);
-        String sufijoMejora = (esArma || nivelMejora > 0) ? " §8[§e+" + nivelMejora + "§8]" : "";
-
-        String nombreReforjado = org.bukkit.ChatColor.translateAlternateColorCodes('&', reforge.prefijoColor()) + reforge.nombre() + " " + nombreBase + sufijoMejora;
-        meta.setDisplayName(nombreReforjado);
-
-        // 4. APLICAR ATRIBUTOS DE COMBATE (Si es arma o da daño)
-        if (esArma || reforge.danioExtra() > 0) {
-            meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE);
-            meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_SPEED);
-
-            double danioTotal = danioOriginal + reforge.danioExtra();
-            NamespacedKey dmgKey = new NamespacedKey(pluginMemoria, "nexo_dmg_" + idBase);
-            org.bukkit.attribute.AttributeModifier dmgMod = new org.bukkit.attribute.AttributeModifier(
-                    dmgKey, danioTotal, Operation.ADD_NUMBER, org.bukkit.inventory.EquipmentSlotGroup.MAINHAND);
-            meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, dmgMod);
-
-            double velocidadTotal = (velOriginal - 4.0) + reforge.velocidadAtaqueExtra();
-            NamespacedKey spdKey = new NamespacedKey(pluginMemoria, "nexo_spd_" + idBase);
-            org.bukkit.attribute.AttributeModifier spdMod = new org.bukkit.attribute.AttributeModifier(
-                    spdKey, velocidadTotal, Operation.ADD_NUMBER, org.bukkit.inventory.EquipmentSlotGroup.MAINHAND);
-            meta.addAttributeModifier(Attribute.GENERIC_ATTACK_SPEED, spdMod);
-        }
-
-        // 5. APLICAR BONOS DE PROFESIÓN (FORTUNA)
-        if (reforge.fortunaExtra() > 0) {
-            if (claseOriginal.equalsIgnoreCase("Minería")) {
-                pdc.set(llaveSuerteMinera, PersistentDataType.DOUBLE, reforge.fortunaExtra());
-            } else if (claseOriginal.equalsIgnoreCase("Agricultura")) {
-                pdc.set(llaveSuerteAgricola, PersistentDataType.DOUBLE, reforge.fortunaExtra());
-            } else if (claseOriginal.equalsIgnoreCase("Tala")) {
-                pdc.set(llaveSuerteTala, PersistentDataType.DOUBLE, reforge.fortunaExtra());
-            } else if (claseOriginal.equalsIgnoreCase("Pesca")) {
-                pdc.set(llaveCriaturaMarina, PersistentDataType.DOUBLE, reforge.fortunaExtra());
-            }
-        }
-
-        // 6. ACTUALIZAR EL LORE (VISUAL)
-        List<String> lore = meta.getLore();
-        if (lore != null) {
-            for (int i = 0; i < lore.size(); i++) {
-                if (esArma) {
-                    if (lore.get(i).contains("Daño Base:")) {
-                        double danioTotal = danioOriginal + reforge.danioExtra();
-                        lore.set(i, "§7Daño Base: §c" + danioTotal + " ⚔ " + org.bukkit.ChatColor.translateAlternateColorCodes('&', reforge.prefijoColor() + "(+" + reforge.danioExtra() + ")"));
-                    }
-                    if (lore.get(i).contains("Velocidad:")) {
-                        double velVisual = velOriginal + reforge.velocidadAtaqueExtra();
-                        lore.set(i, "§7Velocidad: §e" + velVisual + " ⚡ " + org.bukkit.ChatColor.translateAlternateColorCodes('&', reforge.prefijoColor() + "(" + (reforge.velocidadAtaqueExtra() >= 0 ? "+" : "") + reforge.velocidadAtaqueExtra() + ")"));
-                    }
-                } else if (esHerramienta) {
-                    if (lore.get(i).contains("Bonus Drops:")) {
-                        double fortunaTotal = fortunaOriginal + reforge.fortunaExtra();
-                        lore.set(i, "§7Bonus Drops: §b+" + fortunaTotal + "% " + org.bukkit.ChatColor.translateAlternateColorCodes('&', reforge.prefijoColor() + "(+" + reforge.fortunaExtra() + "%)"));
-                    }
-                }
-            }
-            meta.setLore(lore);
-        }
-
         item.setItemMeta(meta);
+        sincronizarItemAsync(item);
+
         return item;
     }
 
@@ -401,19 +397,16 @@ public class ItemManager {
     public static ItemStack generarLibroEncantamiento(String idEnchant, int nivel) {
         EnchantDTO dto = pluginMemoria.getFileManager().getEnchantDTO(idEnchant);
 
-        // Si el encantamiento no existe, devolvemos un libro normal feo para avisarte
         if (dto == null) {
             org.bukkit.Bukkit.getLogger().warning("¡No se encontró el encantamiento " + idEnchant + " en la caché!");
             return new ItemStack(Material.BOOK);
         }
 
-        // Limitamos el nivel al máximo permitido por el DTO
         int nivelReal = Math.min(nivel, dto.nivelMaximo());
 
         ItemStack libro = new ItemStack(Material.ENCHANTED_BOOK);
         ItemMeta meta = libro.getItemMeta();
 
-        // Nombre: Ej. "Vampirismo III"
         String nombreRomanos = "I";
         switch (nivelReal) {
             case 2: nombreRomanos = "II"; break;
@@ -422,25 +415,22 @@ public class ItemManager {
             case 5: nombreRomanos = "V"; break;
         }
 
-        meta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', dto.nombre() + " " + nombreRomanos));
+        meta.setDisplayName(serialize(dto.nombre() + " " + nombreRomanos));
 
-        // Construimos el Lore
         List<String> lore = new ArrayList<>();
-        lore.add("§7Libro de Encantamiento Mágico");
-        lore.add("");
+        lore.add(serialize("&#AAAAAALibro de Encantamiento Mágico"));
+        lore.add(" ");
 
-        // Reemplazamos {val} por el valor real que da ese nivel
         double valorActual = dto.getValorPorNivel(nivelReal);
         String descReemplazada = dto.descripcion().replace("{val}", String.valueOf(valorActual));
-        lore.add(org.bukkit.ChatColor.translateAlternateColorCodes('&', descReemplazada));
+        lore.add(serialize(descReemplazada));
 
-        lore.add("");
-        lore.add("§8Aplica a: " + String.join(", ", dto.aplicaA()));
-        lore.add("§eLlévalo a un Yunque Mágico para aplicarlo.");
+        lore.add(" ");
+        lore.add(serialize("&#555555Aplica a: " + String.join(", ", dto.aplicaA())));
+        lore.add(serialize("&#FFAA00Llévalo a un Yunque Mágico para aplicarlo."));
 
         meta.setLore(lore);
 
-        // Inyectamos la información en el PDC para que el Yunque la lea luego
         meta.getPersistentDataContainer().set(llaveEnchantId, PersistentDataType.STRING, dto.id());
         meta.getPersistentDataContainer().set(llaveEnchantNivel, PersistentDataType.INTEGER, nivelReal);
 
@@ -459,11 +449,9 @@ public class ItemManager {
 
         ItemMeta meta = item.getItemMeta();
 
-        // 1. Guardamos el encantamiento en el PDC del arma usando una llave dinámica
         NamespacedKey keyEnchant = new NamespacedKey(pluginMemoria, "nexo_enchant_" + idEnchant);
         meta.getPersistentDataContainer().set(keyEnchant, PersistentDataType.INTEGER, nivel);
 
-        // 2. Traducimos el nivel a números romanos
         String nombreRomanos = "I";
         switch (nivel) {
             case 2: nombreRomanos = "II"; break;
@@ -472,15 +460,14 @@ public class ItemManager {
             case 5: nombreRomanos = "V"; break;
         }
 
-        // 3. Preparamos el texto visual para el Lore (Ej: "&cVampirismo III")
-        String nombrePuro = org.bukkit.ChatColor.stripColor(org.bukkit.ChatColor.translateAlternateColorCodes('&', enchant.nombre()));
-        String lineaEncantamiento = org.bukkit.ChatColor.translateAlternateColorCodes('&', enchant.nombre() + " " + nombreRomanos);
+        String lineaEncantamiento = serialize(enchant.nombre() + " " + nombreRomanos);
 
-        // 4. Actualizamos el Lore
+        // Convertimos a string sin colores hex para poder buscar la coincidencia
+        String nombrePuro = org.bukkit.ChatColor.stripColor(LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(enchant.nombre())));
+
         List<String> lore = meta.getLore();
         if (lore != null) {
             boolean encontrado = false;
-            // Buscamos si ya tiene este encantamiento para actualizar el nivel
             for (int i = 0; i < lore.size(); i++) {
                 if (org.bukkit.ChatColor.stripColor(lore.get(i)).startsWith(nombrePuro)) {
                     lore.set(i, lineaEncantamiento);
@@ -488,7 +475,6 @@ public class ItemManager {
                     break;
                 }
             }
-            // Si es un encantamiento nuevo, lo añadimos al final
             if (!encontrado) {
                 lore.add(lineaEncantamiento);
             }
@@ -498,14 +484,13 @@ public class ItemManager {
         item.setItemMeta(meta);
         return item;
     }
-    // TODO: Implementar generador de armaduras
+
+    // STUBS TEMPORALES PARA EVITAR ERRORES DE COMPILACIÓN (A falta de su YAML DTO)
     public static ItemStack generarArmadura(String id) {
-        return null;
+        return generarArmaduraProfesion(id, "CHESTPLATE");
     }
 
-    // TODO: Implementar generador de herramientas
     public static ItemStack generarHerramienta(String id) {
-        return null;
+        return generarHerramientaProfesion(id);
     }
-
 }

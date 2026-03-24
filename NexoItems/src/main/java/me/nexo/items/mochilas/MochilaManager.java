@@ -1,9 +1,10 @@
 package me.nexo.items.mochilas;
 
-// 🟢 Importamos tu nueva clase principal
 import me.nexo.core.NexoCore;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.NexoItems;
 import me.nexo.core.utils.Base64Util;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -15,21 +16,22 @@ import java.sql.ResultSet;
 
 public class MochilaManager {
 
-    // 🟢 ARQUITECTURA: Ahora usamos NexoItems
     private final NexoItems plugin;
 
     public MochilaManager(NexoItems plugin) {
         this.plugin = plugin;
     }
 
+    private String serialize(String hex) {
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
+    }
+
     public void abrirMochila(Player p, int id) {
-        // Hacemos la consulta Asíncrona para no congelar el servidor
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
 
-            // 🟢 CONEXIÓN AL CEREBRO: Pedimos la conexión al NexoCore
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
             if (nexoCore == null || nexoCore.getDatabaseManager() == null) {
-                p.sendMessage("§cError crítico: No se pudo contactar con la base de datos central.");
+                p.sendMessage(NexoColor.parse("&#FF5555[!] Error crítico: Enlace caído con la Base de Datos Central."));
                 return;
             }
 
@@ -49,9 +51,9 @@ public class MochilaManager {
             }
 
             String finalData = base64Data;
-            // Volvemos al hilo principal para abrir el inventario
             Bukkit.getScheduler().runTask(plugin, () -> {
-                Inventory inv = Bukkit.createInventory(null, 54, "§8🎒 Mochila Virtual #" + id);
+                // 🎨 Aplicamos el formato Ciberpunk al título de la mochila
+                Inventory inv = Bukkit.createInventory(null, 54, serialize("&#555555<bold>»</bold> &#00E5FFMochila Virtual #" + id));
 
                 if (finalData != null && !finalData.isEmpty()) {
                     ItemStack[] items = Base64Util.itemStackArrayFromBase64(finalData);
@@ -65,17 +67,13 @@ public class MochilaManager {
     }
 
     public void guardarMochila(Player p, int id, Inventory inv) {
-        // Serializamos usando nuestra utilidad
         String base64Data = Base64Util.itemStackArrayToBase64(inv.getContents());
 
-        // Guardamos en la BD de forma asíncrona
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
 
-            // 🟢 CONEXIÓN AL CEREBRO: Pedimos la conexión al NexoCore
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
             if (nexoCore == null || nexoCore.getDatabaseManager() == null) return;
 
-            // Sintaxis PostgreSQL: Inserta, y si ya existe, lo actualiza
             String sql = "INSERT INTO mochilas (uuid, mochila_id, contenido) VALUES (?, ?, ?) " +
                     "ON CONFLICT (uuid, mochila_id) DO UPDATE SET contenido = EXCLUDED.contenido;";
 

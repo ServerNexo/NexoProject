@@ -1,10 +1,13 @@
 package me.nexo.items.estaciones;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.ReforgeDTO;
 import me.nexo.items.dtos.ToolDTO;
 import me.nexo.items.dtos.WeaponDTO;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -19,28 +22,37 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
 public class ReforjaListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Usamos la clase principal de NexoItems
     private final NexoItems plugin;
-    private final String TITULO_MENU = "§8💎 Mesa de Reforjas";
     private final Random random = new Random();
+
+    // 🎨 Títulos limpios y seguros para Paper 1.21
+    public static final String TITLE_PLAIN = "» Mesa de Reforjas";
+    public static final String MENU_TITLE = "&#555555<bold>»</bold> &#00E5FFMesa de Reforjas";
 
     public ReforjaListener(NexoItems plugin) {
         this.plugin = plugin;
     }
 
+    private String serialize(String hex) {
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
+    }
+
     public void abrirMenu(Player jugador) {
-        Inventory inv = Bukkit.createInventory(null, 27, TITULO_MENU);
+        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
 
         // Decoración
         ItemStack cristal = new ItemStack(Material.CYAN_STAINED_GLASS_PANE);
         ItemMeta metaCristal = cristal.getItemMeta();
-        metaCristal.setDisplayName(" ");
-        cristal.setItemMeta(metaCristal);
+        if (metaCristal != null) {
+            metaCristal.setDisplayName(serialize(" "));
+            cristal.setItemMeta(metaCristal);
+        }
 
         for (int i = 0; i < 27; i++) {
             inv.setItem(i, cristal);
@@ -53,14 +65,16 @@ public class ReforjaListener implements Listener {
         // Botón Central
         ItemStack yunque = new ItemStack(Material.SMITHING_TABLE);
         ItemMeta metaYunque = yunque.getItemMeta();
-        metaYunque.setDisplayName("§b§lAPLICAR REFORJA ALEATORIA");
-        metaYunque.setLore(List.of(
-                "§7Aplica modificadores extra a tu arma",
-                "§7o herramienta dependiendo de tu clase.",
-                "",
-                "§eRequiere: §f1x Polvo Estelar"
-        ));
-        yunque.setItemMeta(metaYunque);
+        if (metaYunque != null) {
+            metaYunque.setDisplayName(serialize("&#00E5FF<bold>APLICAR REFORJA ALEATORIA</bold>"));
+            metaYunque.setLore(Arrays.asList(
+                    serialize("&#AAAAAAAplica modificadores extra a tu activo"),
+                    serialize("&#AAAAAAdependiendo de su clase/profesión."),
+                    serialize(" "),
+                    serialize("&#FFAA00Requiere: &#FFFFFF1x Polvo Estelar")
+            ));
+            yunque.setItemMeta(metaYunque);
+        }
         inv.setItem(13, yunque);
 
         jugador.openInventory(inv);
@@ -68,7 +82,9 @@ public class ReforjaListener implements Listener {
 
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals(TITULO_MENU)) return;
+        // 🌟 Validación segura del título del menú
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!tituloLimpio.equals(TITLE_PLAIN)) return;
 
         Player jugador = (Player) event.getWhoClicked();
         int slot = event.getRawSlot();
@@ -88,14 +104,14 @@ public class ReforjaListener implements Listener {
             ItemStack material = inv.getItem(15);
 
             if (arma == null || arma.getType() == Material.AIR) {
-                jugador.sendMessage("§cPon un arma o herramienta en la ranura izquierda.");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Inserta un activo en la bahía izquierda."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             if (material == null || !material.hasItemMeta() ||
                     !material.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveMaterialMejora, PersistentDataType.BYTE)) {
-                jugador.sendMessage("§cNecesitas §ePolvo Estelar §cen la ranura derecha.");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Necesitas &#FFAA00Polvo Estelar &#FF5555en la bahía derecha."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -107,7 +123,7 @@ public class ReforjaListener implements Listener {
             boolean esHerramienta = pdc.has(ItemManager.llaveHerramientaId, PersistentDataType.STRING);
 
             if (!esArma && !esHerramienta) {
-                jugador.sendMessage("§cEse ítem no es un Arma o Herramienta válida del Nexo.");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Este activo no soporta matrices de reforja."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -132,7 +148,7 @@ public class ReforjaListener implements Listener {
             }
 
             if (reforjasCompatibles.isEmpty()) {
-                jugador.sendMessage("§cNo hay reforjas descubiertas para la clase " + claseItem + ".");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Base de datos vacía: No hay reforjas descubiertas para la clase " + claseItem + "."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -147,7 +163,8 @@ public class ReforjaListener implements Listener {
             ItemStack armaReforjada = ItemManager.aplicarReforja(arma, reforjaElegida.id());
             inv.setItem(11, armaReforjada);
 
-            jugador.sendMessage("§a§l¡ÉXITO! §7Tu ítem ahora es: " + org.bukkit.ChatColor.translateAlternateColorCodes('&', reforjaElegida.prefijoColor()) + reforjaElegida.nombre());
+            // 🎨 Formato dinámico combinando el Hex de la reforja con el texto de éxito
+            jugador.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>¡FUSIÓN EXITOSA!</bold> Modificador aplicado: " + reforjaElegida.prefijoColor() + reforjaElegida.nombre()));
             jugador.playSound(jugador.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1f);
             jugador.playSound(jugador.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 2f);
         }
@@ -156,7 +173,8 @@ public class ReforjaListener implements Listener {
     // ANTI-DUPE
     @EventHandler
     public void alCerrar(InventoryCloseEvent event) {
-        if (!event.getView().getTitle().equals(TITULO_MENU)) return;
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!tituloLimpio.equals(TITLE_PLAIN)) return;
 
         Player jugador = (Player) event.getPlayer();
         Inventory inv = event.getInventory();

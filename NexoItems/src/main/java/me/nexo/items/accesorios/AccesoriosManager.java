@@ -1,8 +1,10 @@
 package me.nexo.items.accesorios;
 
 import me.nexo.core.NexoCore;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.NexoItems;
 import me.nexo.core.utils.Base64Util;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -19,12 +21,10 @@ import java.util.*;
 
 public class AccesoriosManager {
 
-    // 🟢 ARQUITECTURA: Ahora usamos NexoItems para la llave y las tareas asíncronas
     private final NexoItems plugin;
     public final Map<String, AccessoryDTO> registro = new HashMap<>();
     public final NamespacedKey llaveAccesorio;
 
-    // Almacena quién tiene el Corazón del Nexo activo para el Failsafe
     public final Set<UUID> usuariosCorazonNexo = new HashSet<>();
 
     public AccesoriosManager(NexoItems plugin) {
@@ -33,9 +33,6 @@ public class AccesoriosManager {
         cargarBaseDeDatosAccesorios();
     }
 
-    // ==========================================
-    // 🗃️ REGISTRO DE LOS 26 ACCESORIOS
-    // ==========================================
     private void cargarBaseDeDatosAccesorios() {
         // Minería
         registro.put("guijarro_magnetico", new AccessoryDTO("guijarro_magnetico", AccessoryDTO.Familia.MINERIA, AccessoryDTO.Rareza.COMUN, AccessoryDTO.StatType.FUERZA, 2, "Atrae minerales ligeramente."));
@@ -73,16 +70,19 @@ public class AccesoriosManager {
         registro.put("corazon_nexo", new AccessoryDTO("corazon_nexo", AccessoryDTO.Familia.CAZAJEFES, AccessoryDTO.Rareza.COSMICO, AccessoryDTO.StatType.VIDA, 100, "Te revive una vez cada hora al recibir daño letal."));
     }
 
+    private String serialize(String hex) {
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
+    }
+
     // ==========================================
     // 🎒 LÓGICA DEL GUI Y SLOTS DESBLOQUEADOS
     // ==========================================
     public void abrirBolsa(Player p) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
 
-            // 🟢 ARQUITECTURA LIMPIA: Buscamos a NexoCore en el servidor para usar su base de datos
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
             if (nexoCore == null || nexoCore.getDatabaseManager() == null) {
-                p.sendMessage("§cError crítico: No se pudo contactar con la base de datos central.");
+                p.sendMessage(NexoColor.parse("&#FF5555[!] Error crítico: Enlace caído con la Base de Datos Central."));
                 return;
             }
 
@@ -98,21 +98,22 @@ public class AccesoriosManager {
 
             String finalData = base64Data;
             Bukkit.getScheduler().runTask(plugin, () -> {
-                // Cálculo de tamaño dinámico basado en Colección de Redstone
                 int slotsDesbloqueados = getSlotsDesbloqueados(p);
                 int filas = Math.max(1, (int) Math.ceil(slotsDesbloqueados / 9.0));
 
-                Inventory inv = Bukkit.createInventory(null, filas * 9, "§8💍 Accessory Bag");
+                Inventory inv = Bukkit.createInventory(null, filas * 9, serialize("&#555555<bold>»</bold> &#FFAA00Bolsa de Accesorios"));
 
                 if (finalData != null && !finalData.isEmpty()) {
                     inv.setContents(Base64Util.itemStackArrayFromBase64(finalData));
                 }
 
-                // Bloqueamos visualmente los slots no desbloqueados (Con cristal de Nexo/Vanilla)
                 ItemStack cristalBloqueado = new ItemStack(Material.RED_STAINED_GLASS_PANE);
                 ItemMeta meta = cristalBloqueado.getItemMeta();
-                meta.setDisplayName("§c§l🔒 Slot Bloqueado");
-                meta.setLore(List.of("§7Aumenta tu Colección de Redstone", "§7para desbloquear más espacio."));
+                meta.setDisplayName(serialize("&#FF5555<bold>🔒 Slot Bloqueado</bold>"));
+                meta.setLore(Arrays.asList(
+                        serialize("&#AAAAAAAumenta tu Nivel de Colección"),
+                        serialize("&#AAAAAApara desbloquear este espacio.")
+                ));
                 cristalBloqueado.setItemMeta(meta);
 
                 for (int i = slotsDesbloqueados; i < inv.getSize(); i++) {
@@ -125,29 +126,21 @@ public class AccesoriosManager {
         });
     }
 
-    // Hook Simulado de AuraCollections
     public int getSlotsDesbloqueados(Player p) {
-        // Aquí conectarías con tu API de colecciones.
-        // Ejemplo: return AuraCollectionsAPI.getCollectionLevel(p, "REDSTONE") + 3;
-        // Por ahora, simulamos que tienen entre 9 y 18 slots.
         return 12; // 12 slots desbloqueados para probar
     }
 
-    // Hook Simulado de Validación de Ítem
     public boolean cumpleRequisito(Player p, AccessoryDTO dto) {
-        // Ejemplo: Si es la "reliquia_nucleo", requiere 100k de obsidiana.
-        return true; // Asumimos que lo cumple por defecto
+        return true;
     }
 
     // ==========================================
     // ⚙️ PROCESAMIENTO MATEMÁTICO (No Stacking)
     // ==========================================
     public void procesarYGuardarBolsa(Player p, Inventory inv) {
-        // 1. Guardar Asíncronamente en BD
         String base64Data = Base64Util.itemStackArrayToBase64(inv.getContents());
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
 
-            // 🟢 ARQUITECTURA LIMPIA: Igual que arriba, usamos el NexoCore para la escritura
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
             if (nexoCore == null || nexoCore.getDatabaseManager() == null) return;
 
@@ -161,7 +154,6 @@ public class AccesoriosManager {
             } catch (Exception e) { e.printStackTrace(); }
         });
 
-        // 2. Filtrado de Stacking por Familias
         Map<AccessoryDTO.Familia, AccessoryDTO> accesoriosActivos = new EnumMap<>(AccessoryDTO.Familia.class);
 
         for (ItemStack item : inv.getContents()) {
@@ -173,7 +165,6 @@ public class AccesoriosManager {
                 AccessoryDTO dto = registro.get(id);
 
                 if (dto != null && cumpleRequisito(p, dto)) {
-                    // Si ya hay uno de esta familia, nos quedamos con el de mayor rareza
                     if (accesoriosActivos.containsKey(dto.family())) {
                         AccessoryDTO existente = accesoriosActivos.get(dto.family());
                         if (dto.rarity().getPoderNexo() > existente.rarity().getPoderNexo()) {
@@ -186,7 +177,6 @@ public class AccesoriosManager {
             }
         }
 
-        // 3. Cálculo Final de Stats y Nexo Power
         Map<AccessoryDTO.StatType, Double> statsTotales = new EnumMap<>(AccessoryDTO.StatType.class);
         int poderTotal = 0;
         boolean corazon = false;
@@ -198,12 +188,37 @@ public class AccesoriosManager {
             if (activo.id().equals("corazon_nexo")) corazon = true;
         }
 
-        // Actualizamos estado de Corazón del Nexo globalmente
         if (corazon) usuariosCorazonNexo.add(p.getUniqueId());
         else usuariosCorazonNexo.remove(p.getUniqueId());
 
-        // 4. Disparar Evento Bukkit
         AccessoryStatsUpdateEvent evento = new AccessoryStatsUpdateEvent(p, statsTotales, poderTotal, corazon);
         Bukkit.getPluginManager().callEvent(evento);
+    }
+
+    // ==========================================
+    // 🛠️ GENERADOR FÍSICO DE ACCESORIOS (Lo que le faltaba a tu código)
+    // ==========================================
+    public ItemStack generarAccesorio(String id) {
+        AccessoryDTO dto = registro.get(id.toLowerCase());
+        if (dto == null) return null;
+
+        ItemStack item = new ItemStack(Material.PAPER);
+        ItemMeta meta = item.getItemMeta();
+
+        meta.setDisplayName(serialize("&#FFAA00<bold>💍 " + dto.id().toUpperCase().replace("_", " ") + "</bold>"));
+        meta.setLore(Arrays.asList(
+                serialize("&#AAAAAAFamilia: &#00E5FF" + dto.family().name()),
+                serialize("&#AAAAAARareza: &#55FF55" + dto.rarity().name()),
+                serialize(" "),
+                serialize("&#AAAAAABono: &#FFAA00+" + dto.statValue() + " " + dto.statType().name()),
+
+                // 🌟 CORRECCIÓN AQUÍ: abilityDescription()
+                serialize("&#AAAAAAAtributo Único: &#FFFFFF" + dto.abilityDescription())
+        ));
+
+        meta.getPersistentDataContainer().set(llaveAccesorio, PersistentDataType.STRING, dto.id());
+
+        item.setItemMeta(meta);
+        return item;
     }
 }

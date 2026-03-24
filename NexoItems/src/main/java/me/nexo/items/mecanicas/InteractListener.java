@@ -1,5 +1,6 @@
 package me.nexo.items.mecanicas;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.WeaponDTO;
@@ -30,7 +31,6 @@ import java.util.UUID;
 
 public class InteractListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos NexoItems
     private final NexoItems plugin;
     private final HashMap<UUID, Long> cooldowns = new HashMap<>();
 
@@ -45,7 +45,6 @@ public class InteractListener implements Listener {
         Player jugador = event.getPlayer();
         ItemStack arma = jugador.getInventory().getItemInMainHand();
 
-        // Solucionado el warning de 1.21+ (siempre devuelve AIR, no null)
         if (arma.getType() == org.bukkit.Material.AIR || !arma.hasItemMeta()) return;
         var pdc = arma.getItemMeta().getPersistentDataContainer();
 
@@ -66,7 +65,6 @@ public class InteractListener implements Listener {
                 int costoEnergia = 20;
                 int cooldownMs = 2000;
 
-                // Balance de costos según el Tier de la habilidad
                 switch (dto.habilidadId().toLowerCase()) {
                     case "quake", "ola", "rafaga" -> { costoEnergia = 20; cooldownMs = 3000; }
                     case "tajo_sanguinario", "agujero_negro" -> { costoEnergia = 40; cooldownMs = 5000; }
@@ -84,20 +82,19 @@ public class InteractListener implements Listener {
 
         if (cooldowns.containsKey(uuid) && (ahora - cooldowns.get(uuid)) < cooldownMs) {
             long faltan = (cooldownMs - (ahora - cooldowns.get(uuid))) / 1000;
-            jugador.sendActionBar("§c❄ En enfriamiento: " + faltan + "s");
+            jugador.sendActionBar(NexoColor.parse("&#FF5555❄ Enfriamiento de Sistema: " + faltan + "s"));
             return;
         }
 
-        // 🟢 ARQUITECTURA LIMPIA: Obtenemos el usuario de la caché de la API
         NexoUser user = NexoAPI.getInstance().getUserLocal(uuid);
         if (user == null) {
-            jugador.sendMessage("§cTus datos aún están cargando...");
+            jugador.sendMessage(NexoColor.parse("&#FF5555[!] Sincronizando interfaz neuronal. Espera..."));
             return;
         }
 
         int energiaActual = user.getEnergiaMineria();
         if (energiaActual < costoEnergia) {
-            jugador.sendActionBar("§c⚡ No tienes suficiente energía (" + costoEnergia + " req)");
+            jugador.sendActionBar(NexoColor.parse("&#FF5555⚡ Energía Insuficiente (" + costoEnergia + " requeridos)"));
             jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
             return;
         }
@@ -170,7 +167,7 @@ public class InteractListener implements Listener {
                 break;
 
             case "agujero_negro":
-                Location centro = loc.add(loc.getDirection().multiply(6)).add(0, 1, 0); // Lo lanza 6 bloques adelante
+                Location centro = loc.add(loc.getDirection().multiply(6)).add(0, 1, 0);
                 jugador.playSound(centro, Sound.BLOCK_PORTAL_TRAVEL, 0.5f, 2f);
                 jugador.getWorld().spawnParticle(Particle.PORTAL, centro, 150, 2, 2, 2, 0.5);
 
@@ -196,8 +193,8 @@ public class InteractListener implements Listener {
                 for (Entity e : jugador.getNearbyEntities(7, 4, 7)) {
                     if (e instanceof LivingEntity vivo && e != jugador) {
                         vivo.damage(45.0, jugador);
-                        vivo.setFireTicks(100); // 5 segundos quemándose
-                        vivo.setVelocity(new Vector(0, 1.2, 0)); // Los lanza al aire
+                        vivo.setFireTicks(100);
+                        vivo.setVelocity(new Vector(0, 1.2, 0));
                     }
                 }
                 exito = true;
@@ -211,31 +208,30 @@ public class InteractListener implements Listener {
                 if (!enemigos.isEmpty()) {
                     for (Entity e : enemigos) {
                         if (e instanceof LivingEntity vivo && e != jugador) {
-                            jugador.getWorld().strikeLightningEffect(vivo.getLocation()); // Rayo visual sin fuego
+                            jugador.getWorld().strikeLightningEffect(vivo.getLocation());
                             vivo.damage(50.0, jugador);
                         }
                     }
                     exito = true;
                 } else {
-                    jugador.sendMessage("§cNo hay enemigos cerca para el Juicio.");
+                    jugador.sendMessage(NexoColor.parse("&#FF5555[!] Sin objetivos hostiles válidos en el rango de Juicio."));
                 }
                 break;
 
             case "corte_umbral":
                 jugador.playSound(loc, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1.5f);
                 Vector dash = loc.getDirection().normalize().multiply(3.0);
-                jugador.setVelocity(dash); // Dash súper rápido
+                jugador.setVelocity(dash);
 
-                // Efectos visuales en el camino
                 Bukkit.getScheduler().runTaskLater(plugin, () -> {
                     jugador.getWorld().spawnParticle(Particle.LARGE_SMOKE, jugador.getLocation().add(0, 1, 0), 50, 1, 1, 1, 0);
                     for (Entity e : jugador.getNearbyEntities(3, 2, 3)) {
                         if (e instanceof LivingEntity vivo && e != jugador) {
-                            vivo.damage(60.0, jugador); // Daño masivo por atravesarlos
+                            vivo.damage(60.0, jugador);
                             vivo.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 60, 1));
                         }
                     }
-                }, 5L); // Espera un cuarto de segundo a que termine el dash para hacer daño
+                }, 5L);
                 exito = true;
                 break;
 
@@ -255,22 +251,18 @@ public class InteractListener implements Listener {
                     jugador.playSound(destino, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
                     exito = true;
                 } else {
-                    jugador.sendMessage("§cNo hay un bloque válido a la vista.");
+                    jugador.sendMessage(NexoColor.parse("&#FF5555[!] Destino inválido para salto traslacional."));
                 }
                 break;
         }
 
         if (exito) {
-            // 🟢 GUARDAMOS LA NUEVA ENERGÍA EN EL USUARIO
             user.setEnergiaMineria(Math.max(0, energiaActual - costoEnergia));
             cooldowns.put(uuid, ahora);
-            jugador.sendActionBar("§b✨ Poder utilizado: §f" + habilidad.toUpperCase() + " §8(-" + costoEnergia + "⚡)");
+            jugador.sendActionBar(NexoColor.parse("&#00E5FF✨ Habilidad Desplegada: &#FFFFFF" + habilidad.toUpperCase() + " &#555555(-" + costoEnergia + "⚡)"));
         }
     }
 
-    // ==========================================
-    // 🧹 PREVENCIÓN DE FUGAS DE MEMORIA (RAM)
-    // ==========================================
     @EventHandler
     public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
         cooldowns.remove(event.getPlayer().getUniqueId());

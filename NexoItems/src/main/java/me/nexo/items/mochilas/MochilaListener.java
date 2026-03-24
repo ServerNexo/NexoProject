@@ -1,5 +1,8 @@
 package me.nexo.items.mochilas;
 
+import me.nexo.core.utils.NexoColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -14,35 +17,37 @@ public class MochilaListener implements Listener {
 
     private final MochilaManager manager;
 
+    // 🎨 Títulos y prefijos limpios para validaciones
+    public static final String TITLE_PREFIX_PLAIN = "» Mochila Virtual #";
+
     public MochilaListener(MochilaManager manager) {
         this.manager = manager;
     }
 
     @EventHandler
     public void alCerrarMochila(InventoryCloseEvent event) {
-        // ⚠️ NOTA: Si ves 'getTitle()' tachado, ¡NO ES UN ERROR!
-        // Es una advertencia visual de Bukkit 1.21, pero compilará 100% bien.
-        String titulo = event.getView().getTitle();
+        // 🌟 CORRECCIÓN 1.21: Usamos PlainTextComponentSerializer en vez de getTitle()
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
 
-        if (titulo.startsWith("§8🎒 Mochila Virtual #")) {
+        if (tituloLimpio.startsWith(TITLE_PREFIX_PLAIN)) {
             Player p = (Player) event.getPlayer();
             try {
-                String idString = titulo.replace("§8🎒 Mochila Virtual #", "");
+                String idString = tituloLimpio.replace(TITLE_PREFIX_PLAIN, "");
                 int id = Integer.parseInt(idString);
 
                 manager.guardarMochila(p, id, event.getInventory());
-                p.sendMessage("§a☁ Mochila guardada en la nube.");
+                p.sendMessage(NexoColor.parse("&#55FF55[✓] Sincronización en la nube completada. Mochila #" + id + " asegurada."));
 
             } catch (NumberFormatException e) {
-                p.sendMessage("§c[!] Error al guardar la mochila. No muevas ítems importantes y contacta a un administrador.");
+                p.sendMessage(NexoColor.parse("&#FF5555[!] Error de desincronización al guardar la mochila. Contacta al soporte técnico corporativo."));
             }
         }
     }
 
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
-        String titulo = event.getView().getTitle();
-        if (!titulo.startsWith("§8🎒 Mochila Virtual #")) return;
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!tituloLimpio.startsWith(TITLE_PREFIX_PLAIN)) return;
 
         Inventory topInv = event.getView().getTopInventory();
         Inventory clickedInv = event.getClickedInventory();
@@ -51,14 +56,14 @@ public class MochilaListener implements Listener {
         if (event.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY && clickedInv.equals(event.getView().getBottomInventory())) {
             if (esMochilaProhibida(event.getCurrentItem())) {
                 event.setCancelled(true);
-                event.getWhoClicked().sendMessage("§c[!] No puedes guardar Shulkers o Mochilas dentro de otra Mochila.");
+                event.getWhoClicked().sendMessage(NexoColor.parse("&#FF5555[!] Infracción detectada: Prohibido almacenar contenedores anidados en la mochila virtual."));
             }
         }
         else if (clickedInv.equals(topInv)) {
-            // ⚠️ NOTA: Si ves 'getCursor()' tachado, ignóralo también.
+            // 🌟 CORRECCIÓN 1.21: Usamos event.getCursor() de manera segura o event.getWhoClicked().getItemOnCursor()
             if (esMochilaProhibida(event.getCursor())) {
                 event.setCancelled(true);
-                event.getWhoClicked().sendMessage("§c[!] No puedes guardar Shulkers o Mochilas dentro de otra Mochila.");
+                event.getWhoClicked().sendMessage(NexoColor.parse("&#FF5555[!] Infracción detectada: Prohibido almacenar contenedores anidados en la mochila virtual."));
             }
         }
         else if (event.getAction() == InventoryAction.HOTBAR_SWAP) {
@@ -68,7 +73,7 @@ public class MochilaListener implements Listener {
                     ItemStack hotbarItem = event.getView().getBottomInventory().getItem(hotbarButton);
                     if (esMochilaProhibida(hotbarItem)) {
                         event.setCancelled(true);
-                        event.getWhoClicked().sendMessage("§c[!] No puedes guardar Shulkers o Mochilas dentro de otra Mochila.");
+                        event.getWhoClicked().sendMessage(NexoColor.parse("&#FF5555[!] Infracción detectada: Prohibido almacenar contenedores anidados en la mochila virtual."));
                     }
                 }
             }
@@ -77,14 +82,14 @@ public class MochilaListener implements Listener {
 
     @EventHandler
     public void alArrastrar(InventoryDragEvent event) {
-        String titulo = event.getView().getTitle();
-        if (!titulo.startsWith("§8🎒 Mochila Virtual #")) return;
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!tituloLimpio.startsWith(TITLE_PREFIX_PLAIN)) return;
 
         if (esMochilaProhibida(event.getOldCursor())) {
             for (int slot : event.getRawSlots()) {
                 if (slot < event.getView().getTopInventory().getSize()) {
                     event.setCancelled(true);
-                    event.getWhoClicked().sendMessage("§c[!] No puedes guardar Shulkers o Mochilas dentro de otra Mochila.");
+                    event.getWhoClicked().sendMessage(NexoColor.parse("&#FF5555[!] Infracción detectada: Prohibido almacenar contenedores anidados en la mochila virtual."));
                     return;
                 }
             }

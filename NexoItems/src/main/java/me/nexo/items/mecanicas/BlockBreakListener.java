@@ -1,5 +1,6 @@
 package me.nexo.items.mecanicas;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.managers.ItemManager;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.ArmorDTO;
@@ -7,6 +8,7 @@ import me.nexo.items.dtos.EnchantDTO;
 import me.nexo.items.dtos.ToolDTO;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -34,13 +36,11 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class BlockBreakListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos NexoItems
     private final NexoItems plugin;
     private final HashMap<UUID, Long> cooldownRecoleccion = new HashMap<>();
     private final String MUNDO_RPG = "Mina";
     private final Random random = new Random();
 
-    // 🛡️ MEMORIA DE SEGURIDAD PARA BLOQUES ROTOS
     public static final ConcurrentHashMap<Location, BlockData> bloquesRegenerando = new ConcurrentHashMap<>();
 
     public BlockBreakListener(NexoItems plugin) {
@@ -52,6 +52,10 @@ public class BlockBreakListener implements Listener {
             entry.getKey().getBlock().setBlockData(entry.getValue());
         }
         bloquesRegenerando.clear();
+    }
+
+    private String serialize(String hex) {
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
     }
 
     @EventHandler
@@ -103,16 +107,15 @@ public class BlockBreakListener implements Listener {
             long ahora = System.currentTimeMillis();
             if (cooldownRecoleccion.containsKey(uuid) && (ahora - cooldownRecoleccion.get(uuid)) < 300) return;
 
-            // 🟢 Obtenemos al usuario desde la API del Core
             NexoUser user = NexoAPI.getInstance().getUserLocal(uuid);
             if (user == null) {
-                jugador.sendMessage("§cTus datos aún están cargando...");
+                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Enlace neural cargando. Por favor espera..."));
                 return;
             }
 
             int energiaActual = user.getEnergiaMineria();
             if (energiaActual < costeEnergia) {
-                jugador.sendActionBar("§c§l⚠ ¡AGOTADO! §7Descansa...");
+                jugador.sendActionBar(NexoColor.parse("&#FF5555<bold>⚠ ¡ENERGÍA AGOTADA!</bold> &#AAAAAADebes descansar..."));
                 return;
             }
 
@@ -151,8 +154,10 @@ public class BlockBreakListener implements Listener {
                             if (ench != null && (random.nextDouble() * 100 <= ench.getValorPorNivel(pdc.get(keyMidas, PersistentDataType.INTEGER)))) {
                                 ItemStack oro = new ItemStack(Material.GOLD_INGOT);
                                 ItemMeta oroMeta = oro.getItemMeta();
-                                oroMeta.setDisplayName("§e✨ Oro Encontrado");
-                                oro.setItemMeta(oroMeta);
+                                if (oroMeta != null) {
+                                    oroMeta.setDisplayName(serialize("&#FFAA00✨ Oro Sintético"));
+                                    oro.setItemMeta(oroMeta);
+                                }
                                 jugador.getInventory().addItem(oro);
                                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 2f);
                             }
@@ -165,8 +170,9 @@ public class BlockBreakListener implements Listener {
                         List<String> lore = metaTool.getLore();
                         if (lore != null) {
                             for (int i = 0; i < lore.size(); i++) {
-                                if (lore.get(i).contains("Bloques Rotos:")) {
-                                    lore.set(i, "§7Bloques Rotos: §e" + String.format("%,d", rotos));
+                                // 🌟 Actualización limpia del Lore
+                                if (org.bukkit.ChatColor.stripColor(lore.get(i)).contains("Bloques Rotos:")) {
+                                    lore.set(i, serialize("&#AAAAAABloques Rotos: &#FFAA00" + String.format("%,d", rotos)));
                                     break;
                                 }
                             }
@@ -201,7 +207,7 @@ public class BlockBreakListener implements Listener {
             // 🎲 CÁLCULO DE DROPS CENTRAL
             int cantidad = (random.nextDouble() * 100 <= suerteTotal) ? 2 : 1;
             if (cantidad > 1) {
-                jugador.sendActionBar("§b✨ ¡DROP DUPLICADO! §b(+" + suerteTotal + "%)");
+                jugador.sendActionBar(NexoColor.parse("&#00E5FF✨ ¡DOBLE MATERIAL! &#555555(+" + String.format("%.1f", suerteTotal) + "%)"));
             }
 
             if (recompensa != null) {
@@ -219,7 +225,7 @@ public class BlockBreakListener implements Listener {
             while (xpActual >= (nivelActual * 100)) {
                 xpActual -= (nivelActual * 100);
                 nivelActual++;
-                jugador.sendTitle("§e§l¡NEXO NIVEL " + nivelActual + "!", "§fHas ascendido", 10, 70, 20);
+                jugador.sendTitle(serialize("&#FFAA00<bold>¡ASCENSO CÉNIT!</bold>"), serialize("&#AAAAAANivel Corporal: &#00E5FF" + nivelActual), 10, 70, 20);
             }
 
             user.setNexoNivel(nivelActual);

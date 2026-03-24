@@ -1,6 +1,7 @@
 package me.nexo.items.guardarropa;
 
 import me.nexo.core.NexoCore;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.NexoItems;
 import me.nexo.core.utils.Base64Util;
 import org.bukkit.Bukkit;
@@ -15,7 +16,6 @@ import java.sql.ResultSet;
 
 public class GuardarropaManager {
 
-    // 🟢 ARQUITECTURA: Ahora usamos NexoItems
     private final NexoItems plugin;
 
     public GuardarropaManager(NexoItems plugin) {
@@ -38,7 +38,7 @@ public class GuardarropaManager {
         }
 
         if (estaDesnudo) {
-            p.sendMessage("§cNo tienes ninguna armadura equipada para guardar.");
+            p.sendMessage(NexoColor.parse("&#FF5555[!] No tienes ninguna armadura equipada para guardar."));
             p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             return;
         }
@@ -46,7 +46,6 @@ public class GuardarropaManager {
         String base64Data = Base64Util.itemStackArrayToBase64(armadura);
 
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            // 🟢 CONEXIÓN AL CEREBRO: Pedimos la conexión al NexoCore
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
             if (nexoCore == null || nexoCore.getDatabaseManager() == null) return;
 
@@ -61,7 +60,7 @@ public class GuardarropaManager {
                 ps.executeUpdate();
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    p.sendMessage("§a👕 ¡Armadura guardada exitosamente en el Preset #" + presetId + "!");
+                    p.sendMessage(NexoColor.parse("&#55FF55[✓] 👕 ¡Armadura guardada exitosamente en el Preset #" + presetId + "!"));
                     p.playSound(p.getLocation(), Sound.BLOCK_SMITHING_TABLE_USE, 1f, 1f);
                     p.closeInventory();
                 });
@@ -97,7 +96,7 @@ public class GuardarropaManager {
             String finalData = base64Data;
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (finalData == null || finalData.isEmpty()) {
-                    p.sendMessage("§cNo hay ninguna armadura guardada en el Preset #" + presetId + ".");
+                    p.sendMessage(NexoColor.parse("&#FF5555[!] No hay ninguna armadura guardada en el Preset #" + presetId + "."));
                     p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     return;
                 }
@@ -117,7 +116,7 @@ public class GuardarropaManager {
                 }
 
                 if (espaciosLibres < espaciosNecesarios) {
-                    p.sendMessage("§c§l¡INVENTARIO LLENO! §7Necesitas " + espaciosNecesarios + " espacios libres para guardar tu armadura actual.");
+                    p.sendMessage(NexoColor.parse("&#FF5555<bold>[!] ¡INVENTARIO LLENO!</bold> &#AAAAAANecesitas " + espaciosNecesarios + " espacios libres para guardar tu armadura actual."));
                     p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     return;
                 }
@@ -133,7 +132,7 @@ public class GuardarropaManager {
                 p.getInventory().setArmorContents(nuevaArmadura);
                 borrarPreset(p, presetId);
 
-                p.sendMessage("§b✨ ¡Te has equipado el Preset #" + presetId + " rápidamente!");
+                p.sendMessage(NexoColor.parse("&#00E5FF✨ ¡Te has equipado el Preset #" + presetId + " rápidamente!"));
                 p.playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1f);
                 p.closeInventory();
             });

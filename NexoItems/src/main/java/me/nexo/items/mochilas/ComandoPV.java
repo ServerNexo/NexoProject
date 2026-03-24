@@ -6,7 +6,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
 
 public class ComandoPV implements CommandExecutor {
 
@@ -41,8 +40,8 @@ public class ComandoPV implements CommandExecutor {
                 return true;
             }
 
-            Inventory vault = plugin.getMochilaManager().obtenerMochila(player, vaultNumber);
-            player.openInventory(vault);
+            // 🌟 CORRECCIÓN AQUÍ: Llamamos al método asíncrono que abre el inventario directamente
+            plugin.getMochilaManager().abrirMochila(player, vaultNumber);
 
         } catch (NumberFormatException e) {
             player.sendMessage(NexoColor.parse(ERR_INVALID_NUM));

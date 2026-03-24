@@ -13,8 +13,12 @@ public record AccessoryDTO(
     }
 
     public enum Rareza {
-        COMUN(3, "§7"), RARO(8, "§9"), EPICO(12, "§5"),
-        LEGENDARIO(16, "§6"), MITICO(22, "§c"), COSMICO(30, "§b");
+        COMUN(3, "&#AAAAAA"),       // Gris Plomo
+        RARO(8, "&#5555FF"),        // Azul Neón
+        EPICO(12, "&#AA00AA"),      // Púrpura Profundo
+        LEGENDARIO(16, "&#FFAA00"), // Naranja/Dorado Corporativo
+        MITICO(22, "&#FF5555"),     // Rojo Alerta
+        COSMICO(30, "&#00E5FF");    // Cian Ciberpunk
 
         private final int poderNexo;
         private final String color;

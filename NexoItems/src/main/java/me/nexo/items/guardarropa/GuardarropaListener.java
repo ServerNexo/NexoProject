@@ -1,5 +1,8 @@
 package me.nexo.items.guardarropa;
 
+import me.nexo.core.utils.NexoColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -11,37 +14,40 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.List;
+import java.util.Arrays;
 
 public class GuardarropaListener implements Listener {
 
     private final GuardarropaManager manager;
-    // Título con símbolo custom para usar texturas de Nexo (\uF808 es el shift negativo clásico, \uE001 es tu textura hipotética)
-    private final String TITULO_MENU = "§f\uF808\uE001§8 👕 Guardarropa RPG";
+
+    // 🎨 Títulos limpios y seguros
+    public static final String TITLE_PLAIN = "» Guardarropa RPG";
+    public static final String MENU_TITLE = "&#555555<bold>»</bold> &#00E5FFGuardarropa RPG";
 
     public GuardarropaListener(GuardarropaManager manager) {
         this.manager = manager;
     }
 
     public void abrirMenu(Player p) {
-        Inventory inv = Bukkit.createInventory(null, 27, TITULO_MENU);
+        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
 
-        // Decoración de Slots (Ej: 3 Presets en el medio)
         int[] slotsPresets = {11, 13, 15};
         int presetNum = 1;
 
         for (int slot : slotsPresets) {
             ItemStack soporte = new ItemStack(Material.ARMOR_STAND);
             ItemMeta meta = soporte.getItemMeta();
-            meta.setDisplayName("§e§lPreset de Armadura #" + presetNum);
-            meta.setLore(List.of(
-                    "§7Guarda o equipa conjuntos de",
-                    "§7armadura de forma instantánea.",
-                    "",
-                    "§b▶ CLIC IZQUIERDO: §fEquipar",
-                    "§c▶ CLIC DERECHO: §fGuardar Armadura Actual"
-            ));
-            soporte.setItemMeta(meta);
+            if (meta != null) {
+                meta.setDisplayName(serialize("&#FFAA00<bold>Preset de Armadura #" + presetNum + "</bold>"));
+                meta.setLore(Arrays.asList(
+                        serialize("&#AAAAAAGuarda o equipa conjuntos de"),
+                        serialize("&#AAAAAAarmadura de forma instantánea."),
+                        serialize(" "),
+                        serialize("&#00E5FF▶ CLIC IZQUIERDO: &#FFFFFFEquipar Set"),
+                        serialize("&#FF5555▶ CLIC DERECHO: &#FFFFFFGuardar Conjunto Actual")
+                ));
+                soporte.setItemMeta(meta);
+            }
             inv.setItem(slot, soporte);
             presetNum++;
         }
@@ -50,18 +56,22 @@ public class GuardarropaListener implements Listener {
         p.playSound(p.getLocation(), Sound.BLOCK_WOODEN_DOOR_OPEN, 1f, 1.2f);
     }
 
+    private String serialize(String hex) {
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
+    }
+
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals(TITULO_MENU)) return;
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!plainTitle.equals(TITLE_PLAIN)) return;
 
-        event.setCancelled(true); // Bloqueamos que muevan ítems del menú
+        event.setCancelled(true);
 
         Player p = (Player) event.getWhoClicked();
         int slot = event.getRawSlot();
 
         if (slot >= 27) return;
 
-        // Mapeo de Slots a IDs de Preset
         int presetId = -1;
         if (slot == 11) presetId = 1;
         else if (slot == 13) presetId = 2;
@@ -69,10 +79,8 @@ public class GuardarropaListener implements Listener {
 
         if (presetId != -1) {
             if (event.isRightClick()) {
-                // GUARDAR ARMADURA
                 manager.guardarPreset(p, presetId);
             } else if (event.isLeftClick()) {
-                // EQUIPAR ARMADURA
                 manager.equiparPreset(p, presetId);
             }
         }
