@@ -158,4 +158,12 @@ public class AccesoriosListener implements Listener {
             }
         }
     }
+
+    // ==========================================
+    // 🧹 PREVENCIÓN DE FUGAS DE MEMORIA (RAM)
+    // ==========================================
+    @EventHandler
+    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        cooldownCorazon.remove(event.getPlayer().getUniqueId());
+    }
 }

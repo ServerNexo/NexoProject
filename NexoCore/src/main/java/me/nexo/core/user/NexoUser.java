@@ -97,4 +97,21 @@ public class NexoUser {
 
     public void setEnergiaMineria(int valor) { this.energiaMineria.set(valor); }
     public void setEnergiaExtraAccesorios(int valor) { this.energiaExtraAccesorios.set(valor); }
+
+    // =====================================
+    // 🧠 MÓDULO 3: ÁRBOL DE TALENTOS
+    // =====================================
+    private int knowledgePoints = 0;
+
+    public int getKnowledgePoints() {
+        return knowledgePoints;
+    }
+
+    public void addKnowledgePoints(int amount) {
+        this.knowledgePoints += amount;
+    }
+
+    public void removeKnowledgePoints(int amount) {
+        this.knowledgePoints -= amount;
+    }
 }

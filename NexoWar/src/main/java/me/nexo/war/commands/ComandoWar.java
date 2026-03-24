@@ -156,7 +156,8 @@ public class ComandoWar implements CommandExecutor {
                 clansPlugin.getClanManager().loadClanAsync(desafio.clanAtacanteId(), atacante -> {
                     if (atacante != null) {
                         // 🌟 ¡AQUÍ ESTALLA LA GUERRA! Llamamos a nuestro WarManager
-                        plugin.getWarManager().iniciarDesafio(atacante, defensor, desafio.apuesta());
+                        // Pasamos 'player' como primer argumento para que pague los suministros
+                        plugin.getWarManager().iniciarDesafio(player, atacante, defensor, desafio.apuesta());
                     }
                 });
             });

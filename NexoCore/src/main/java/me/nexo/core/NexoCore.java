@@ -1,5 +1,7 @@
 package me.nexo.core;
 
+import me.nexo.core.api.NexoWebServer; // 🌟 IMPORT NUEVO
+import me.nexo.core.hub.NexoMenuListener; // 🌟 IMPORT NUEVO
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.UserManager;
 import org.bukkit.Bukkit;
@@ -9,9 +11,10 @@ import org.bukkit.plugin.java.JavaPlugin;
 public class NexoCore extends JavaPlugin {
 
     private DatabaseManager databaseManager;
-
     private UserManager userManager;
     private NexoAPI nexoAPI;
+
+    private NexoWebServer webServer; // 🌟 NUEVO: Variable del Servidor Web
 
     @Override
     public void onEnable() {
@@ -24,11 +27,18 @@ public class NexoCore extends JavaPlugin {
         this.userManager = new UserManager();
         this.nexoAPI = new NexoAPI(this.userManager);
 
+        // 🌟 NUEVO: Arrancamos la NexoWeb API (Hilos Virtuales)
+        this.webServer = new NexoWebServer(this);
+        this.webServer.start();
+
         // 🟢 Solo conservamos el comando del Core
         if (getCommand("nexocore") != null) getCommand("nexocore").setExecutor(new ComandoNexo(this));
 
-        // 🟢 Listeners generales (¡El único que sobrevive aquí es el de la Base de Datos!)
+        // 🟢 Listeners generales
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
+
+        // 🌟 NUEVO: Registramos la protección del Ítem del Hub (Slot 9)
+        getServer().getPluginManager().registerEvents(new NexoMenuListener(this), this);
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new NexoExpansion(this).register();
@@ -37,11 +47,16 @@ public class NexoCore extends JavaPlugin {
         // Tarea del HUD
         new HudTask(this).runTaskTimer(this, 20L, 20L);
 
-        getLogger().info("¡Nexo Core V8.2: Core Purificado al 100%!");
+        getLogger().info("¡Nexo Core V8.2: Core Purificado al 100% y API Web en línea!");
     }
 
     @Override
     public void onDisable() {
+        // 🌟 NUEVO: Apagamos el Servidor Web de forma segura
+        if (webServer != null) {
+            webServer.stop();
+        }
+
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (databaseManager != null) {
                 databaseManager.guardarJugadorSync(p);

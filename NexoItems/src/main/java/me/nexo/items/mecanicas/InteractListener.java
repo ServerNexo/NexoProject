@@ -266,4 +266,12 @@ public class InteractListener implements Listener {
             jugador.sendActionBar("§b✨ Poder utilizado: §f" + habilidad.toUpperCase() + " §8(-" + costoEnergia + "⚡)");
         }
     }
+
+    // ==========================================
+    // 🧹 PREVENCIÓN DE FUGAS DE MEMORIA (RAM)
+    // ==========================================
+    @EventHandler
+    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        cooldowns.remove(event.getPlayer().getUniqueId());
+    }
 }

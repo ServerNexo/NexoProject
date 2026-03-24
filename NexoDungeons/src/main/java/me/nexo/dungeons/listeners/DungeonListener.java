@@ -199,4 +199,13 @@ public class DungeonListener implements Listener {
             plugin.getLogger().severe("❌ Error ejecutando acción " + action.type() + ": " + e.getMessage());
         }
     }
+
+    // ==========================================
+    // 🧹 PREVENCIÓN DE FUGAS DE MEMORIA (RAM)
+    // ==========================================
+    @EventHandler
+    public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+        antiSpamCooldown.remove(event.getPlayer().getUniqueId());
+        globalCounters.remove(event.getPlayer().getUniqueId().toString()); // Opcional limpieza
+    }
 }

@@ -4,10 +4,14 @@ import me.nexo.clans.NexoClans;
 import me.nexo.clans.core.NexoClan;
 import me.nexo.core.NexoCore;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.war.NexoWar;
 import me.nexo.war.core.WarContract;
 import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.math.BigDecimal;
@@ -20,26 +24,65 @@ public class WarManager {
 
     private final NexoWar plugin;
     private final Map<UUID, WarContract> guerrasActivas = new ConcurrentHashMap<>();
+    private final NamespacedKey militaryRationKey;
 
     // 🌟 CONFIGURACIÓN DE LA GUERRA
     private final long GRACE_PERIOD_MILLIS = 5 * 60 * 1000L; // 5 Minutos
     private final int KILLS_TO_WIN = 20; // Bajas necesarias para ganar el pozo
+    private final int COSTO_SUMINISTROS = 100; // Costo industrial para iniciar la guerra
 
     public WarManager(NexoWar plugin) {
         this.plugin = plugin;
+        this.militaryRationKey = new NamespacedKey(plugin, "military_rations");
         iniciarRelojDeGuerras();
     }
 
-    public void iniciarDesafio(NexoClan atacante, NexoClan defensor, BigDecimal apuesta) {
-        if (atacante.getBankBalance().compareTo(apuesta) < 0 || defensor.getBankBalance().compareTo(apuesta) < 0) return;
+    // 🌟 NUEVO: Método Modificado para la Fase 2 (Economía de Guerra)
+    public void iniciarDesafio(Player leader, NexoClan atacante, NexoClan defensor, BigDecimal apuesta) {
+        // 1. Verificación de Fondos Bancarios
+        if (atacante.getBankBalance().compareTo(apuesta) < 0 || defensor.getBankBalance().compareTo(apuesta) < 0) {
+            leader.sendMessage(NexoColor.parse("<red>Uno de los clanes no tiene fondos suficientes para la apuesta."));
+            return;
+        }
 
-        // 1. Escrow: Retirar dinero
+        // 2. Escaneo Físico de Suministros Industriales (Módulo 5)
+        int contadorSuministros = 0;
+        for (ItemStack item : leader.getInventory().getContents()) {
+            if (item != null && item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(militaryRationKey, PersistentDataType.BYTE)) {
+                contadorSuministros += item.getAmount();
+            }
+        }
+
+        // 3. Validación Industrial Estricta
+        if (contadorSuministros < COSTO_SUMINISTROS) {
+            leader.sendMessage(NexoColor.parse("<#FF5555>¡Suministros insuficientes para la campaña militar!"));
+            leader.sendMessage(NexoColor.parse("<gray>Necesitas <white>" + COSTO_SUMINISTROS + "x Suministros Militares <gray>fabricados en las Factorías."));
+            return; // ⛔ Cancelamos la guerra, no hay economía que la respalde
+        }
+
+        // 4. Cobro Físico de Ítems (Consumiendo la economía del servidor)
+        int faltanPorCobrar = COSTO_SUMINISTROS;
+        for (ItemStack item : leader.getInventory().getContents()) {
+            if (faltanPorCobrar <= 0) break;
+
+            if (item != null && item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(militaryRationKey, PersistentDataType.BYTE)) {
+                if (item.getAmount() <= faltanPorCobrar) {
+                    faltanPorCobrar -= item.getAmount();
+                    item.setAmount(0); // Borra el stack completo
+                } else {
+                    item.setAmount(item.getAmount() - faltanPorCobrar);
+                    faltanPorCobrar = 0; // Termina el cobro
+                }
+            }
+        }
+
+        // 5. Escrow: Retirar dinero digital
         atacante.withdrawMoney(apuesta.doubleValue());
         defensor.withdrawMoney(apuesta.doubleValue());
         NexoClans.getPlugin(NexoClans.class).getClanManager().saveBankAsync(atacante);
         NexoClans.getPlugin(NexoClans.class).getClanManager().saveBankAsync(defensor);
 
-        // 2. Crear Contrato
+        // 6. Crear Contrato
         UUID warId = UUID.randomUUID();
         WarContract contrato = new WarContract(
                 warId, atacante.getId(), defensor.getId(), apuesta,
@@ -49,7 +92,7 @@ public class WarManager {
         guerrasActivas.put(warId, contrato);
         saveWarToDatabase(contrato);
 
-        // 3. Anuncio
+        // 7. Anuncio Global de Inicio
         String msg = "<gold><bold>⚔ GUERRA DE HONOR:</bold> <white>El clan <yellow>" + atacante.getName() +
                 "</yellow> y <yellow>" + defensor.getName() +
                 "</yellow> han congelado <green>🪙 " + apuesta.multiply(BigDecimal.valueOf(2)) + "</green> en el Escrow!";
