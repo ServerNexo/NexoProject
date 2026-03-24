@@ -498,5 +498,14 @@ public class ItemManager {
         item.setItemMeta(meta);
         return item;
     }
+    // TODO: Implementar generador de armaduras
+    public static ItemStack generarArmadura(String id) {
+        return null;
+    }
+
+    // TODO: Implementar generador de herramientas
+    public static ItemStack generarHerramienta(String id) {
+        return null;
+    }
 
 }
