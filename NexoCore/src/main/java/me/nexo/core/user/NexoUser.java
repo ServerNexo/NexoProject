@@ -114,4 +114,25 @@ public class NexoUser {
     public void removeKnowledgePoints(int amount) {
         this.knowledgePoints -= amount;
     }
+
+    // =====================================
+    // 💎 MÓDULO 4: ECONOMÍA PREMIUM (Gemas)
+    // =====================================
+    private final AtomicInteger gems = new AtomicInteger(0);
+
+    public int getGems() {
+        return gems.get();
+    }
+
+    public void addGems(int amount) {
+        this.gems.addAndGet(amount);
+    }
+
+    public void removeGems(int amount) {
+        this.gems.addAndGet(-amount);
+    }
+
+    public void setGems(int amount) {
+        this.gems.set(amount);
+    }
 }

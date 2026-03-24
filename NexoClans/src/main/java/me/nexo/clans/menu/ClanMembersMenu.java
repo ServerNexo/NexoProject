@@ -4,6 +4,7 @@ import me.nexo.clans.NexoClans;
 import me.nexo.clans.core.ClanMember;
 import me.nexo.clans.core.NexoClan;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.utils.NexoColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -16,12 +17,16 @@ import java.util.List;
 
 public class ClanMembersMenu {
 
-    public static void abrirMenu(Player player, NexoClan clan, NexoUser user, NexoClans plugin) {
-        player.sendMessage("§eBuscando miembros en los registros del servidor...");
+    // 🎨 CONSTANTES
+    public static final String TITLE_MEMBERS = "&#434343<bold>»</bold> &#00fbffRegistro de Operarios";
+    private static final String MSG_SEARCHING = "&#fbd72bConectando con la base de datos de Nexo...";
 
-        // Usamos nuestro nuevo método asíncrono
+    public static void abrirMenu(Player player, NexoClan clan, NexoUser user, NexoClans plugin) {
+        player.sendMessage(NexoColor.parse(MSG_SEARCHING));
+
+        // Hilo asíncrono
         plugin.getClanManager().getMiembrosAsync(clan.getId(), miembros -> {
-            Inventory inv = Bukkit.createInventory(null, 54, "§8§l» §bMiembros del Clan");
+            Inventory inv = Bukkit.createInventory(null, 54, NexoColor.parse(TITLE_MEMBERS));
 
             for (int i = 0; i < miembros.size() && i < 54; i++) {
                 ClanMember m = miembros.get(i);
@@ -29,25 +34,27 @@ public class ClanMembersMenu {
                 ItemStack head = new ItemStack(Material.PLAYER_HEAD);
                 SkullMeta meta = (SkullMeta) head.getItemMeta();
 
-                // Ponemos la textura de su cabeza real
-                meta.setOwningPlayer(Bukkit.getOfflinePlayer(m.uuid()));
-                meta.setDisplayName("§e" + m.name());
+                if (meta != null) {
+                    meta.setOwningPlayer(Bukkit.getOfflinePlayer(m.uuid()));
+                    meta.displayName(NexoColor.parse("&#fbd72b" + m.name()));
 
-                List<String> lore = new ArrayList<>();
-                lore.add("§7Rango: §b" + m.role());
-                lore.add("");
+                    List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+                    lore.add(NexoColor.parse("&#434343Autorización: &#00fbff" + m.role()));
+                    lore.add(NexoColor.parse(" "));
 
-                // Si el que abrió el menú es líder/oficial y no se está clickeando a sí mismo
-                if ((user.getClanRole().equals("LIDER") || user.getClanRole().equals("OFICIAL")) && !m.uuid().equals(player.getUniqueId())) {
-                    lore.add("§c▶ Clic Derecho para Expulsar");
+                    // Lógica de expulsión
+                    if ((user.getClanRole().equals("LIDER") || user.getClanRole().equals("OFICIAL")) && !m.uuid().equals(player.getUniqueId())) {
+                        lore.add(NexoColor.parse("&#ff4b2b▶ Clic Derecho para Revocar Acceso (Expulsar)"));
+                    }
+
+                    meta.lore(lore);
+                    head.setItemMeta(meta);
                 }
-
-                meta.setLore(lore);
-                head.setItemMeta(meta);
                 inv.setItem(i, head);
             }
 
-            player.openInventory(inv);
+            // Sincronizamos con el hilo principal para abrir el inventario
+            Bukkit.getScheduler().runTask(plugin, () -> player.openInventory(inv));
         });
     }
 }

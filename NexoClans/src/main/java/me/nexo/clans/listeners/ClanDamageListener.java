@@ -3,6 +3,7 @@ package me.nexo.clans.listeners;
 import me.nexo.clans.NexoClans;
 import me.nexo.core.NexoCore;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.utils.NexoColor;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
@@ -14,6 +15,9 @@ public class ClanDamageListener implements Listener {
     private final NexoClans plugin;
     private final NexoCore core;
 
+    // 🎨 PALETA HEX - CONSTANTE DE ALERTA
+    private static final String MSG_FRIENDLY_FIRE = "&#ff4b2b[!] Sistema de Protección: No puedes herir a un operario aliado.";
+
     public ClanDamageListener(NexoClans plugin) {
         this.plugin = plugin;
         this.core = NexoCore.getPlugin(NexoCore.class);
@@ -23,7 +27,6 @@ public class ClanDamageListener implements Listener {
     public void onPlayerDamage(EntityDamageByEntityEvent event) {
         if (!(event.getEntity() instanceof Player victim)) return;
 
-        // 🌟 CORRECCIÓN: Usamos una variable temporal primero
         Player tempAttacker = null;
         if (event.getDamager() instanceof Player p) {
             tempAttacker = p;
@@ -33,7 +36,6 @@ public class ClanDamageListener implements Listener {
 
         if (tempAttacker == null || tempAttacker.equals(victim)) return;
 
-        // 🌟 La "sellamos" como final para que Java nos deje usarla en el Lambda
         final Player attacker = tempAttacker;
 
         NexoUser userAttacker = core.getUserManager().getUserOrNull(attacker.getUniqueId());
@@ -47,7 +49,7 @@ public class ClanDamageListener implements Listener {
                 if (!clan.isFriendlyFire()) {
                     // 🛡️ ¡Escudo activado!
                     event.setCancelled(true);
-                    attacker.sendMessage("§c¡No puedes herir a los aliados de tu clan! (Fuego Amigo Desactivado)");
+                    attacker.sendMessage(NexoColor.parse(MSG_FRIENDLY_FIRE));
                 }
             });
         }

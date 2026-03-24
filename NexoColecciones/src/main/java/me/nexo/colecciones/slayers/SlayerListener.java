@@ -1,152 +1,113 @@
 package me.nexo.colecciones.slayers;
 
 import me.nexo.colecciones.NexoColecciones;
-import me.nexo.economy.NexoEconomy; // 🌟 IMPORT ECONOMÍA
-import me.nexo.economy.core.NexoAccount; // 🌟 IMPORT DIVISAS
+import me.nexo.core.NexoCore;
+import me.nexo.core.user.NexoUser;
+import me.nexo.core.utils.NexoColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
-import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
-import org.bukkit.boss.BossBar;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.metadata.FixedMetadataValue;
 
-import java.math.BigDecimal; // 🌟 IMPORT PARA LOS NÚMEROS EXACTOS
+import java.util.UUID;
 
 public class SlayerListener implements Listener {
 
     private final NexoColecciones plugin;
-    private final SlayerManager manager;
+
+    // 🎨 PALETA HEX - CONSTANTES (Clean Code)
+    private static final String BC_DIVIDER = "&#434343=======================================";
+    private static final String MSG_COMPLETED = "&#a8ff78<bold>⚔️ ¡CONTRATO COMPLETADO!</bold>";
+    private static final String MSG_BOSS_DEFEATED = "&#434343Objetivo eliminado: &#ff4b2b%boss%";
+    private static final String MSG_REWARD = "&#a8ff78💎 ¡Transferencia de %gems% Gemas realizada a tu cuenta!";
+    private static final String MSG_BOSS_SPAWN_TITLE = "&#ff4b2b<bold>¡AMENAZA DETECTADA!</bold>";
+    private static final String MSG_BOSS_SPAWN_DESC = "&#434343El objetivo &#ff4b2b%boss% &#434343ha entrado en tu área.";
+    private static final String ERR_BOSS_TYPE = "&#ff4b2b[Error Interno] El tipo de entidad en la base de datos es inválido.";
 
     public SlayerListener(NexoColecciones plugin) {
         this.plugin = plugin;
-        this.manager = plugin.getSlayerManager();
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityDeath(EntityDeathEvent event) {
-        Player player = event.getEntity().getKiller();
-        if (player == null) return;
+        LivingEntity entity = event.getEntity();
+        Player killer = entity.getKiller();
 
-        ActiveSlayer slayer = manager.getActiveSlayer(player.getUniqueId());
-        if (slayer == null) return;
+        // 1. COMPROBAR SI MATAMOS A UN BOSS DE SLAYER
+        if (entity.hasMetadata("SlayerBoss")) {
+            String bossOwnerUUID = entity.getMetadata("SlayerBoss").get(0).asString();
+            Player bossOwner = Bukkit.getPlayer(UUID.fromString(bossOwnerUUID));
 
-        LivingEntity killed = event.getEntity();
-        String mobName = killed.getType().name();
+            if (bossOwner != null) {
+                ActiveSlayer slayer = plugin.getSlayerManager().getActiveSlayer(bossOwner.getUniqueId());
 
-        // 1. ¿Mató al Boss Final?
-        if (slayer.isBossSpawned() && killed.hasMetadata("SlayerBoss_" + player.getUniqueId().toString())) {
+                if (slayer != null && slayer.isBossSpawned()) {
+                    // Borramos la BossBar
+                    slayer.getBossBar().removeAll();
 
-            player.sendMessage("§8=======================================");
-            player.sendMessage("§a§l⚔️ ¡CACERÍA COMPLETADA!");
-            player.sendMessage("§7Has derrotado a: §c" + slayer.getBossName());
-            player.sendMessage("§8=======================================");
+                    bossOwner.sendMessage(NexoColor.parse(BC_DIVIDER));
+                    bossOwner.sendMessage(NexoColor.parse(MSG_COMPLETED));
+                    bossOwner.sendMessage(NexoColor.parse(MSG_BOSS_DEFEATED.replace("%boss%", slayer.getBossName())));
+                    bossOwner.sendMessage(NexoColor.parse(BC_DIVIDER));
 
-            // Ejecutamos los comandos de recompensa normales del YAML
-            for (String cmd : slayer.getRewards()) {
-                String finalCmd = cmd.replace("%player%", player.getName());
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCmd);
+                    // RECOMPENSA: Damos Gemas (Economía Premium)
+                    int recompensaGemas = slayer.getTemplate().requiredKills() / 10;
+                    NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(bossOwner.getUniqueId());
+                    if (user != null) {
+                        user.addGems(recompensaGemas);
+                        bossOwner.sendMessage(NexoColor.parse(MSG_REWARD.replace("%gems%", String.valueOf(recompensaGemas))));
+                    }
+
+                    // Terminamos el slayer
+                    plugin.getSlayerManager().removeActiveSlayer(bossOwner.getUniqueId());
+                }
             }
+            return; // Si era un boss, ya no contamos su kill para el farmeo normal
+        }
 
-            player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+        // 2. COMPROBAR SI EL JUGADOR ESTÁ FARMEANDO PARA INVOCAR AL BOSS
+        if (killer != null) {
+            ActiveSlayer slayer = plugin.getSlayerManager().getActiveSlayer(killer.getUniqueId());
 
-            // 🌟 NUEVO: Borramos la BossBar al ganar
-            if (slayer.getBossBar() != null) {
-                slayer.getBossBar().removeAll();
-            }
+            if (slayer != null && !slayer.isBossSpawned()) {
+                // Si el mob que mató es el que le pide su contrato
+                if (entity.getType().name().equalsIgnoreCase(slayer.getTemplate().targetMob())) {
 
-            // 💎 INYECCIÓN DE ECONOMÍA: Recompensar con Gemas
-            BigDecimal recompensaGemas = new BigDecimal("5"); // 5 Gemas por Boss
-            NexoEconomy.getPlugin(NexoEconomy.class).getEconomyManager()
-                    .updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.GEMS, recompensaGemas, true)
-                    .thenAccept(success -> {
-                        if (success) {
-                            player.sendMessage("§a💎 ¡Has obtenido " + recompensaGemas + " Gemas por derrotar al Slayer!");
+                    slayer.addKill();
+
+                    // Si ya llegó a la meta, ¡SPAWNEA EL BOSS!
+                    if (slayer.getKills() >= slayer.getTemplate().requiredKills()) {
+                        slayer.setBossSpawned(true);
+
+                        Location loc = entity.getLocation();
+                        try {
+                            EntityType type = EntityType.valueOf(slayer.getTemplate().bossType());
+                            LivingEntity boss = (LivingEntity) loc.getWorld().spawnEntity(loc, type);
+
+                            // Súper buff al Boss
+                            boss.customName(NexoColor.parse("&#ff4b2b<bold>" + slayer.getBossName() + "</bold>"));
+                            boss.setCustomNameVisible(true);
+                            boss.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(1000.0);
+                            boss.setHealth(1000.0);
+
+                            // Le ponemos la etiqueta para reconocerlo cuando muera
+                            boss.setMetadata("SlayerBoss", new org.bukkit.metadata.FixedMetadataValue(plugin, killer.getUniqueId().toString()));
+
+                            killer.sendMessage(NexoColor.parse(MSG_BOSS_SPAWN_TITLE));
+                            killer.sendMessage(NexoColor.parse(MSG_BOSS_SPAWN_DESC.replace("%boss%", slayer.getBossName())));
+
+                        } catch (Exception e) {
+                            killer.sendMessage(NexoColor.parse(ERR_BOSS_TYPE));
                         }
-                    });
-
-            manager.removeActiveSlayer(player.getUniqueId());
-            return;
-        }
-
-        // 2. ¿Mató a un mob normal?
-        if (!slayer.isBossSpawned() && mobName.equals(slayer.getTargetMob())) {
-            slayer.addKill();
-
-            int current = slayer.getCurrentKills();
-            int req = slayer.getRequiredKills();
-
-            if (slayer.isReadyForBoss()) {
-                player.sendTitle("§c§l¡CUIDADO!", "§7El " + slayer.getBossName() + " §7ha aparecido", 10, 70, 20);
-                player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1.0f, 1.0f);
-
-                Location spawnLoc = killed.getLocation();
-                spawnLoc.getWorld().strikeLightningEffect(spawnLoc);
-
-                try {
-                    LivingEntity boss = (LivingEntity) spawnLoc.getWorld().spawnEntity(spawnLoc, EntityType.valueOf(slayer.getBossType()));
-                    boss.setCustomName(slayer.getBossName());
-                    boss.setCustomNameVisible(true);
-                    boss.setMetadata("SlayerBoss_" + player.getUniqueId().toString(), new FixedMetadataValue(plugin, true));
-
-                    slayer.setBossSpawned(true);
-
-                    // Creamos la BossBar y se la mostramos al jugador
-                    BossBar bar = Bukkit.createBossBar(slayer.getBossName(), BarColor.RED, BarStyle.SOLID);
-                    bar.addPlayer(player);
-                    slayer.setBossBar(bar);
-
-                } catch (IllegalArgumentException e) {
-                    player.sendMessage("§c[Error] El tipo de Boss en el YAML es inválido.");
-                    manager.removeActiveSlayer(player.getUniqueId());
+                    }
                 }
-            } else {
-                player.sendActionBar("§c⚔️ Progreso de Slayer: §e" + current + " §8/ §e" + req);
             }
-        }
-    }
-
-    // Actualizar la barra cuando el Boss recibe daño
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onBossDamage(EntityDamageEvent event) {
-        Entity entity = event.getEntity();
-        if (!(entity instanceof LivingEntity boss)) return;
-
-        for (ActiveSlayer slayer : manager.getActiveSlayers().values()) {
-            if (slayer.isBossSpawned() && boss.hasMetadata("SlayerBoss_" + slayer.getPlayerId().toString())) {
-                if (slayer.getBossBar() != null) {
-                    double maxHealth = boss.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-                    double currentHealth = boss.getHealth() - event.getFinalDamage();
-                    if (currentHealth < 0) currentHealth = 0;
-
-                    double progress = currentHealth / maxHealth;
-                    slayer.getBossBar().setProgress(progress);
-                }
-                break;
-            }
-        }
-    }
-
-    // Castigar al jugador si se desconecta (Se cancela la misión)
-    @EventHandler
-    public void onPlayerQuit(PlayerQuitEvent event) {
-        ActiveSlayer slayer = manager.getActiveSlayer(event.getPlayer().getUniqueId());
-        if (slayer != null) {
-            if (slayer.getBossBar() != null) {
-                slayer.getBossBar().removeAll(); // Quitamos la barra
-            }
-            manager.removeActiveSlayer(event.getPlayer().getUniqueId());
         }
     }
 }

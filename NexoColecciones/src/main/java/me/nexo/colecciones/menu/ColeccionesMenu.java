@@ -4,6 +4,7 @@ import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.colecciones.CollectionProfile;
 import me.nexo.colecciones.data.CollectionCategory;
 import me.nexo.colecciones.data.CollectionItem;
+import me.nexo.core.utils.NexoColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -17,9 +18,14 @@ import java.util.stream.Collectors;
 
 public class ColeccionesMenu {
 
+    // 🎨 CONSTANTES PARA EL LISTENER Y TÍTULOS
+    public static final String TITLE_MAIN = "&#434343<bold>»</bold> &#fbd72bCategorías de Colecciones";
+    public static final String TITLE_SUBMENU_PREFIX = "&#434343<bold>»</bold> &#00fbffColecciones: &#fbd72b";
+    private static final String ERR_LOADING = "&#ff4b2b[!] Tus datos aún están sincronizándose con la red.";
+
     // 🌟 1. MENÚ PRINCIPAL
     public static void abrirMenuPrincipal(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, "§8Categorías de Colecciones");
+        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(TITLE_MAIN));
 
         inv.setItem(10, crearIconoCategoria(Material.IRON_PICKAXE, CollectionCategory.MINA));
         inv.setItem(11, crearIconoCategoria(Material.IRON_HOE, CollectionCategory.FARMING));
@@ -36,11 +42,14 @@ public class ColeccionesMenu {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName("§a§l" + cat.name());
+            // 🌟 USAMOS EL SERIALIZADOR PARA VOLVER AL FORMATO SEGURO DE BUKKIT
+            meta.setDisplayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#a8ff78<bold>" + cat.name() + "</bold>")));
+
             List<String> lore = new ArrayList<>();
-            lore.add("§7Haz clic para ver tus");
-            lore.add("§7colecciones de esta rama.");
+            lore.add(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#434343Haz clic para explorar la")));
+            lore.add(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#434343base de datos de esta rama.")));
             meta.setLore(lore);
+
             item.setItemMeta(meta);
         }
         return item;
@@ -48,11 +57,11 @@ public class ColeccionesMenu {
 
     // 🌟 2. SUB-MENÚ (Por Categoría)
     public static void abrirSubMenu(Player player, CollectionManager manager, CollectionCategory categoria) {
-        Inventory inv = Bukkit.createInventory(null, 54, "§8Colecciones: §8" + categoria.name());
+        Inventory inv = Bukkit.createInventory(null, 54, NexoColor.parse(TITLE_SUBMENU_PREFIX + categoria.name()));
         CollectionProfile profile = manager.getProfile(player.getUniqueId());
 
         if (profile == null) {
-            player.sendMessage("§cTus datos aún están cargando...");
+            player.sendMessage(NexoColor.parse(ERR_LOADING));
             return;
         }
 
@@ -68,31 +77,31 @@ public class ColeccionesMenu {
             ItemStack icono = new ItemStack(mat);
             ItemMeta meta = icono.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName("§6§l" + item.displayName());
+                meta.setDisplayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#fbd72b<bold>" + item.displayName() + "</bold>")));
 
                 int cantidad = profile.getProgress(item.itemId());
                 int nivel = manager.calcularNivel(cantidad);
 
-                List<String> lore = new ArrayList<>();
-                lore.add("§8ID: " + item.itemId());
-                lore.add("");
-                lore.add("§7Nivel Actual: §b" + nivel);
+                List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+                lore.add(NexoColor.parse("&#434343ID de Registro: " + item.itemId()));
+                lore.add(NexoColor.parse(" "));
+                lore.add(NexoColor.parse("&#434343Nivel Actual: &#00fbff" + nivel));
 
                 if (nivel < CollectionManager.TIERS.length) {
                     int siguienteMeta = CollectionManager.TIERS[nivel];
-                    lore.add("§7Progreso: §e" + cantidad + " §8/ §e" + siguienteMeta);
-                    lore.add("");
-                    lore.add("§a¡Sigue farmeando para subir!");
+                    lore.add(NexoColor.parse("&#434343Progreso: &#fbd72b" + cantidad + " &#434343/ &#fbd72b" + siguienteMeta));
+                    lore.add(NexoColor.parse(" "));
+                    lore.add(NexoColor.parse("&#a8ff78¡Producción requerida para mejorar!"));
                 } else {
-                    lore.add("§7Progreso: §e" + cantidad);
-                    lore.add("");
-                    lore.add("§6§l¡COLECCIÓN AL MÁXIMO!");
+                    lore.add(NexoColor.parse("&#434343Progreso: &#fbd72b" + cantidad));
+                    lore.add(NexoColor.parse(" "));
+                    lore.add(NexoColor.parse("&#fbd72b<bold>¡MÁXIMA EFICIENCIA ALCANZADA!</bold>"));
                 }
-                lore.add("");
-                lore.add("§7Usa §e/col top " + item.itemId());
-                lore.add("§7para ver los mejores del mundo.");
+                lore.add(NexoColor.parse(" "));
+                lore.add(NexoColor.parse("&#434343Usa &#fbd72b/col top " + item.itemId()));
+                lore.add(NexoColor.parse("&#434343para ver a los mejores del mundo."));
 
-                meta.setLore(lore);
+                meta.lore(lore);
                 icono.setItemMeta(meta);
             }
             inv.addItem(icono);
@@ -102,7 +111,7 @@ public class ColeccionesMenu {
         ItemStack volver = new ItemStack(Material.ARROW);
         ItemMeta volverMeta = volver.getItemMeta();
         if (volverMeta != null) {
-            volverMeta.setDisplayName("§cVolver atrás");
+            volverMeta.displayName(NexoColor.parse("&#ff4b2bRegresar al Directorio Central"));
             volver.setItemMeta(volverMeta);
         }
         inv.setItem(49, volver);

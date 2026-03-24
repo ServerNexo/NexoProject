@@ -3,7 +3,8 @@ package me.nexo.clans.menu;
 import me.nexo.clans.NexoClans;
 import me.nexo.core.NexoCore;
 import me.nexo.core.user.NexoUser;
-import org.bukkit.ChatColor;
+import me.nexo.core.utils.NexoColor;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -24,8 +25,11 @@ public class ClanMenuListener implements Listener {
         NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
         if (user == null || !user.hasClan()) return;
 
-        // 🌟 SI ESTAMOS EN EL MENÚ PRINCIPAL
-        if (event.getView().getTitle().equals("§8§l» §eTu Clan")) {
+        // 🌟 COMPARACIÓN SEGURA DE COMPONENTES DE PAPER
+        net.kyori.adventure.text.Component titleComp = event.getView().title();
+
+        // MENÚ PRINCIPAL
+        if (titleComp.equals(NexoColor.parse(ClanMenu.TITLE_MENU))) {
             event.setCancelled(true);
             if (event.getCurrentItem() == null) return;
 
@@ -45,18 +49,19 @@ public class ClanMenuListener implements Listener {
                     ClanMembersMenu.abrirMenu(player, clan, user, plugin);
                 });
             }
+            return;
         }
 
-        // 🌟 SI ESTAMOS EN EL SUB-MENÚ DE MIEMBROS
-        if (event.getView().getTitle().equals("§8§l» §bMiembros del Clan")) {
+        // SUB-MENÚ DE MIEMBROS
+        if (titleComp.equals(NexoColor.parse(ClanMembersMenu.TITLE_MEMBERS))) {
             event.setCancelled(true);
             if (event.getCurrentItem() == null || event.getCurrentItem().getType() != Material.PLAYER_HEAD) return;
 
-            // Si da clic derecho para expulsar
-            if (event.getClick().isRightClick()) {
-                String targetName = ChatColor.stripColor(event.getCurrentItem().getItemMeta().getDisplayName());
+            if (event.getClick().isRightClick() && event.getCurrentItem().getItemMeta() != null) {
+                // Extraemos el nombre sin colores HEX usando el serializador nativo de Paper
+                String targetName = PlainTextComponentSerializer.plainText().serialize(event.getCurrentItem().getItemMeta().displayName());
 
-                // Obligamos al jugador a ejecutar el comando invisiblemente (Reutilizamos la lógica blindada que ya creaste)
+                // Ejecución invisible del comando de expulsión
                 player.performCommand("clan kick " + targetName);
                 player.closeInventory();
             }

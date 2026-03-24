@@ -2,6 +2,7 @@ package me.nexo.colecciones.commands;
 
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.menu.ColeccionesMenu;
+import me.nexo.core.utils.NexoColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -10,6 +11,10 @@ import org.bukkit.entity.Player;
 public class ComandoColecciones implements CommandExecutor {
     private final NexoColecciones plugin;
 
+    // 🎨 PALETA HEX - CONSTANTES
+    private static final String MSG_RELOAD_SUCCESS = "&#a8ff78[✓] Sistemas de Colecciones y Slayers sincronizados y en línea.";
+    private static final String ERR_NO_PERM = "&#ff4b2bAcceso Denegado. Se requiere autorización de administrador.";
+
     public ComandoColecciones(NexoColecciones plugin) {
         this.plugin = plugin;
     }
@@ -17,44 +22,39 @@ public class ComandoColecciones implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
-        // 💻 Si el comando se ejecuta desde la CONSOLA
+        // 💻 CONSOLA
         if (!(sender instanceof Player player)) {
             if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                 plugin.getColeccionesConfig().recargarConfig();
                 plugin.getCollectionManager().cargarDesdeConfig();
-                plugin.getSlayerManager().cargarSlayers(); // Recargamos Slayers también desde consola
-                sender.sendMessage("§a✅ [NexoColecciones] Configuración recargada con éxito desde la consola.");
+                plugin.getSlayerManager().cargarSlayers();
+                sender.sendMessage(NexoColor.parse(MSG_RELOAD_SUCCESS));
             }
             return true;
         }
 
-        // 🌟 NUEVO: Comando Reload (/colecciones reload) - SOLO ADMINS IN-GAME
+        // 🌟 RELOAD (SOLO ADMINS IN-GAME)
         if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
             if (!player.hasPermission("nexocolecciones.admin")) {
-                player.sendMessage("§c¡No tienes permiso para hacer esto!");
+                player.sendMessage(NexoColor.parse(ERR_NO_PERM));
                 return true;
             }
 
-            // 1. Forzamos la lectura del disco con tu método existente
             plugin.getColeccionesConfig().recargarConfig();
-
-            // 2. Le decimos al Cerebro que limpie la RAM y cargue los nuevos datos
             plugin.getCollectionManager().cargarDesdeConfig();
-
-            // 3. Recargamos las misiones de Slayers
             plugin.getSlayerManager().cargarSlayers();
 
-            player.sendMessage("§a✅ ¡Configuración de Colecciones y Slayers recargada con éxito!");
+            player.sendMessage(NexoColor.parse(MSG_RELOAD_SUCCESS));
             return true;
         }
 
-        // 🏆 Comando Top (/colecciones top ZOMBIE)
+        // 🏆 TOP
         if (args.length == 2 && args[0].equalsIgnoreCase("top")) {
             plugin.getCollectionManager().calcularTopAsync(player, args[1]);
             return true;
         }
 
-        // 🎒 Si solo escribe /colecciones, abrimos el Menú Principal
+        // 🎒 ABRIR MENÚ
         ColeccionesMenu.abrirMenuPrincipal(player);
         return true;
     }

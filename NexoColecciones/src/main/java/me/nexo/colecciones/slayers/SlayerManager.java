@@ -1,97 +1,80 @@
 package me.nexo.colecciones.slayers;
 
 import me.nexo.colecciones.NexoColecciones;
-import org.bukkit.configuration.ConfigurationSection;
+import me.nexo.core.utils.NexoColor;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
+import java.io.File;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SlayerManager {
 
     private final NexoColecciones plugin;
 
-    // Aquí guardamos los Slayers Activos de los jugadores online
-    private final Map<UUID, ActiveSlayer> activeSlayers = new HashMap<>();
+    // 🎨 PALETA HEX - CONSTANTES (Clean Code)
+    private static final String BC_DIVIDER = "&#434343=======================================";
+    private static final String ERR_NOT_FOUND = "&#ff4b2b[!] Protocolo no encontrado. Código de cacería inválido.";
+    private static final String ERR_ALREADY_ACTIVE = "&#ff4b2b[!] Ya tienes un protocolo activo. Complétalo o cancélalo primero.";
+    private static final String MSG_SLAYER_START = "&#ff4b2b<bold>⚔️ ¡CACERÍA INICIADA! ⚔️</bold>";
+    private static final String MSG_SLAYER_OBJ = "&#434343Contrato aceptado: &#fbd72b%name%";
+    private static final String MSG_SLAYER_DESC = "&#434343Mata &#ff4b2b%kills%x %mob%s &#434343para forzar la aparición del Jefe.";
 
-    // Aquí guardamos las plantillas cargadas desde colecciones.yml
+    public record SlayerTemplate(String id, String name, String targetMob, int requiredKills, String bossName, String bossType) {}
+
     private final Map<String, SlayerTemplate> templates = new HashMap<>();
+    private final Map<UUID, ActiveSlayer> activeSlayers = new ConcurrentHashMap<>();
 
     public SlayerManager(NexoColecciones plugin) {
         this.plugin = plugin;
-        cargarSlayers();
     }
 
     public void cargarSlayers() {
         templates.clear();
-        ConfigurationSection sec = plugin.getColeccionesConfig().getConfig().getConfigurationSection("slayers");
-        if (sec == null) {
-            plugin.getLogger().warning("No se encontró la sección 'slayers' en colecciones.yml.");
-            return;
-        }
+        File file = new File(plugin.getDataFolder(), "slayers.yml");
+        if (!file.exists()) plugin.saveResource("slayers.yml", false);
 
-        for (String key : sec.getKeys(false)) {
-            ConfigurationSection data = sec.getConfigurationSection(key);
-            if (data == null) continue;
+        FileConfiguration config = YamlConfiguration.loadConfiguration(file);
+        for (String key : config.getKeys(false)) {
+            String name = config.getString(key + ".nombre", key);
+            String targetMob = config.getString(key + ".mob_objetivo", "ZOMBIE");
+            int kills = config.getInt(key + ".kills_necesarias", 100);
+            String bossName = config.getString(key + ".boss_nombre", "Boss");
+            String bossType = config.getString(key + ".boss_tipo", "ZOMBIE");
 
-            templates.put(key.toUpperCase(), new SlayerTemplate(
-                    key.toUpperCase(),
-                    data.getString("nombre", key).replace("&", "§"),
-                    data.getString("mob_para_farmear", "ZOMBIE").toUpperCase(),
-                    data.getInt("kills_requeridas", 50),
-                    data.getString("boss_tipo", "ZOMBIE").toUpperCase(),
-                    data.getString("boss_nombre", "Boss").replace("&", "§"),
-                    data.getStringList("recompensas")
-            ));
+            templates.put(key.toUpperCase(), new SlayerTemplate(key.toUpperCase(), name, targetMob, kills, bossName, bossType));
         }
-        plugin.getLogger().info("⚔️ Se han cargado " + templates.size() + " misiones de Slayer desde la configuración.");
     }
 
+    public Map<String, SlayerTemplate> getTemplates() { return templates; }
+    public ActiveSlayer getActiveSlayer(UUID uuid) { return activeSlayers.get(uuid); }
+    public void removeActiveSlayer(UUID uuid) { activeSlayers.remove(uuid); }
+
     public void iniciarSlayer(Player player, String slayerId) {
-        SlayerTemplate template = templates.get(slayerId.toUpperCase());
-        if (template == null) {
-            player.sendMessage("§cEsa misión de Slayer no existe.");
+        slayerId = slayerId.toUpperCase();
+
+        if (!templates.containsKey(slayerId)) {
+            player.sendMessage(NexoColor.parse(ERR_NOT_FOUND));
             return;
         }
 
         if (activeSlayers.containsKey(player.getUniqueId())) {
-            player.sendMessage("§c¡Ya tienes un Slayer activo! Termínalo o cancélalo primero.");
+            player.sendMessage(NexoColor.parse(ERR_ALREADY_ACTIVE));
             return;
         }
 
-        ActiveSlayer nuevoSlayer = new ActiveSlayer(
-                player.getUniqueId(), template.id(), template.targetMob(),
-                template.requiredKills(), template.bossType(), template.bossName(), template.rewards()
-        );
+        SlayerTemplate template = templates.get(slayerId);
+        ActiveSlayer activo = new ActiveSlayer(player, template);
+        activeSlayers.put(player.getUniqueId(), activo);
 
-        activeSlayers.put(player.getUniqueId(), nuevoSlayer);
-
-        player.sendMessage("§8=======================================");
-        player.sendMessage("§c§l⚔️ ¡CACERÍA INICIADA! ⚔️");
-        player.sendMessage("§7Has comenzado: §e" + template.name());
-        player.sendMessage("§7Mata §c" + template.requiredKills() + " " + template.targetMob() + "s §7para invocar al Boss.");
-        player.sendMessage("§8=======================================");
+        player.sendMessage(NexoColor.parse(BC_DIVIDER));
+        player.sendMessage(NexoColor.parse(MSG_SLAYER_START));
+        player.sendMessage(NexoColor.parse(MSG_SLAYER_OBJ.replace("%name%", template.name())));
+        player.sendMessage(NexoColor.parse(MSG_SLAYER_DESC.replace("%kills%", String.valueOf(template.requiredKills())).replace("%mob%", template.targetMob())));
+        player.sendMessage(NexoColor.parse(BC_DIVIDER));
     }
-
-    public ActiveSlayer getActiveSlayer(UUID uuid) {
-        return activeSlayers.get(uuid);
-    }
-
-    public void removeActiveSlayer(UUID uuid) {
-        activeSlayers.remove(uuid);
-    }
-
-    public Map<String, SlayerTemplate> getTemplates() {
-        return templates;
-    }
-
-    // 🌟 NUEVO: Este es el método que le faltaba al Listener para actualizar la BossBar
-    public Map<UUID, ActiveSlayer> getActiveSlayers() {
-        return activeSlayers;
-    }
-
-    // 🌟 Record súper optimizado para guardar las plantillas
-    public record SlayerTemplate(String id, String name, String targetMob, int requiredKills, String bossType, String bossName, List<String> rewards) {}
 }
