@@ -1,6 +1,7 @@
 package me.nexo.economy.bazar;
 
 import me.nexo.core.NexoCore;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
 import org.bukkit.Bukkit;
@@ -20,6 +21,19 @@ public class BazaarManager {
     private final NexoEconomy plugin;
     private final NexoCore core;
 
+    // 🎨 PALETA HEX - CONSTANTES INDUSTRIALES
+    private static final String ERR_NO_ITEMS = "&#ff4b2b[!] Stock insuficiente en tu inventario local para cubrir la orden.";
+    private static final String MSG_SELL_ORDER = "&#a8ff78[✓] Orden de Venta (ASK) generada: &#fbd72b%amount%x %item% &#434343a &#fbd72b🪙 %price% c/u.";
+    private static final String MSG_BUY_ORDER = "&#a8ff78[✓] Orden de Compra (BID) generada: &#fbd72b%amount%x %item% &#434343(Total: &#fbd72b🪙 %total%&#434343).";
+    private static final String ERR_NO_COINS = "&#ff4b2b[!] Fondos insuficientes para respaldar la orden de compra.";
+
+    private static final String BC_DIVIDER = "&#434343=======================================";
+    private static final String MSG_DELIVERY_TITLE = "&#a8ff78<bold>📦 ¡CONTRATO DE BAZAR COMPLETADO!</bold>";
+    private static final String MSG_DELIVERY_DESC = "&#434343Los activos han sido depositados. Usa &#fbd72b/bazar claim &#434343para extraerlos.";
+
+    private static final String MSG_CLAIM_SUCCESS = "&#a8ff78[✓] Extracción corporativa exitosa: &#fbd72b%amount%x %item%";
+    private static final String ERR_CLAIM_EMPTY = "&#ff4b2b[!] Tu buzón corporativo se encuentra actualmente vacío.";
+
     public BazaarManager(NexoEconomy plugin) {
         this.plugin = plugin;
         this.core = NexoCore.getPlugin(NexoCore.class);
@@ -31,7 +45,6 @@ public class BazaarManager {
             try (Connection conn = core.getDatabaseManager().getConnection();
                  Statement stmt = conn.createStatement()) {
 
-                // Tabla de Órdenes
                 stmt.execute("""
                     CREATE TABLE IF NOT EXISTS nexo_bazaar_orders (
                         order_id UUID PRIMARY KEY,
@@ -46,7 +59,6 @@ public class BazaarManager {
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_bazaar_item ON nexo_bazaar_orders(item_id);");
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_bazaar_price ON nexo_bazaar_orders(price_per_unit);");
 
-                // 🌟 NUEVO: Tabla de Entregas (Buzón de ítems para jugadores offline)
                 stmt.execute("""
                     CREATE TABLE IF NOT EXISTS nexo_bazaar_deliveries (
                         id UUID PRIMARY KEY,
@@ -68,13 +80,13 @@ public class BazaarManager {
     public void crearOrdenVenta(Player player, String itemId, int amount, BigDecimal pricePerUnit) {
         Material mat = Material.matchMaterial(itemId);
         if (mat == null || !player.getInventory().contains(mat, amount)) {
-            player.sendMessage("§cNo tienes suficientes ítems en tu inventario.");
+            player.sendMessage(NexoColor.parse(ERR_NO_ITEMS));
             return;
         }
 
         quitarItems(player, mat, amount);
         guardarOrdenYEmparejar(player.getUniqueId(), BazaarOrder.OrderType.SELL, itemId, amount, pricePerUnit);
-        player.sendMessage("§aHas creado una Orden de Venta por §e" + amount + "x " + mat.name() + " §aa §e🪙 " + pricePerUnit + " c/u.");
+        player.sendMessage(NexoColor.parse(MSG_SELL_ORDER.replace("%amount%", String.valueOf(amount)).replace("%item%", mat.name()).replace("%price%", pricePerUnit.toString())));
     }
 
     // ==========================================
@@ -86,9 +98,9 @@ public class BazaarManager {
         plugin.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, totalCost, false).thenAccept(success -> {
             if (success) {
                 guardarOrdenYEmparejar(player.getUniqueId(), BazaarOrder.OrderType.BUY, itemId, amount, pricePerUnit);
-                player.sendMessage("§aHas creado una Orden de Compra por §e" + amount + "x " + itemId + " §apor un total de §e🪙 " + totalCost + ".");
+                player.sendMessage(NexoColor.parse(MSG_BUY_ORDER.replace("%amount%", String.valueOf(amount)).replace("%item%", itemId).replace("%total%", totalCost.toString())));
             } else {
-                player.sendMessage("§cNo tienes suficientes Monedas en tu cuenta.");
+                player.sendMessage(NexoColor.parse(ERR_NO_COINS));
             }
         });
     }
@@ -101,7 +113,6 @@ public class BazaarManager {
             UUID orderId = UUID.randomUUID();
             long timestamp = System.currentTimeMillis();
 
-            // 1. Guardamos la nueva orden en la BD
             String insert = "INSERT INTO nexo_bazaar_orders (order_id, owner_id, order_type, item_id, amount, price_per_unit, timestamp) VALUES (CAST(? AS UUID), CAST(? AS UUID), ?, ?, ?, ?, ?)";
             try (Connection conn = core.getDatabaseManager().getConnection();
                  PreparedStatement ps = conn.prepareStatement(insert)) {
@@ -115,16 +126,14 @@ public class BazaarManager {
                 ps.executeUpdate();
             } catch (Exception e) {
                 plugin.getLogger().severe("Error guardando orden: " + e.getMessage());
-                return; // Si falla, no intentamos emparejar
+                return;
             }
 
-            // 2. ¡DESPERTAMOS AL MOTOR DE EMPAREJAMIENTO!
             ejecutarMotorDeCruce(itemId);
         });
     }
 
     private void ejecutarMotorDeCruce(String itemId) {
-        // Este motor busca las mejores compras y ventas del mismo ítem y las cruza si el precio cuadra.
         String findMatchSQL = """
             SELECT b.order_id AS buy_id, b.owner_id AS buyer_id, b.amount AS buy_amount, b.price_per_unit AS buy_price,
                    s.order_id AS sell_id, s.owner_id AS seller_id, s.amount AS sell_amount, s.price_per_unit AS sell_price
@@ -144,7 +153,6 @@ public class BazaarManager {
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                // ¡HAY UN CRUCE PERFECTO!
                 UUID buyId = UUID.fromString(rs.getString("buy_id"));
                 UUID buyerId = UUID.fromString(rs.getString("buyer_id"));
                 int buyAmount = rs.getInt("buy_amount");
@@ -153,30 +161,21 @@ public class BazaarManager {
                 UUID sellerId = UUID.fromString(rs.getString("seller_id"));
                 int sellAmount = rs.getInt("sell_amount");
 
-                // El precio se define por el vendedor (Maker)
                 BigDecimal matchPrice = rs.getBigDecimal("sell_price");
-
-                // Determinamos la cantidad a intercambiar (el mínimo entre lo que piden y lo que venden)
                 int cantidadIntercambiada = Math.min(buyAmount, sellAmount);
                 BigDecimal totalTransferencia = matchPrice.multiply(new BigDecimal(cantidadIntercambiada));
 
-                // 💸 APLICAMOS IMPUESTO ANTI-INFLACIÓN (1% se quema)
                 BigDecimal tax = totalTransferencia.multiply(new BigDecimal("0.01"));
                 BigDecimal netoParaVendedor = totalTransferencia.subtract(tax);
 
-                // 1. Damos el Dinero al Vendedor
                 plugin.getEconomyManager().updateBalanceAsync(sellerId, NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, netoParaVendedor, true);
-
-                // 2. Damos los Ítems al Comprador (Al buzón de Entregas)
                 enviarABuzon(buyerId, itemId, cantidadIntercambiada);
 
-                // 3. Actualizamos o borramos las órdenes de la Base de Datos
                 actualizarOrden(conn, buyId, buyAmount - cantidadIntercambiada);
                 actualizarOrden(conn, sellId, sellAmount - cantidadIntercambiada);
 
                 plugin.getLogger().info("📈 [BAZAR] Cruce exitoso de " + cantidadIntercambiada + "x " + itemId + " por " + totalTransferencia + " Monedas.");
 
-                // 🔄 Como podría haber MÁS órdenes que cruzar, llamamos al motor de nuevo recursivamente
                 ejecutarMotorDeCruce(itemId);
             }
 
@@ -212,13 +211,12 @@ public class BazaarManager {
             ps.setInt(4, amount);
             ps.executeUpdate();
 
-            // Avisar si el jugador está online
             Player p = Bukkit.getPlayer(ownerId);
             if (p != null) {
-                p.sendMessage("§8========================================");
-                p.sendMessage("§a📦 ¡Una orden del Bazar se ha completado!");
-                p.sendMessage("§7Usa §e/bazar claim §7para recoger tus ítems o monedas.");
-                p.sendMessage("§8========================================");
+                p.sendMessage(NexoColor.parse(BC_DIVIDER));
+                p.sendMessage(NexoColor.parse(MSG_DELIVERY_TITLE));
+                p.sendMessage(NexoColor.parse(MSG_DELIVERY_DESC));
+                p.sendMessage(NexoColor.parse(BC_DIVIDER));
             }
         } catch (Exception e) {
             plugin.getLogger().severe("Error entregando ítem al buzón: " + e.getMessage());
@@ -261,14 +259,12 @@ public class BazaarManager {
                     String itemId = rs.getString("item_id");
                     int amount = rs.getInt("amount");
 
-                    // Borramos el ítem de la BD (para que no lo dupliquen)
                     String delete = "DELETE FROM nexo_bazaar_deliveries WHERE id = CAST(? AS UUID)";
                     try (PreparedStatement delPs = conn.prepareStatement(delete)) {
                         delPs.setString(1, deliveryId);
                         delPs.executeUpdate();
                     }
 
-                    // Le damos el ítem al jugador en el hilo principal
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         Material mat = Material.matchMaterial(itemId);
                         if (mat != null) {
@@ -278,18 +274,17 @@ public class BazaarManager {
                             } else {
                                 player.getInventory().addItem(item);
                             }
-                            player.sendMessage("§a📦 Has recogido del buzón: §e" + amount + "x " + mat.name());
+                            player.sendMessage(NexoColor.parse(MSG_CLAIM_SUCCESS.replace("%amount%", String.valueOf(amount)).replace("%item%", mat.name())));
                         }
                     });
                 }
 
                 if (!tieneItems) {
-                    Bukkit.getScheduler().runTask(plugin, () -> player.sendMessage("§cTu buzón de entregas del Bazar está vacío."));
+                    Bukkit.getScheduler().runTask(plugin, () -> player.sendMessage(NexoColor.parse(ERR_CLAIM_EMPTY)));
                 }
             } catch (Exception e) {
                 plugin.getLogger().severe("Error reclamando buzón: " + e.getMessage());
             }
         });
     }
-
 }

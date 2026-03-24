@@ -1,8 +1,10 @@
 package me.nexo.economy.blackmarket;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
-import me.nexo.items.managers.ItemManager; // 🌟 IMPORTANTE: Conexión con NexoItems
+import me.nexo.items.managers.ItemManager;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
@@ -18,8 +20,6 @@ public class BlackMarketManager {
     private final NexoEconomy plugin;
     private boolean isMarketOpen = false;
     private final List<BlackMarketItem> currentStock = new ArrayList<>();
-
-    // Catálogo maestro de cosas ilegales que el Mercader podría traer
     private final List<BlackMarketItem> possibleLootPool = new ArrayList<>();
 
     public BlackMarketManager(NexoEconomy plugin) {
@@ -28,65 +28,35 @@ public class BlackMarketManager {
     }
 
     private void cargarLootPool() {
-        // ====================================================
-        // 🌟 CATÁLOGO OSCURO (CONECTADO A NEXO ITEMS)
-        // ====================================================
+        possibleLootPool.add(new BlackMarketItem("hoja_vacio", ItemManager.crearHojaVacio(), new BigDecimal("1500"), NexoAccount.Currency.MANA));
 
-        // 1. Artefacto Custom: Hoja del Vacío
-        possibleLootPool.add(new BlackMarketItem(
-                "hoja_vacio",
-                ItemManager.crearHojaVacio(),
-                new BigDecimal("1500"), NexoAccount.Currency.MANA
-        ));
-
-        // 2. Material de Mejora: 16x Polvo Estelar
         ItemStack polvos = ItemManager.crearPolvoEstelar();
         polvos.setAmount(16);
-        possibleLootPool.add(new BlackMarketItem(
-                "polvo_estelar_x16",
-                polvos,
-                new BigDecimal("400"), NexoAccount.Currency.GEMS
-        ));
+        possibleLootPool.add(new BlackMarketItem("polvo_estelar_x16", polvos, new BigDecimal("400"), NexoAccount.Currency.GEMS));
 
-        // 3. Libro de Encantamiento Custom (Ejemplo: Vampirismo III)
-        // Usamos try-catch por si el ID del encantamiento aún no existe en tu YAML
         try {
             ItemStack libroMagico = ItemManager.generarLibroEncantamiento("vampirismo", 3);
             if (libroMagico != null && libroMagico.getType() != Material.BOOK) {
-                possibleLootPool.add(new BlackMarketItem(
-                        "libro_vampirismo",
-                        libroMagico,
-                        new BigDecimal("800"), NexoAccount.Currency.GEMS
-                ));
+                possibleLootPool.add(new BlackMarketItem("libro_vampirismo", libroMagico, new BigDecimal("800"), NexoAccount.Currency.GEMS));
             }
         } catch (Exception ignored) {}
 
-        // 4. Arma RPG Oculta (Ejemplo genérico, puedes cambiar "guadana_oscura" por un ID de tu armas.yml)
         try {
             ItemStack armaProhibida = ItemManager.generarArmaRPG("guadana_oscura");
             if (armaProhibida != null && armaProhibida.getType() != Material.WOODEN_SWORD) {
-                possibleLootPool.add(new BlackMarketItem(
-                        "arma_rpg_oculta",
-                        armaProhibida,
-                        new BigDecimal("2500"), NexoAccount.Currency.MANA
-                ));
+                possibleLootPool.add(new BlackMarketItem("arma_rpg_oculta", armaProhibida, new BigDecimal("2500"), NexoAccount.Currency.MANA));
             }
         } catch (Exception ignored) {}
 
-        // 5. Relleno vainilla para dar variedad
         possibleLootPool.add(new BlackMarketItem(
                 "forbidden_apple",
-                crearItemMagico(Material.ENCHANTED_GOLDEN_APPLE, "§c🍎 Manzana Prohibida", "§7Fruta del inframundo."),
+                crearItemMagico(Material.ENCHANTED_GOLDEN_APPLE, "&#ff4b2b<bold>🍎 Manzana Prohibida</bold>", "&#434343Fruta del inframundo."),
                 new BigDecimal("150"), NexoAccount.Currency.GEMS
         ));
     }
 
-    // ==========================================
-    // 🌑 LÓGICA DE APERTURA Y CIERRE
-    // ==========================================
     public void openMarket() {
         if (isMarketOpen) return;
-
         this.isMarketOpen = true;
         this.currentStock.clear();
 
@@ -97,38 +67,34 @@ public class BlackMarketManager {
             currentStock.add(shuffled.get(i));
         }
 
-        Bukkit.broadcastMessage("§8========================================");
-        Bukkit.broadcastMessage("§5§l🌑 EL MERCADER OSCURO HA LLEGADO");
-        Bukkit.broadcastMessage("§7Se rumorea que trae mercancía prohibida...");
-        Bukkit.broadcastMessage("§8========================================");
+        Bukkit.broadcast(NexoColor.parse("&#434343========================================"));
+        Bukkit.broadcast(NexoColor.parse("&#8b008b<bold>🌑 EL MERCADER OSCURO HA LLEGADO</bold>"));
+        Bukkit.broadcast(NexoColor.parse("&#434343Se rumorea que trae mercancía prohibida y altamente valiosa..."));
+        Bukkit.broadcast(NexoColor.parse("&#434343========================================"));
     }
 
     public void closeMarket() {
         if (!isMarketOpen) return;
-
         this.isMarketOpen = false;
         this.currentStock.clear();
 
-        Bukkit.broadcastMessage("§8========================================");
-        Bukkit.broadcastMessage("§8§l🌑 EL MERCADER OSCURO SE HA IDO");
-        Bukkit.broadcastMessage("§7Sus huellas se han desvanecido en las sombras.");
-        Bukkit.broadcastMessage("§8========================================");
+        Bukkit.broadcast(NexoColor.parse("&#434343========================================"));
+        Bukkit.broadcast(NexoColor.parse("&#8b008b<bold>🌑 EL MERCADER OSCURO SE HA IDO</bold>"));
+        Bukkit.broadcast(NexoColor.parse("&#434343Sus huellas se han desvanecido entre las sombras."));
+        Bukkit.broadcast(NexoColor.parse("&#434343========================================"));
     }
 
-    public boolean isMarketOpen() {
-        return isMarketOpen;
-    }
+    public boolean isMarketOpen() { return isMarketOpen; }
+    public List<BlackMarketItem> getCurrentStock() { return currentStock; }
 
-    public List<BlackMarketItem> getCurrentStock() {
-        return currentStock;
-    }
-
-    private ItemStack crearItemMagico(Material mat, String nombre, String lore) {
+    private ItemStack crearItemMagico(Material mat, String hexName, String hexLore) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(nombre);
-        meta.setLore(List.of(lore));
-        item.setItemMeta(meta);
+        if (meta != null) {
+            meta.setDisplayName(LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hexName)));
+            meta.setLore(List.of(LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hexLore))));
+            item.setItemMeta(meta);
+        }
         return item;
     }
 }

@@ -1,8 +1,10 @@
 package me.nexo.economy.listeners;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
-import me.nexo.economy.core.NexoAccount; // 🌟 IMPORTANTE
+import me.nexo.economy.core.NexoAccount;
 import me.nexo.economy.trade.TradeSession;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -29,6 +31,9 @@ public class TradeListener implements Listener {
         TradeSession session = plugin.getTradeManager().getSession(player);
         if (session == null) return;
 
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!plainTitle.equals(TradeSession.TITLE_PLAIN)) return;
+
         if (event.getClickedInventory() != session.getInventory()) {
             session.unready();
             return;
@@ -39,27 +44,17 @@ public class TradeListener implements Listener {
 
         if (slot % 9 == 4) {
             event.setCancelled(true);
-
-            // 🌟 CLIC EN BOTONES MULTIDIVISA
-            if (slot == 13) {
-                session.addCurrency(player, NexoAccount.Currency.COINS, new BigDecimal("1000"));
-            } else if (slot == 22) {
-                session.addCurrency(player, NexoAccount.Currency.GEMS, new BigDecimal("100"));
-            } else if (slot == 31) {
-                session.addCurrency(player, NexoAccount.Currency.MANA, new BigDecimal("10"));
-            }
+            if (slot == 13) session.addCurrency(player, NexoAccount.Currency.COINS, new BigDecimal("1000"));
+            else if (slot == 22) session.addCurrency(player, NexoAccount.Currency.GEMS, new BigDecimal("100"));
+            else if (slot == 31) session.addCurrency(player, NexoAccount.Currency.MANA, new BigDecimal("10"));
             return;
         }
 
         boolean isLeftSide = (slot % 9 < 4);
 
-        if (isPlayer1 && !isLeftSide) {
-            event.setCancelled(true);
-        } else if (!isPlayer1 && isLeftSide) {
-            event.setCancelled(true);
-        } else {
-            session.unready();
-        }
+        if (isPlayer1 && !isLeftSide) event.setCancelled(true);
+        else if (!isPlayer1 && isLeftSide) event.setCancelled(true);
+        else session.unready();
 
         if (slot == 45 && isPlayer1) {
             event.setCancelled(true);
@@ -84,9 +79,9 @@ public class TradeListener implements Listener {
             Player other = player.equals(session.getPlayer1()) ? session.getPlayer2() : session.getPlayer1();
             if (other.getOpenInventory().getTopInventory().equals(session.getInventory())) {
                 other.closeInventory();
-                other.sendMessage("§cEl otro jugador canceló el intercambio.");
+                other.sendMessage(NexoColor.parse("&#ff4b2b[!] La otra parte ha abortado el proceso de intercambio."));
             }
-            player.sendMessage("§cIntercambio cancelado.");
+            player.sendMessage(NexoColor.parse("&#ff4b2b[!] Canal de intercambio cerrado."));
         }
     }
 

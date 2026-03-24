@@ -1,5 +1,6 @@
 package me.nexo.factories.managers;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
 import me.nexo.factories.core.StructureTemplate;
@@ -27,7 +28,15 @@ public class BlueprintManager implements Listener {
 
     private final NexoFactories plugin;
 
-    // Memoria RAM temporal para saber quién está construyendo qué
+    // 🎨 PALETA HEX
+    private static final String MSG_BLUEPRINT_ON = "&#00fbff<bold>[⚙]</bold> &#a8ff78Plano proyectado. Coloca los materiales requeridos en el holograma.";
+    private static final String ERR_WRONG_BLOCK = "&#ff4b2b[!] Pieza incorrecta o incompatible. El sistema requiere: &#fbd72b%block%";
+    private static final String ERR_NO_STONE = "&#ff4b2b<bold>¡ERROR CRÍTICO!</bold> &#ff4b2bLas máquinas industriales solo pueden construirse dentro de una Zona Protegida. &#434343Destruye la estructura y reconstrúyela cerca de tu Nexo de Protección.";
+
+    private static final String MSG_BUILT_TITLE = "&#a8ff78<bold>¡MÁQUINA ENSAMBLADA Y VINCULADA!</bold>";
+    private static final String MSG_BUILT_TYPE = "&#434343Estructura Registrada: &#fbd72b%type%";
+    private static final String MSG_BUILT_NET = "&#434343Red Eléctrica: &#00fbffConectada y Estable";
+
     private final Map<UUID, List<BlockDisplay>> activeHolograms = new ConcurrentHashMap<>();
     private final Map<UUID, Location> activeCores = new ConcurrentHashMap<>();
     private final Map<UUID, StructureTemplate> activeTemplates = new ConcurrentHashMap<>();
@@ -37,7 +46,7 @@ public class BlueprintManager implements Listener {
     }
 
     public void projectBlueprint(Player player, Location coreLocation, StructureTemplate template) {
-        clearBlueprint(player); // Limpiar cualquier plano viejo
+        clearBlueprint(player);
 
         List<BlockDisplay> displays = new ArrayList<>();
 
@@ -46,22 +55,18 @@ public class BlueprintManager implements Listener {
             Material mat = entry.getValue();
 
             Location displayLoc = coreLocation.clone().add(rel.getBlockX(), rel.getBlockY(), rel.getBlockZ());
-
-            // Si el bloque ya está puesto en el mundo real, no ponemos el holograma
             if (displayLoc.getBlock().getType() == mat) continue;
 
-            // Spawneamos la entidad visual (Cero lag, no tiene físicas)
             BlockDisplay display = (BlockDisplay) coreLocation.getWorld().spawnEntity(displayLoc, EntityType.BLOCK_DISPLAY);
             display.setBlock(Bukkit.createBlockData(mat));
 
-            // Hacerlo "Fantasma" (Escalamos a 0.6 para que se vea como un mini-bloque flotando)
             display.setTransformation(new Transformation(
-                    new org.joml.Vector3f(0.2f, 0.2f, 0.2f), // Centramos el bloque
+                    new org.joml.Vector3f(0.2f, 0.2f, 0.2f),
                     new org.joml.Quaternionf(),
-                    new org.joml.Vector3f(0.6f, 0.6f, 0.6f), // Escala
+                    new org.joml.Vector3f(0.6f, 0.6f, 0.6f),
                     new org.joml.Quaternionf()
             ));
-            display.setGlowing(true); // Le damos un contorno brillante
+            display.setGlowing(true);
             displays.add(display);
         }
 
@@ -69,7 +74,7 @@ public class BlueprintManager implements Listener {
         activeCores.put(player.getUniqueId(), coreLocation);
         activeTemplates.put(player.getUniqueId(), template);
 
-        player.sendMessage("§b§l[⚙] §fPlano proyectado. Coloca los bloques requeridos en el holograma.");
+        player.sendMessage(NexoColor.parse(MSG_BLUEPRINT_ON));
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
     }
 
@@ -96,7 +101,6 @@ public class BlueprintManager implements Listener {
         StructureTemplate template = activeTemplates.get(id);
         Block placedBlock = event.getBlockPlaced();
 
-        // 1. Verificamos si el bloque que puso es parte de la estructura
         boolean isPart = false;
         for (Map.Entry<Vector, Material> entry : template.getRequiredBlocks().entrySet()) {
             Vector rel = entry.getKey();
@@ -106,7 +110,6 @@ public class BlueprintManager implements Listener {
                 if (placedBlock.getType() == entry.getValue()) {
                     isPart = true;
 
-                    // Eliminar el holograma específico que estaba en esa posición
                     List<BlockDisplay> displays = activeHolograms.get(id);
                     if (displays != null) {
                         displays.removeIf(display -> {
@@ -120,9 +123,9 @@ public class BlueprintManager implements Listener {
                         });
                     }
 
-                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 2f); // Sonido de "Pieza Encajada"
+                    player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 2f);
                 } else {
-                    player.sendMessage("§cPieza incorrecta. Debes colocar §e" + entry.getValue().name());
+                    player.sendMessage(NexoColor.parse(ERR_WRONG_BLOCK.replace("%block%", entry.getValue().name())));
                     event.setCancelled(true);
                     return;
                 }
@@ -130,39 +133,34 @@ public class BlueprintManager implements Listener {
             }
         }
 
-        // 🌟 SI LA MÁQUINA FUE ENSAMBLADA COMPLETAMENTE
         if (isPart && template.isValid(coreLoc.getBlock())) {
-
-            // 1. Buscamos la piedra en esa ubicación usando NexoProtections
             me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(coreLoc);
 
             if (stone == null) {
-                player.sendMessage("§c§l¡ERROR! §cLas máquinas industriales solo pueden construirse dentro de una Zona Protegida.");
-                player.sendMessage("§7Destruye la estructura y reconstrúyela cerca de tu Nexo.");
+                player.sendMessage(NexoColor.parse(ERR_NO_STONE));
                 event.setCancelled(true);
                 return;
             }
 
-            // 2. Vinculamos la Fábrica a la Piedra y la guardamos en el Grid
             ActiveFactory factory = new ActiveFactory(
                     UUID.randomUUID(),
-                    stone.getStoneId(), // ⚡ ¡AQUÍ CONECTAMOS AL NEXO-GRID!
+                    stone.getStoneId(),
                     player.getUniqueId(),
                     template.getFactoryType(),
-                    1, // Nivel 1 por defecto
+                    1,
                     "OFFLINE",
                     0,
-                    coreLoc, // 🌟 Coordenadas del núcleo
-                    "NONE",  // 🌟 Catalizador vacío por defecto
-                    "NONE"   // 🌟 Script lógico vacío por defecto
+                    coreLoc,
+                    "NONE",
+                    "NONE"
             );
             plugin.getFactoryManager().createFactoryAsync(factory);
 
-            player.sendMessage(" ");
-            player.sendMessage("§a§l¡MÁQUINA ENSAMBLADA Y VINCULADA!");
-            player.sendMessage("§7Estructura: §e" + template.getFactoryType());
-            player.sendMessage("§7Red Eléctrica: §bConectada al Nexo Principal");
-            player.sendMessage(" ");
+            player.sendMessage(NexoColor.parse(" "));
+            player.sendMessage(NexoColor.parse(MSG_BUILT_TITLE));
+            player.sendMessage(NexoColor.parse(MSG_BUILT_TYPE.replace("%type%", template.getFactoryType())));
+            player.sendMessage(NexoColor.parse(MSG_BUILT_NET));
+            player.sendMessage(NexoColor.parse(" "));
             player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
 
             clearBlueprint(player);

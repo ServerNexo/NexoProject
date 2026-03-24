@@ -2,6 +2,7 @@ package me.nexo.core;
 
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.utils.NexoColor;
 import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
@@ -51,13 +52,14 @@ public class HudTask extends BukkitRunnable {
             } catch (Exception ignored) {}
 
             int hpActual = (int) Math.ceil(p.getHealth());
-            int hpMax = (int) p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+            int hpMax = 20;
+            if (p.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
+                hpMax = (int) p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+            }
 
-            String hud = "§c❤ " + hpActual + "/" + hpMax + "  §b💧 " + manaActual + "/" + maxMana + "  §e⚡ " + energiaActual + "/" + maxEnergia;
-
-
-
-            p.sendActionBar(hud);
+            // 🌟 NATIVO DE PAPER: Enviamos el HUD directamente como Componente HEX anti-lag
+            String hudFormat = "&#ff4b2b❤ " + hpActual + "/" + hpMax + "   &#00fbff💧 " + manaActual + "/" + maxMana + "   &#fbd72b⚡ " + energiaActual + "/" + maxEnergia;
+            p.sendActionBar(NexoColor.parse(hudFormat));
         }
     }
 }

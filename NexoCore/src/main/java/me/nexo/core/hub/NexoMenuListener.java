@@ -2,6 +2,7 @@ package me.nexo.core.hub;
 
 import me.nexo.core.NexoCore;
 import me.nexo.core.utils.NexoColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
@@ -29,9 +30,11 @@ public class NexoMenuListener implements Listener {
         ItemStack star = new ItemStack(Material.NETHER_STAR);
         ItemMeta meta = star.getItemMeta();
         if (meta != null) {
-            // Usamos el Motor de Color de NexoCore
-            meta.displayName(NexoColor.parse("<gradient:#FFAA00:#FF00AA><bold>Nexo Menu</bold></gradient>"));
-            // Marca de agua criptográfica (PersistentDataContainer)
+            // 🌟 Serializador seguro para evitar errores "null components"
+            String safeName = LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("<gradient:#fbd72b:#ff4b2b><bold>Terminal Nexo</bold></gradient>"));
+            meta.setDisplayName(safeName);
+
+            // Marca de agua criptográfica
             meta.getPersistentDataContainer().set(hubKey, PersistentDataType.BYTE, (byte) 1);
             star.setItemMeta(meta);
         }
@@ -55,8 +58,8 @@ public class NexoMenuListener implements Listener {
         if (clicked != null && clicked.hasItemMeta()) {
             if (clicked.getItemMeta().getPersistentDataContainer().has(hubKey, PersistentDataType.BYTE)) {
                 e.setCancelled(true);
-                // Aquí llamarías a la apertura de tu menú VIP/Hub
-                // ej: e.getWhoClicked().sendMessage(NexoColor.parse("<green>Abriendo menú..."));
+                // Apertura futura del Menú Global
+                // e.getWhoClicked().sendMessage(NexoColor.parse("&#00fbff[NEXO] Conectando a la red global..."));
             }
         }
     }

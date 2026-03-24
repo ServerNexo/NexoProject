@@ -2,6 +2,7 @@ package me.nexo.economy.trade;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import org.bukkit.entity.Player;
 
@@ -18,8 +19,11 @@ public class TradeManager {
             .expireAfterWrite(60, TimeUnit.SECONDS)
             .build();
 
-    // 🌟 AQUÍ GUARDAMOS LOS INTERCAMBIOS ACTIVOS
     private final Map<UUID, TradeSession> activeSessions = new HashMap<>();
+
+    // 🎨 PALETA HEX
+    private static final String MSG_SENT = "&#a8ff78[✓] Petición de intercambio enviada a &#fbd72b%target%";
+    private static final String MSG_RECEIVED = "&#fbd72b%sender% &#00fbffsolicita abrir un canal de intercambio comercial contigo. Escribe: &#a8ff78/trade accept %sender%";
 
     public TradeManager(NexoEconomy plugin) {
         this.plugin = plugin;
@@ -27,8 +31,8 @@ public class TradeManager {
 
     public void enviarPeticion(Player sender, Player target) {
         tradeRequests.put(target.getUniqueId(), sender.getUniqueId());
-        sender.sendMessage("§aPetición de intercambio enviada a §e" + target.getName() + "§a.");
-        target.sendMessage("§e" + sender.getName() + " §adesea iniciar un intercambio contigo. Usa §e/trade accept " + sender.getName());
+        sender.sendMessage(NexoColor.parse(MSG_SENT.replace("%target%", target.getName())));
+        target.sendMessage(NexoColor.parse(MSG_RECEIVED.replace("%sender%", sender.getName())));
     }
 
     public boolean tienePeticionDe(Player target, Player sender) {
@@ -40,7 +44,6 @@ public class TradeManager {
         tradeRequests.invalidate(player1.getUniqueId());
         tradeRequests.invalidate(player2.getUniqueId());
 
-        // 🌟 CREAMOS Y ABRIMOS LA SESIÓN
         TradeSession session = new TradeSession(player1, player2);
         activeSessions.put(player1.getUniqueId(), session);
         activeSessions.put(player2.getUniqueId(), session);
@@ -48,9 +51,7 @@ public class TradeManager {
         session.open();
     }
 
-    public TradeSession getSession(Player player) {
-        return activeSessions.get(player.getUniqueId());
-    }
+    public TradeSession getSession(Player player) { return activeSessions.get(player.getUniqueId()); }
 
     public void removeSession(TradeSession session) {
         activeSessions.remove(session.getPlayer1().getUniqueId());

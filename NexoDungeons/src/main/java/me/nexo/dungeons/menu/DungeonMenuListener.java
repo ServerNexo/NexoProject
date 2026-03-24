@@ -1,6 +1,8 @@
 package me.nexo.dungeons.menu;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.dungeons.NexoDungeons;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -17,8 +19,10 @@ public class DungeonMenuListener implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals(DungeonMenu.MENU_TITLE)) return;
-        event.setCancelled(true); // Bloqueamos para que no roben ítems
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!plainTitle.equals(DungeonMenu.TITLE_PLAIN)) return;
+
+        event.setCancelled(true);
 
         if (event.getCurrentItem() == null || !event.getCurrentItem().hasItemMeta()) return;
 
@@ -26,26 +30,18 @@ public class DungeonMenuListener implements Listener {
 
         switch (event.getSlot()) {
             case 11 -> {
-                // 🏰 Instancias Privadas
                 player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1f, 1f);
-                player.sendMessage("§bAbriendo selector de Mazmorras...");
+                player.sendMessage(NexoColor.parse("&#00fbff[NEXO] Conectando con el selector de Fortalezas..."));
                 player.closeInventory();
-
-                // Aquí en el futuro abriremos otro sub-menú (Ej: Criptas, Castillo, etc.)
-                // Y llamaríamos a: plugin.getGridManager().pasteDungeonAsync("CriptasT1").thenAccept(loc -> player.teleport(loc));
             }
             case 13 -> {
-                // ⚔️ Arenas de Oleadas (Matchmaking)
                 player.playSound(player.getLocation(), Sound.ITEM_ARMOR_EQUIP_CHAIN, 1f, 1f);
                 player.closeInventory();
-
-                // 🌟 NUEVO: Lo metemos al sistema de colas automatizado
                 plugin.getQueueManager().addPlayerToWaves(player);
             }
             case 15 -> {
-                // 🐉 Bosses Públicos
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.5f);
-                player.sendMessage("§d§lINFO: §7El Altar del Dragón se encuentra en §fX: 0, Z: 0 §7(En el End).");
+                player.sendMessage(NexoColor.parse("&#8b008b[INFO] &#434343El Altar del Dragón se localiza en &#fbd72bX: 0, Z: 0 &#434343(Sector: El Fin)."));
                 player.closeInventory();
             }
         }

@@ -1,7 +1,9 @@
 package me.nexo.economy.blackmarket;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -20,15 +22,16 @@ public class BlackMarketListener implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!event.getView().getTitle().equals("§5🌑 Mercado Negro")) return;
-        event.setCancelled(true); // Evitar que roben los ítems del menú
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!plainTitle.equals(BlackMarketMenu.TITLE_PLAIN)) return;
+
+        event.setCancelled(true);
 
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        // Si el admin cierra el mercado mientras alguien lo ve
         if (!plugin.getBlackMarketManager().isMarketOpen()) {
             player.closeInventory();
-            player.sendMessage("§cEl Mercader ha huido repentinamente...");
+            player.sendMessage(NexoColor.parse("&#ff4b2b[!] El Mercader ha huido repentinamente entre las sombras..."));
             return;
         }
 
@@ -43,9 +46,8 @@ public class BlackMarketListener implements Listener {
         if (index != -1 && index < stock.size()) {
             BlackMarketItem bmItem = stock.get(index);
 
-            player.sendMessage("§eProcesando pago con el inframundo...");
+            player.sendMessage(NexoColor.parse("&#8b008b[MERCADER] &#434343Procesando el pago con el inframundo..."));
 
-            // ⚡ TRANSACCIÓN ATÓMICA: Cobramos Gemas o Maná
             plugin.getEconomyManager().updateBalanceAsync(
                     player.getUniqueId(),
                     NexoAccount.AccountType.PLAYER,
@@ -60,11 +62,11 @@ public class BlackMarketListener implements Listener {
                     } else {
                         player.getInventory().addItem(item);
                     }
-                    player.sendMessage("§5§l[MERCADER] §dUn placer hacer negocios oscuros contigo...");
+                    player.sendMessage(NexoColor.parse("&#8b008b[MERCADER] &#00fbffHa sido un placer hacer negocios oscuros contigo..."));
                     player.closeInventory();
                 } else {
                     String divisa = bmItem.currency() == NexoAccount.Currency.GEMS ? "Gemas" : "Maná";
-                    player.sendMessage("§cNo tienes suficiente " + divisa + " para pagar esto.");
+                    player.sendMessage(NexoColor.parse("&#ff4b2b[!] Fondos insuficientes de " + divisa + " para completar la transacción."));
                 }
             });
         }

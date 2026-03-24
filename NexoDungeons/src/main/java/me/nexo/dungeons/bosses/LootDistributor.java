@@ -1,5 +1,6 @@
 package me.nexo.dungeons.bosses;
 
+import me.nexo.core.utils.NexoColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -12,14 +13,20 @@ import java.util.UUID;
 
 public class LootDistributor {
 
-    public static void distributeLoot(String bossInternalName, Map<UUID, Double> damageMap) {
+    // 🎨 PALETA HEX
+    private static final String BC_DIVIDER = "&#434343=======================================";
+    private static final String MSG_BOSS_DEFEATED = "&#8b008b<bold>☠ %boss% ELIMINADO</bold>";
+    private static final String MSG_DAMAGE_STAT = "&#434343Daño registrado: &#ff4b2b%dmg% &#434343(%pct%%)";
+    private static final String MSG_TOP_1 = "&#fbd72b🏆 <bold>¡RENDIMIENTO ÓPTIMO (TOP #1)!</bold> &#434343Extrayendo Botín Mítico.";
+    private static final String MSG_TOP_3 = "&#a8ff78🥈 <bold>¡SOBRESALIENTE (TOP #%rank%)!</bold> &#434343Extrayendo Botín Épico.";
+    private static final String MSG_PARTICIPATION = "&#00fbff🎖 Participación confirmada. &#434343Extrayendo Botín Estándar.";
+    private static final String MSG_XP_REWARD = "&#00fbff✨ Transferencia de +500 XP de Combate completada.";
 
-        // 1. Ordenamos la lista de mayor daño a menor daño
+    public static void distributeLoot(String bossInternalName, Map<UUID, Double> damageMap) {
         List<Map.Entry<UUID, Double>> ranking = damageMap.entrySet().stream()
                 .sorted(Map.Entry.<UUID, Double>comparingByValue().reversed())
                 .toList();
 
-        // 2. Calculamos el daño total para sacar los porcentajes
         double totalDamage = ranking.stream().mapToDouble(Map.Entry::getValue).sum();
 
         int rank = 1;
@@ -28,55 +35,44 @@ public class LootDistributor {
             if (p == null || !p.isOnline()) continue;
 
             double percentage = (entry.getValue() / totalDamage) * 100;
-
-            // Volvemos al hilo principal para enviarle mensajes y darle ítems
             final int finalRank = rank;
-            Bukkit.getScheduler().runTask(Bukkit.getPluginManager().getPlugin("NexoDungeons"), () -> {
-                p.sendMessage("§8====================================");
-                p.sendMessage("§d☠ §l" + bossInternalName.toUpperCase() + " DERROTADO");
-                p.sendMessage("§7Tu daño infligido: §c" + String.format("%.0f", entry.getValue()) + " §8(" + String.format("%.1f", percentage) + "%)");
 
-                // 🎁 REPARTO ANTI-ROBO (Directo al inventario)
+            Bukkit.getScheduler().runTask(Bukkit.getPluginManager().getPlugin("NexoDungeons"), () -> {
+                p.sendMessage(NexoColor.parse(BC_DIVIDER));
+                p.sendMessage(NexoColor.parse(MSG_BOSS_DEFEATED.replace("%boss%", bossInternalName.toUpperCase())));
+                p.sendMessage(NexoColor.parse(MSG_DAMAGE_STAT.replace("%dmg%", String.format("%.0f", entry.getValue())).replace("%pct%", String.format("%.1f", percentage))));
+
                 if (finalRank == 1) {
-                    p.sendMessage("§e🏆 §l¡TOP #1 DE DAÑO! §7Recibes Botín Mítico.");
+                    p.sendMessage(NexoColor.parse(MSG_TOP_1));
                     p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
                     entregarItemSeguro(p, generarRecompensa("MITICO", bossInternalName));
                 }
                 else if (finalRank <= 3) {
-                    p.sendMessage("§6🥈 §l¡TOP #" + finalRank + "! §7Recibes Botín Épico.");
+                    p.sendMessage(NexoColor.parse(MSG_TOP_3.replace("%rank%", String.valueOf(finalRank))));
                     p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.5f);
                     entregarItemSeguro(p, generarRecompensa("EPICO", bossInternalName));
                 }
                 else {
-                    p.sendMessage("§b🎖 §lParticipación. §7Recibes recompensa base.");
+                    p.sendMessage(NexoColor.parse(MSG_PARTICIPATION));
                     entregarItemSeguro(p, generarRecompensa("COMUN", bossInternalName));
                 }
 
-                // 🌟 Integración con NexoCore (Exp de Combate / AuraSkills)
-                // me.nexo.core.user.NexoAPI.getInstance().addProfessionXp(p.getUniqueId(), "fighting", 500);
-                p.sendMessage("§3✨ +500 XP de Combate");
-                p.sendMessage("§8====================================");
+                p.sendMessage(NexoColor.parse(MSG_XP_REWARD));
+                p.sendMessage(NexoColor.parse(BC_DIVIDER));
             });
 
             rank++;
         }
     }
 
-    // Método para inyectar el botín. ESTILO HYPIXEL: Cae al suelo protegido
     private static void entregarItemSeguro(Player p, ItemStack item) {
         if (item == null) return;
-
-        // En lugar de meterlo al inventario, lo tiramos a sus pies con protección
         me.nexo.dungeons.listeners.LootProtectionListener.dropProtectedItem(p.getLocation(), item, p);
     }
 
-    // Aquí conectarías con tu ItemManager de NexoItems (Ej: ItemManager.generarArmaRPG("ESPADA_DRAGON"))
     private static ItemStack generarRecompensa(String tier, String bossName) {
-        if (tier.equals("MITICO")) {
-            return new ItemStack(Material.NETHER_STAR, 1); // Placeholder
-        } else if (tier.equals("EPICO")) {
-            return new ItemStack(Material.DIAMOND, 3); // Placeholder
-        }
-        return new ItemStack(Material.GOLD_INGOT, 5); // Placeholder Comun
+        if (tier.equals("MITICO")) return new ItemStack(Material.NETHER_STAR, 1);
+        if (tier.equals("EPICO")) return new ItemStack(Material.DIAMOND, 3);
+        return new ItemStack(Material.GOLD_INGOT, 5);
     }
 }
