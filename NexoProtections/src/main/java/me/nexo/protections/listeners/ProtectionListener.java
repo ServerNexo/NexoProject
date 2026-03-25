@@ -1,8 +1,9 @@
 package me.nexo.protections.listeners;
 
 import me.nexo.core.NexoCore;
+import me.nexo.core.crossplay.CrossplayUtils; // 🌟 TRADUCTOR UNIVERSAL
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
+import me.nexo.core.utils.NexoColor;
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.core.ClaimAction;
 import me.nexo.protections.core.ClaimBox;
@@ -19,6 +20,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 
 import java.sql.Connection;
@@ -40,17 +42,15 @@ public class ProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
+        // [CÓDIGO INTACTO - Ya estaba perfecto]
         Player player = event.getPlayer();
         Block block = event.getBlock();
         ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
 
-        // 🌟 ¿Está intentando romper el bloque central (El Faro / Nexo)?
         if (stone != null && block.getType() == Material.BEACON) {
-            // Solo el DUEÑO de la piedra puede desmantelarla
             if (stone.getOwnerId().equals(player.getUniqueId())) {
-                claimManager.removeStoneFromCache(stone); // Borrar de la RAM
+                claimManager.removeStoneFromCache(stone);
 
-                // Borrar de Supabase Asíncronamente
                 CompletableFuture.runAsync(() -> {
                     try (Connection conn = core.getDatabaseManager().getConnection();
                          PreparedStatement ps = conn.prepareStatement("DELETE FROM nexo_protections WHERE stone_id = CAST(? AS UUID)")) {
@@ -59,74 +59,62 @@ public class ProtectionListener implements Listener {
                     } catch (Exception e) { e.printStackTrace(); }
                 });
 
-                player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>PROTOCOLO DE DESMANTELAMIENTO:</bold> &#AAAAAANexo de protección desconectado exitosamente."));
-                // Opcional: Podrías dropear el ítem del Nexo aquí para que lo recupere.
+                CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>PROTOCOLO DE DESMANTELAMIENTO:</bold> &#AAAAAANexo de protección desconectado exitosamente.");
                 return;
             }
         }
 
-        // Si intenta romper un bloque normal dentro de la zona protegida
         if (stone != null && !stone.hasPermission(player.getUniqueId(), ClaimAction.BREAK)) {
             event.setCancelled(true);
-            player.sendMessage(NexoColor.parse("&#FF5555[!] Infracción de Seguridad: &#AAAAAATerritorio corporativo ajeno. No tienes permisos de minería."));
+            CrossplayUtils.sendMessage(player, "&#FF5555[!] Infracción de Seguridad: &#AAAAAATerritorio corporativo ajeno. No tienes permisos de minería.");
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
+        // [CÓDIGO INTACTO - Ya estaba perfecto]
         Player player = event.getPlayer();
         Block block = event.getBlockPlaced();
 
         ProtectionStone existingStone = claimManager.getStoneAt(block.getLocation());
         if (existingStone != null && !existingStone.hasPermission(player.getUniqueId(), ClaimAction.BUILD)) {
             event.setCancelled(true);
-            player.sendMessage(NexoColor.parse("&#FF5555[!] Acceso Denegado: &#AAAAAANo puedes construir estructuras en el sector de otra entidad."));
+            CrossplayUtils.sendMessage(player, "&#FF5555[!] Acceso Denegado: &#AAAAAANo puedes construir estructuras en el sector de otra entidad.");
             return;
         }
 
-        // 🌟 ¿Está colocando una NUEVA Piedra (Faro de Nexo)?
         ItemStack itemInHand = event.getItemInHand();
         if (itemInHand.getType() == Material.BEACON && itemInHand.hasItemMeta()) {
 
-            // Verificamos de forma segura que sea nuestro ítem especial y no un faro normal
             String displayName = itemInHand.getItemMeta().getDisplayName();
-            if (displayName == null || !displayName.contains("Nexo de Protección")) {
-                return; // Es un faro normal, dejamos que lo coloque sin crear protección
-            }
+            if (displayName == null || !displayName.contains("Nexo de Protección")) return;
 
-            // Clonamos el ítem por si tenemos que devolvérselo
             ItemStack refundItem = itemInHand.clone();
             refundItem.setAmount(1);
 
-            // Consultamos la BD asíncronamente para ver si no ha superado el límite
             limitManager.canPlaceNewStone(player).thenAccept(canPlace -> {
                 if (!canPlace) {
-                    // Si alcanzó el límite, cancelamos el bloque en el hilo principal de Bukkit
                     Bukkit.getScheduler().runTask(NexoProtections.getPlugin(NexoProtections.class), () -> {
                         block.setType(Material.AIR);
                         player.getInventory().addItem(refundItem);
-                        player.sendMessage(NexoColor.parse("&#FF5555[!] Cuota Excedida: &#AAAAAAHas alcanzado el límite máximo de protecciones permitidas."));
+                        CrossplayUtils.sendMessage(player, "&#FF5555[!] Cuota Excedida: &#AAAAAAHas alcanzado el límite máximo de protecciones permitidas.");
                     });
                     return;
                 }
 
-                // Generamos la nueva piedra
                 int radius = limitManager.getProtectionRadius(player);
                 UUID newStoneId = UUID.randomUUID();
                 NexoUser user = core.getUserManager().getUserOrNull(player.getUniqueId());
                 UUID clanId = (user != null && user.hasClan()) ? user.getClanId() : null;
 
-                // El ClaimBox va desde el subsuelo hasta el límite del cielo
                 ClaimBox newBox = new ClaimBox(block.getWorld().getName(), block.getX()-radius, -64, block.getZ()-radius, block.getX()+radius, 320, block.getZ()+radius);
                 ProtectionStone newStone = new ProtectionStone(newStoneId, player.getUniqueId(), clanId, newBox);
 
-                // Insertamos en la RAM en el hilo principal
                 Bukkit.getScheduler().runTask(NexoProtections.getPlugin(NexoProtections.class), () -> {
                     claimManager.addStoneToCache(newStone);
-                    player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>ESCUDO OPERATIVO DESPLEGADO:</bold> &#AAAAAASellando un radio de &#00E5FF" + radius + " bloques&#AAAAAA a la red."));
+                    CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>ESCUDO OPERATIVO DESPLEGADO:</bold> &#AAAAAASellando un radio de &#00E5FF" + radius + " bloques&#AAAAAA a la red.");
                 });
 
-                // Guardamos en Supabase en el hilo secundario
                 CompletableFuture.runAsync(() -> {
                     String sql = "INSERT INTO nexo_protections (stone_id, owner_id, clan_id, world_name, min_x, min_y, min_z, max_x, max_y, max_z) VALUES (CAST(? AS UUID), CAST(? AS UUID), " + (clanId == null ? "NULL" : "CAST(? AS UUID)") + ", ?, ?, ?, ?, ?, ?, ?)";
                     try (Connection conn = core.getDatabaseManager().getConnection();
@@ -151,6 +139,10 @@ public class ProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
+        // 🌟 PROTECCIÓN CROSS-PLAY: Evitamos el bug del doble-click en Bedrock
+        // ignorando la interacción de la mano secundaria (OFF_HAND)
+        if (event.getHand() == EquipmentSlot.OFF_HAND) return;
+
         if (event.getClickedBlock() == null) return;
 
         Block block = event.getClickedBlock();
@@ -158,27 +150,27 @@ public class ProtectionListener implements Listener {
         Player player = event.getPlayer();
 
         if (stone != null) {
-            // 🌟 NUEVO: ¿Le dio Shift + Clic Derecho a la piedra central (Faro)?
-            if (block.getType() == Material.BEACON && player.isSneaking() && event.getAction().isRightClick()) {
+            // 🌟 MEJORA UX (MOBILE-FRIENDLY): Quitamos el player.isSneaking()
+            // Ahora basta con darle un simple clic derecho al Faro para abrir el menú
+            if (block.getType() == Material.BEACON && event.getAction().isRightClick()) {
                 event.setCancelled(true);
 
-                // Solo el dueño o un miembro del clan con permisos puede abrir el menú
                 if (stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) {
                     me.nexo.protections.menu.ProtectionMenu.openMenu(player, stone);
                 } else {
-                    player.sendMessage(NexoColor.parse("&#FF5555[!] Autorización Denegada: &#AAAAAANo posees las credenciales para administrar este Nexo."));
+                    CrossplayUtils.sendMessage(player, "&#FF5555[!] Autorización Denegada: &#AAAAAANo posees las credenciales para administrar este Nexo.");
                 }
-                return;
+                return; // Cortamos el código aquí para que no evalúe más abajo
             }
 
-            // Lógica normal de proteger cofres y puertas
+            // Lógica normal de proteger cofres y puertas del terreno
             String typeName = block.getType().name();
             ClaimAction action = (typeName.contains("CHEST") || typeName.contains("BARREL") || typeName.contains("SHULKER"))
                     ? ClaimAction.OPEN_CONTAINER : ClaimAction.INTERACT;
 
             if (!stone.hasPermission(player.getUniqueId(), action)) {
                 event.setCancelled(true);
-                player.sendMessage(NexoColor.parse("&#FF5555[!] Acceso Restringido: &#AAAAAAPropiedad privada asegurada."));
+                CrossplayUtils.sendActionBar(player, "&#FF5555[!] Acceso Restringido: Propiedad privada asegurada.");
             }
         }
     }
