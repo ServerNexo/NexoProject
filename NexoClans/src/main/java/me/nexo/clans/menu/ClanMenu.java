@@ -16,19 +16,16 @@ import java.util.List;
 public class ClanMenu {
 
     // 🎨 CONSTANTE PÚBLICA PARA EL LISTENER
-    public static final String TITLE_MENU = "&#434343<bold>»</bold> &#fbd72bCentral Logística del Clan";
+    public static final String TITLE_MENU = "&#434343<bold>»</bold> &#FFAA00Central Logística del Clan";
 
     // 🎨 PALETA HEX - ÍTEMS DE LA TERMINAL
-    private static final String ITEM_MONOLITH_NAME = "&#fbd72b<bold>🏛️ Monolito de %clan%</bold>";
-    private static final String ITEM_BANK_NAME = "&#a8ff78<bold>💰 Reserva Logística</bold>";
-    private static final String ITEM_FF_NAME = "&#ff4b2b<bold>⚔️ Protocolo de Fuego</bold>";
-    private static final String ITEM_MEMBERS_NAME = "&#00fbff<bold>👥 Base de Operarios</bold>";
+    private static final String ITEM_BANK_NAME = "&#55FF55<bold>💰 Reserva Logística</bold>";
+    private static final String ITEM_FF_NAME = "&#FF5555<bold>⚔️ Protocolo de Fuego</bold>";
+    private static final String ITEM_MEMBERS_NAME = "&#00E5FF<bold>👥 Base de Operarios</bold>";
 
     public static void abrirMenu(Player player, NexoClan clan, NexoUser user) {
-        // Creamos la terminal usando el Componente nativo de Paper
         Inventory inv = Bukkit.createInventory(null, 36, NexoColor.parse(TITLE_MENU));
 
-        // ⬛ Cristal de fondo (Gris Carbón para reducir fatiga visual)
         ItemStack panel = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta panelMeta = panel.getItemMeta();
         if (panelMeta != null) {
@@ -43,65 +40,75 @@ public class ClanMenu {
         ItemStack monolith = new ItemStack(Material.BEACON);
         ItemMeta monoMeta = monolith.getItemMeta();
         if (monoMeta != null) {
-            monoMeta.displayName(NexoColor.parse(ITEM_MONOLITH_NAME.replace("%clan%", clan.getName())));
+            // 🌟 INYECCIÓN HEX: Ahora parsea el nombre del clan completo, incluyendo sus códigos HEX
+            monoMeta.displayName(NexoColor.parse("&#FFAA00<bold>🏛️ Monolito de </bold>" + clan.getName()));
             List<net.kyori.adventure.text.Component> monoLore = new ArrayList<>();
-            monoLore.add(NexoColor.parse("&#434343Tag Operativo: &#fbd72b[" + clan.getTag() + "]"));
-            monoLore.add(NexoColor.parse("&#434343Nivel de Núcleo: &#a8ff78" + clan.getMonolithLevel()));
-            monoLore.add(NexoColor.parse("&#434343Energía (EXP): &#00fbff" + clan.getMonolithExp()));
+            monoLore.add(NexoColor.parse("&#AAAAAATag Operativo: &#FFAA00[" + clan.getTag() + "]"));
+            monoLore.add(NexoColor.parse("&#AAAAAANivel de Núcleo: &#55FF55" + clan.getMonolithLevel()));
+            monoLore.add(NexoColor.parse("&#AAAAAAEnergía (EXP): &#00E5FF" + clan.getMonolithExp()));
+
+            if (user.getClanRole().equals("LIDER")) {
+                monoLore.add(NexoColor.parse(" "));
+                monoLore.add(NexoColor.parse("&#FFAA00<bold>SISTEMAS DE GESTIÓN (LÍDER):</bold>"));
+                monoLore.add(NexoColor.parse("&#AAAAAA/clan invite <user> &#555555- Reclutar"));
+                monoLore.add(NexoColor.parse("&#AAAAAA/clan kick <user> &#555555- Expulsar"));
+                monoLore.add(NexoColor.parse("&#AAAAAA/clan sethome &#555555- Reubicar Monolito"));
+                monoLore.add(NexoColor.parse("&#FF5555/clan disband &#555555- Destruir Núcleo"));
+            }
             monoMeta.lore(monoLore);
             monolith.setItemMeta(monoMeta);
         }
-        inv.setItem(13, monolith);
 
-        // 💰 Banco (Izquierda - Slot 11)
-        ItemStack bank = new ItemStack(Material.EMERALD);
+        // 💰 Banco Logístico (Slot 20)
+        ItemStack bank = new ItemStack(Material.GOLD_INGOT);
         ItemMeta bankMeta = bank.getItemMeta();
         if (bankMeta != null) {
             bankMeta.displayName(NexoColor.parse(ITEM_BANK_NAME));
             List<net.kyori.adventure.text.Component> bankLore = new ArrayList<>();
-            bankLore.add(NexoColor.parse("&#434343Balance Disponible: &#fbd72b🪙 " + clan.getBankBalance()));
+            bankLore.add(NexoColor.parse("&#AAAAAAFondos Disponibles: &#FFAA00🪙 " + clan.getBankBalance()));
             bankLore.add(NexoColor.parse(" "));
-            bankLore.add(NexoColor.parse("&#a8ff78▶ Escribe &#fbd72b/clan deposit <cantidad>"));
-            bankLore.add(NexoColor.parse("&#ff4b2b▶ Escribe &#fbd72b/clan withdraw <cantidad>"));
+            bankLore.add(NexoColor.parse("&#AAAAAA/clan deposit <monto>"));
+            if (user.getClanRole().equals("LIDER") || user.getClanRole().equals("OFICIAL")) {
+                bankLore.add(NexoColor.parse("&#AAAAAA/clan withdraw <monto>"));
+            }
             bankMeta.lore(bankLore);
             bank.setItemMeta(bankMeta);
         }
-        inv.setItem(11, bank);
 
-        // 🛡️ Fuego Amigo (Derecha - Slot 15)
-        ItemStack ff = new ItemStack(clan.isFriendlyFire() ? Material.IRON_SWORD : Material.SHIELD);
-        ItemMeta ffMeta = ff.getItemMeta();
-        if (ffMeta != null) {
-            ffMeta.displayName(NexoColor.parse(ITEM_FF_NAME));
-            List<net.kyori.adventure.text.Component> ffLore = new ArrayList<>();
-            ffLore.add(NexoColor.parse("&#434343Estado del Seguro: " + (clan.isFriendlyFire() ? "&#ff4b2b<bold>RIESGO ACTIVO</bold>" : "&#a8ff78<bold>PROTEGIDO</bold>")));
-            ffLore.add(NexoColor.parse(" "));
+        // ⚔️ Fuego Amigo (Slot 22)
+        ItemStack sword = new ItemStack(clan.isFriendlyFire() ? Material.IRON_SWORD : Material.WOODEN_SWORD);
+        ItemMeta swordMeta = sword.getItemMeta();
+        if (swordMeta != null) {
+            swordMeta.displayName(NexoColor.parse(ITEM_FF_NAME));
+            List<net.kyori.adventure.text.Component> swordLore = new ArrayList<>();
+            String status = clan.isFriendlyFire() ? "&#FF5555<bold>ACTIVADO</bold>" : "&#55FF55<bold>APAGADO</bold>";
+            swordLore.add(NexoColor.parse("&#AAAAAAEstado Actual: " + status));
             if (user.getClanRole().equals("LIDER") || user.getClanRole().equals("OFICIAL")) {
-                ffLore.add(NexoColor.parse("&#fbd72b▶ Clic para reconfigurar sistema"));
-            } else {
-                ffLore.add(NexoColor.parse("&#ff4b2bAcceso Denegado."));
-                ffLore.add(NexoColor.parse("&#434343Requiere autorización de Oficial."));
+                swordLore.add(NexoColor.parse(" "));
+                swordLore.add(NexoColor.parse("&#FFAA00Click para alternar protocolo."));
             }
-            ffMeta.lore(ffLore);
-            ff.setItemMeta(ffMeta);
+            swordMeta.lore(swordLore);
+            sword.setItemMeta(swordMeta);
         }
-        inv.setItem(15, ff);
 
-        // 👥 Miembros (Abajo - Slot 22)
-        ItemStack members = new ItemStack(Material.PLAYER_HEAD);
-        ItemMeta memMeta = members.getItemMeta();
-        if (memMeta != null) {
-            memMeta.displayName(NexoColor.parse(ITEM_MEMBERS_NAME));
-            List<net.kyori.adventure.text.Component> memLore = new ArrayList<>();
-            memLore.add(NexoColor.parse("&#434343Rango Operativo: &#00fbff" + user.getClanRole()));
-            memLore.add(NexoColor.parse(" "));
-            memLore.add(NexoColor.parse("&#fbd72b▶ Clic para abrir Base de Datos"));
-            memMeta.lore(memLore);
-            members.setItemMeta(memMeta);
+        // 👥 Miembros (Slot 24)
+        ItemStack heads = new ItemStack(Material.PLAYER_HEAD);
+        ItemMeta headsMeta = heads.getItemMeta();
+        if (headsMeta != null) {
+            headsMeta.displayName(NexoColor.parse(ITEM_MEMBERS_NAME));
+            List<net.kyori.adventure.text.Component> headsLore = new ArrayList<>();
+            headsLore.add(NexoColor.parse("&#AAAAAARango Personal: &#00E5FF" + user.getClanRole()));
+            headsLore.add(NexoColor.parse(" "));
+            headsLore.add(NexoColor.parse("&#FFAA00Click para inspeccionar base de datos."));
+            headsMeta.lore(headsLore);
+            heads.setItemMeta(headsMeta);
         }
-        inv.setItem(22, members);
 
-        // Abrimos la terminal
+        inv.setItem(13, monolith);
+        inv.setItem(20, bank);
+        inv.setItem(22, sword);
+        inv.setItem(24, heads);
+
         player.openInventory(inv);
     }
 }

@@ -18,8 +18,8 @@ import java.util.List;
 public class ClanMembersMenu {
 
     // 🎨 CONSTANTES
-    public static final String TITLE_MEMBERS = "&#434343<bold>»</bold> &#00fbffRegistro de Operarios";
-    private static final String MSG_SEARCHING = "&#fbd72bConectando con la base de datos de Nexo...";
+    public static final String TITLE_MEMBERS = "&#434343<bold>»</bold> &#00E5FFRegistro de Operarios";
+    private static final String MSG_SEARCHING = "&#FFAA00Conectando con la base de datos de Nexo...";
 
     public static void abrirMenu(Player player, NexoClan clan, NexoUser user, NexoClans plugin) {
         player.sendMessage(NexoColor.parse(MSG_SEARCHING));
@@ -36,24 +36,26 @@ public class ClanMembersMenu {
 
                 if (meta != null) {
                     meta.setOwningPlayer(Bukkit.getOfflinePlayer(m.uuid()));
-                    meta.displayName(NexoColor.parse("&#fbd72b" + m.name()));
+                    meta.displayName(NexoColor.parse("&#FFAA00" + m.name()));
 
                     List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                    lore.add(NexoColor.parse("&#434343Autorización: &#00fbff" + m.role()));
-                    lore.add(NexoColor.parse(" "));
-
-                    // Lógica de expulsión
-                    if ((user.getClanRole().equals("LIDER") || user.getClanRole().equals("OFICIAL")) && !m.uuid().equals(player.getUniqueId())) {
-                        lore.add(NexoColor.parse("&#ff4b2b▶ Clic Derecho para Revocar Acceso (Expulsar)"));
-                    }
+                    lore.add(NexoColor.parse("&#AAAAAARango: &#00E5FF" + m.role()));
 
                     meta.lore(lore);
                     head.setItemMeta(meta);
                 }
-                inv.setItem(i, head);
+                inv.addItem(head);
             }
 
-            // Sincronizamos con el hilo principal para abrir el inventario
+            // Botón Regresar
+            ItemStack back = new ItemStack(Material.ARROW);
+            org.bukkit.inventory.meta.ItemMeta backMeta = back.getItemMeta();
+            if (backMeta != null) {
+                backMeta.displayName(NexoColor.parse("&#FF5555Regresar al Monolito Central"));
+                back.setItemMeta(backMeta);
+            }
+            inv.setItem(49, back);
+
             Bukkit.getScheduler().runTask(plugin, () -> player.openInventory(inv));
         });
     }
