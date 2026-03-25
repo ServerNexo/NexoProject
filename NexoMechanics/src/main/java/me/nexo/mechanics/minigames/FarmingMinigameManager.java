@@ -1,7 +1,9 @@
 package me.nexo.mechanics.minigames;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.mechanics.NexoMechanics;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -16,9 +18,6 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
-import me.nexo.protections.NexoProtections;
-import me.nexo.protections.core.ProtectionStone;
-import me.nexo.protections.core.ClaimAction;
 
 import java.util.Map;
 import java.util.UUID;
@@ -26,7 +25,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class FarmingMinigameManager implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos el plugin de Mechanics
     private final NexoMechanics plugin;
 
     // UUID del ArmorStand (La Plaga) -> Cantidad de golpes recibidos
@@ -66,12 +64,19 @@ public class FarmingMinigameManager implements Listener {
             plaga.getEquipment().setHelmet(new ItemStack(Material.WEEPING_VINES)); // Textura de Raíz Corrupta
         }
 
-        plaga.setCustomName("§c§lPlaga Mutante");
+        // Inyección de Componente Nativo Paper 1.21
+        plaga.customName(NexoColor.parse("&#FF5555<bold>Plaga Biológica</bold>"));
         plaga.setCustomNameVisible(true);
 
         plagasActivas.put(plaga.getUniqueId(), 0);
         p.playSound(loc, Sound.ENTITY_SILVERFISH_AMBIENT, 1f, 0.5f);
-        p.sendTitle("§2§l¡PLAGA MUTANTE!", "§aDestrúyela antes de que escape", 5, 40, 5);
+
+        // Alerta de Biomasa con formato seguro
+        p.sendTitle(
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FF5555<bold>¡ANOMALÍA BIOLÓGICA!</bold>")),
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FFAA00Erradica la plaga antes de que escape.")),
+                5, 40, 5
+        );
 
         // BukkitRunnable para que "salte" como un bicho por los cultivos
         new BukkitRunnable() {
@@ -81,7 +86,7 @@ public class FarmingMinigameManager implements Listener {
             public void run() {
                 if (tiempoVida <= 0 || plaga.isDead() || !plagasActivas.containsKey(plaga.getUniqueId())) {
                     if (!plaga.isDead()) {
-                        plaga.getWorld().spawnParticle(Particle.SMOKE, plaga.getLocation(), 10); // 🟢 FIX 1.21: Particle Name
+                        plaga.getWorld().spawnParticle(Particle.SMOKE, plaga.getLocation(), 10);
                         plaga.remove();
                         plagasActivas.remove(plaga.getUniqueId());
                     }
@@ -121,7 +126,7 @@ public class FarmingMinigameManager implements Listener {
 
                     // Drops raros
                     plaga.getWorld().dropItemNaturally(plaga.getLocation(), new ItemStack(Material.PITCHER_POD, 3));
-                    p.sendActionBar("§a¡La plaga fue erradicada!");
+                    p.sendActionBar(NexoColor.parse("&#55FF55[✓] <bold>AMENAZA ERRADICADA:</bold> &#AAAAAALa biomasa ha sido purgada."));
                 } else {
                     plagasActivas.put(plaga.getUniqueId(), golpes);
                 }

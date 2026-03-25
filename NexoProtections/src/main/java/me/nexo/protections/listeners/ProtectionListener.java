@@ -2,6 +2,7 @@ package me.nexo.protections.listeners;
 
 import me.nexo.core.NexoCore;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.core.ClaimAction;
 import me.nexo.protections.core.ClaimBox;
@@ -58,7 +59,7 @@ public class ProtectionListener implements Listener {
                     } catch (Exception e) { e.printStackTrace(); }
                 });
 
-                player.sendMessage("§aHas desmantelado tu Protección exitosamente.");
+                player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>PROTOCOLO DE DESMANTELAMIENTO:</bold> &#AAAAAANexo de protección desconectado exitosamente."));
                 // Opcional: Podrías dropear el ítem del Nexo aquí para que lo recupere.
                 return;
             }
@@ -67,7 +68,7 @@ public class ProtectionListener implements Listener {
         // Si intenta romper un bloque normal dentro de la zona protegida
         if (stone != null && !stone.hasPermission(player.getUniqueId(), ClaimAction.BREAK)) {
             event.setCancelled(true);
-            player.sendMessage("§cNo tienes permiso para romper bloques aquí.");
+            player.sendMessage(NexoColor.parse("&#FF5555[!] Infracción de Seguridad: &#AAAAAATerritorio corporativo ajeno. No tienes permisos de minería."));
         }
     }
 
@@ -79,7 +80,7 @@ public class ProtectionListener implements Listener {
         ProtectionStone existingStone = claimManager.getStoneAt(block.getLocation());
         if (existingStone != null && !existingStone.hasPermission(player.getUniqueId(), ClaimAction.BUILD)) {
             event.setCancelled(true);
-            player.sendMessage("§cNo puedes construir en territorio ajeno.");
+            player.sendMessage(NexoColor.parse("&#FF5555[!] Acceso Denegado: &#AAAAAANo puedes construir estructuras en el sector de otra entidad."));
             return;
         }
 
@@ -104,7 +105,7 @@ public class ProtectionListener implements Listener {
                     Bukkit.getScheduler().runTask(NexoProtections.getPlugin(NexoProtections.class), () -> {
                         block.setType(Material.AIR);
                         player.getInventory().addItem(refundItem);
-                        player.sendMessage("§cHas alcanzado el límite máximo de protecciones.");
+                        player.sendMessage(NexoColor.parse("&#FF5555[!] Cuota Excedida: &#AAAAAAHas alcanzado el límite máximo de protecciones permitidas."));
                     });
                     return;
                 }
@@ -122,7 +123,7 @@ public class ProtectionListener implements Listener {
                 // Insertamos en la RAM en el hilo principal
                 Bukkit.getScheduler().runTask(NexoProtections.getPlugin(NexoProtections.class), () -> {
                     claimManager.addStoneToCache(newStone);
-                    player.sendMessage("§a¡Nexo de Protección establecido! Protegiendo un radio de " + radius + " bloques.");
+                    player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>ESCUDO OPERATIVO DESPLEGADO:</bold> &#AAAAAASellando un radio de &#00E5FF" + radius + " bloques&#AAAAAA a la red."));
                 });
 
                 // Guardamos en Supabase en el hilo secundario
@@ -165,7 +166,7 @@ public class ProtectionListener implements Listener {
                 if (stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) {
                     me.nexo.protections.menu.ProtectionMenu.openMenu(player, stone);
                 } else {
-                    player.sendMessage("§cNo tienes permiso para administrar esta piedra.");
+                    player.sendMessage(NexoColor.parse("&#FF5555[!] Autorización Denegada: &#AAAAAANo posees las credenciales para administrar este Nexo."));
                 }
                 return;
             }
@@ -177,7 +178,7 @@ public class ProtectionListener implements Listener {
 
             if (!stone.hasPermission(player.getUniqueId(), action)) {
                 event.setCancelled(true);
-                player.sendMessage("§cEsta zona está protegida.");
+                player.sendMessage(NexoColor.parse("&#FF5555[!] Acceso Restringido: &#AAAAAAPropiedad privada asegurada."));
             }
         }
     }

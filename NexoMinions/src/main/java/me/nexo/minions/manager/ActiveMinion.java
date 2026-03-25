@@ -1,7 +1,7 @@
 package me.nexo.minions.manager;
 
-// 🌟 Importamos directamente el plugin principal de Colecciones
 import me.nexo.colecciones.NexoColecciones;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionTier;
@@ -71,7 +71,6 @@ public class ActiveMinion {
         return base + bonus;
     }
 
-    // 🌟 BALANCE OFF-LINE ESTRICTO:
     public void calcularTrabajoOffline(long currentTimeMillis) {
         long tiempoPasado = currentTimeMillis - this.nextActionTime;
         if (tiempoPasado > 0) {
@@ -80,23 +79,18 @@ public class ActiveMinion {
 
             int maxStorage = getRealMaxStorage();
 
-            // Si el minion NO tiene la mejora de cofre ("STORAGE_LINK"), se topa con su mochila y deja de producir.
             if (!tieneMejora("STORAGE_LINK")) {
                 this.storedItems = Math.min(maxStorage, this.storedItems + trabajosPerdidos);
 
-                // Si la mochila se llenó, el minion no hizo más trabajos (así evitamos dar XP o gastar combustible de sobra)
                 if (this.storedItems >= maxStorage) {
                     trabajosPerdidos = maxStorage - this.storedItems;
                 }
             } else {
-                // Si tiene cofre, asume que lo guardó en el cofre (o se llenó el cofre, Bukkit manejará el sobrante)
-                // Aquí podrías añadir lógica para comprobar si el cofre offline también se llenó,
-                // pero por ahora dejaremos que fluya si tiene la mejora comprada.
                 this.storedItems += trabajosPerdidos;
             }
 
             this.trabajosRealizados += trabajosPerdidos;
-            consumirCombustibles(); // Le cobramos el combustible de todo lo que minó mientras dormías
+            consumirCombustibles();
 
             this.entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
 
@@ -126,11 +120,12 @@ public class ActiveMinion {
     private void actualizarHolograma(int maxStorage) {
         if (holograma == null || holograma.isDead()) return;
 
+        // 🌟 Reemplazo a Component Nativo de Paper 1.21 y Paleta HEX
         if (storedItems >= maxStorage && !tieneMejora("STORAGE_LINK")) {
-            holograma.setText("§c§l¡INVENTARIO LLENO!\n§e" + storedItems + " / " + maxStorage);
+            holograma.text(NexoColor.parse("&#FF5555<bold>¡CAPACIDAD MÁXIMA ALCANZADA!</bold>\n&#AAAAAAReservas: &#00E5FF" + storedItems + " / " + maxStorage));
         } else {
             String nombreBonito = type.name().replace("MINION_", "").replace("_", " ");
-            holograma.setText("§aAbeja " + nombreBonito + " Nvl " + tier + "\n§fAlmacenado: §e" + storedItems + " / " + maxStorage);
+            holograma.text(NexoColor.parse("&#FFAA00<bold>Operario " + nombreBonito + "</bold> &#AAAAAA(Nv. " + tier + ")\n&#AAAAAAAlmacenado: &#55FF55" + storedItems + " / " + maxStorage));
         }
     }
 
@@ -154,13 +149,9 @@ public class ActiveMinion {
         this.trabajosRealizados++;
         consumirCombustibles();
 
-        // 🌟 NUEVO SISTEMA DE COLECCIONES: Se conecta directo al motor y calcula O(1)
         Player owner = Bukkit.getPlayer(ownerId);
         if (owner != null && owner.isOnline()) {
-            // BUGFIX: Dejamos el nombre en MAYÚSCULAS para que coincida con "OAK_LOG", "DIAMOND_ORE", etc.
             String blockId = type.getTargetMaterial().name();
-
-            // Hablamos con el Cerebro de Colecciones para sumar el progreso y ver si sube de nivel
             NexoColecciones.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, blockId, 1);
         }
     }

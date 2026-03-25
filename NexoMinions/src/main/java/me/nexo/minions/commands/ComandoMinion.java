@@ -1,9 +1,9 @@
 package me.nexo.minions.commands;
 
 import com.nexomc.nexo.api.NexoItems;
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import me.nexo.minions.data.MinionType;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -25,21 +25,21 @@ public class ComandoMinion implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         // 1. Verificación de permisos
         if (!sender.hasPermission("nexominions.admin")) {
-            sender.sendMessage(ChatColor.RED + "¡No tienes permiso para invocar abejas!");
+            sender.sendMessage(NexoColor.parse("&#FF5555[!] Acceso Denegado: Autorización requerida para despachar operarios."));
             return true;
         }
 
         // 2. Verificación de argumentos mínimos
         if (args.length < 3 || !args[0].equalsIgnoreCase("give")) {
-            sender.sendMessage(ChatColor.RED + "Uso correcto: /minion give <jugador> <tipo> [nivel]");
-            sender.sendMessage(ChatColor.GRAY + "Tipos disponibles: COBBLESTONE, WHEAT, OAK_WOOD");
+            sender.sendMessage(NexoColor.parse("&#FFAA00[!] Sintaxis de Red: /minion give <jugador> <tipo> [nivel]"));
+            sender.sendMessage(NexoColor.parse("&#AAAAAATipos de unidad base: COBBLESTONE, WHEAT, OAK_WOOD, etc."));
             return true;
         }
 
         // 3. Buscar al jugador
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) {
-            sender.sendMessage(ChatColor.RED + "Jugador no encontrado o desconectado.");
+            sender.sendMessage(NexoColor.parse("&#FF5555[!] Error de Enlace: El jugador destino no se encuentra en la red."));
             return true;
         }
 
@@ -48,7 +48,7 @@ public class ComandoMinion implements CommandExecutor {
         try {
             type = MinionType.valueOf(args[2].toUpperCase());
         } catch (IllegalArgumentException e) {
-            sender.sendMessage(ChatColor.RED + "Tipo inválido. Usa: COBBLESTONE, WHEAT, u OAK_WOOD");
+            sender.sendMessage(NexoColor.parse("&#FF5555[!] Clase de operario inválida o no registrada."));
             return true;
         }
 
@@ -58,7 +58,7 @@ public class ComandoMinion implements CommandExecutor {
             try {
                 tier = Integer.parseInt(args[3]);
             } catch (NumberFormatException e) {
-                sender.sendMessage(ChatColor.RED + "El nivel debe ser un número entero (Ej: 1, 2, 3).");
+                sender.sendMessage(NexoColor.parse("&#FF5555[!] Error de Formato: El nivel de firmware debe ser numérico (Ej: 1, 2, 3)."));
                 return true;
             }
         }
@@ -66,7 +66,7 @@ public class ComandoMinion implements CommandExecutor {
         // 🌟 6. LA MAGIA: Obtener el ítem de Nexo
         var itemBuilder = NexoItems.itemFromId(type.getNexoModelID());
         if (itemBuilder == null) {
-            sender.sendMessage(ChatColor.DARK_RED + "Error: No existe la ID '" + type.getNexoModelID() + "' en Nexo.");
+            sender.sendMessage(NexoColor.parse("&#FF5555[!] Error Crítico: ID de modelo '" + type.getNexoModelID() + "' no detectada en la base de datos Nexo."));
             return true;
         }
 
@@ -74,7 +74,7 @@ public class ComandoMinion implements CommandExecutor {
 
         // Verificamos si Nexo nos entregó un ítem fantasma (AIR)
         if (minionItem == null || minionItem.getType().isAir()) {
-            sender.sendMessage(ChatColor.DARK_RED + "Error: Nexo encontró la ID, pero el material está mal configurado en tu minions.yml (Generó AIR).");
+            sender.sendMessage(NexoColor.parse("&#FF5555[!] Error Estructural: El ensamblador Nexo generó una entidad vacía (AIR). Revisa tu configuración."));
             return true;
         }
 
@@ -90,14 +90,14 @@ public class ComandoMinion implements CommandExecutor {
 
             minionItem.setItemMeta(meta);
         } else {
-            sender.sendMessage(ChatColor.RED + "Error: El ítem de Nexo no acepta datos NBT. Revisa su material.");
+            sender.sendMessage(NexoColor.parse("&#FF5555[!] Fallo de Escritura NBT: El material base no acepta inyección de datos."));
             return true;
         }
 
         // 8. Entregar el ítem
         target.getInventory().addItem(minionItem);
-        sender.sendMessage(ChatColor.GREEN + "Le diste un " + type.getDisplayName() + " (Nivel " + tier + ") a " + target.getName() + ".");
-        target.sendMessage(ChatColor.AQUA + "¡Recibiste un " + type.getDisplayName() + " (Nivel " + tier + ")! Colócalo en el suelo para activarlo.");
+        sender.sendMessage(NexoColor.parse("&#55FF55[✓] Suministro Autorizado: &#AAAAAA" + type.getDisplayName() + " (Nv. " + tier + ") despachado a " + target.getName() + "."));
+        target.sendMessage(NexoColor.parse("&#00E5FF[📦] PAQUETE RECIBIDO: &#AAAAAAUnidad " + type.getDisplayName() + " (Firmware Nv. " + tier + ") lista para su despliegue en el terreno."));
 
         return true;
     }

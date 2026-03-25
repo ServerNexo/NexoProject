@@ -1,11 +1,12 @@
 package me.nexo.mechanics.minigames;
 
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import me.nexo.mechanics.NexoMechanics;
 import me.nexo.economy.NexoEconomy; // 🌟 IMPORT ECONOMÍA
 import me.nexo.economy.core.NexoAccount;
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.core.ProtectionStone;
-import me.nexo.protections.core.ClaimAction;// 🌟 IMPORT DIVISAS
+import me.nexo.protections.core.ClaimAction;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -27,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MiningMinigameManager implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos el plugin de Mechanics
     private final NexoMechanics plugin;
 
     // Guarda qué jugador tiene una veta activa, dónde está, y cuándo expira
@@ -76,7 +76,7 @@ public class MiningMinigameManager implements Listener {
                 NexoEconomy.getPlugin(NexoEconomy.class).getEconomyManager()
                         .updateBalanceAsync(p.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, recompensaMonedas, true);
 
-                p.sendActionBar("§e🪙 +" + monedasRandom + " Monedas");
+                p.sendActionBar(NexoColor.parse("&#FFAA00[✓] Extracción Rentable: +" + monedasRandom + " Créditos 🪙"));
 
                 // Reacción en cadena: Volvemos a invocar otra veta cercana
                 generarVetaContigua(p, b);
@@ -104,6 +104,9 @@ public class MiningMinigameManager implements Listener {
                 p.playSound(contiguo.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 1.5f);
                 p.getWorld().spawnParticle(Particle.WAX_ON, contiguo.getLocation().add(0.5, 0.5, 0.5), 10);
 
+                // Alerta Ciberpunk para el jugador
+                p.sendActionBar(NexoColor.parse("&#00E5FF✨ <bold>¡ANOMALÍA GEOLÓGICA!</bold> &#AAAAAAExtrae el mineral brillante rápido."));
+
                 // Registramos el minijuego por 4 segundos
                 vetasActivas.put(p.getUniqueId(), new VetaActiva(contiguo.getLocation(), System.currentTimeMillis() + 4000L, contiguo.getType()));
                 break;
@@ -121,6 +124,7 @@ public class MiningMinigameManager implements Listener {
                         // Le devolvemos la textura original porque falló - CORREGIDO PARA 1.21
                         p.sendBlockChange(entry.getValue().loc(), Bukkit.createBlockData(entry.getValue().tipoOriginal()));
                         p.playSound(p.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 0.5f, 1f);
+                        p.sendActionBar(NexoColor.parse("&#FF5555[!] La anomalía se ha estabilizado. Oportunidad perdida."));
                     }
                     vetasActivas.remove(entry.getKey());
                 }

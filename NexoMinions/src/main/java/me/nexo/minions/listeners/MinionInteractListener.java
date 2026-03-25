@@ -1,10 +1,10 @@
 package me.nexo.minions.listeners;
 
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.minions.menu.MinionMenu;
-import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
@@ -62,7 +62,8 @@ public class MinionInteractListener implements Listener {
 
         String ownerStr = hitbox.getPersistentDataContainer().get(MinionKeys.OWNER, PersistentDataType.STRING);
         if (ownerStr != null && !player.getUniqueId().toString().equals(ownerStr) && !player.hasPermission("nexominions.admin")) {
-            player.sendMessage(ChatColor.RED + "🛡️ ¡Este Minion pertenece a otro jugador!");
+            // 🌟 Alerta Ciberpunk de Infracción
+            player.sendMessage(NexoColor.parse("&#FF5555[!] Infracción de Seguridad: &#AAAAAAEste operario está enlazado a la red de otra entidad."));
             return false;
         }
         return true;

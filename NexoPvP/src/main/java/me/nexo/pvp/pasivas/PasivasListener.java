@@ -8,6 +8,7 @@ import me.nexo.pvp.NexoPvP;
 // 🟢 MANTENEMOS ESTO: El Addon se comunica con la API del Core
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -41,11 +42,9 @@ import java.util.UUID;
 
 public class PasivasListener implements Listener {
 
-    // 🟢 ARQUITECTURA: Cambiamos Main por NexoPvP
     private final NexoPvP plugin;
     private final PasivasManager manager;
 
-    // 🟢 ARQUITECTURA: Pedimos NexoPvP en el constructor
     public PasivasListener(NexoPvP plugin, PasivasManager manager) {
         this.plugin = plugin;
         this.manager = manager;
@@ -69,7 +68,7 @@ public class PasivasListener implements Listener {
                 }
             }
 
-            // Lvl 10: Sed de Sangre
+            // Lvl 10: Sed de Sangre (Robo de Vida)
             if (nivel >= 10) {
                 double cura = event.getFinalDamage() * 0.05;
                 double maxHp = atacante.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
@@ -100,7 +99,13 @@ public class PasivasListener implements Listener {
 
                     victima.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, victima.getLocation(), 100);
                     victima.playSound(victima.getLocation(), Sound.ITEM_TOTEM_USE, 1f, 1f);
-                    victima.sendTitle("§c§l¡ÚLTIMA BATALLA!", "§7Has esquivado a la muerte", 5, 40, 5);
+
+                    // 🌟 Título de Emergencia Serializado
+                    victima.sendTitle(
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FF5555<bold>¡ESCUDO DE EMERGENCIA!</bold>")),
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#AAAAAADaño letal anulado. Sistemas en enfriamiento.")),
+                            5, 40, 5
+                    );
                 }
             }
         }
@@ -224,7 +229,8 @@ public class PasivasListener implements Listener {
                 ItemStack caught = itemEntity.getItemStack();
                 caught.setAmount(caught.getAmount() * 2);
                 itemEntity.setItemStack(caught);
-                p.sendMessage("§b🎣 ¡Botín Gemelo activado!");
+                // 🌟 Alerta Corporativa
+                p.sendActionBar(NexoColor.parse("&#00E5FF[✓] <bold>EXTRACCIÓN DUPLICADA:</bold> &#AAAAAARedimensionamiento cuántico aplicado."));
             }
         }
     }
@@ -291,7 +297,7 @@ public class PasivasListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 p.setLevel(p.getLevel() + event.getExpLevelCost());
                 p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1f, 1f);
-                p.sendMessage("§d✨ ¡Retención Mágica! Niveles devueltos.");
+                p.sendMessage(NexoColor.parse("&#AA00AA✨ <bold>RETENCIÓN DE ENERGÍA:</bold> &#AAAAAACosto de ensamblaje reintegrado."));
             }, 1L);
         }
     }

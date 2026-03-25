@@ -41,7 +41,7 @@ public class WarManager {
     public void iniciarDesafio(Player leader, NexoClan atacante, NexoClan defensor, BigDecimal apuesta) {
         // 1. Verificación de Fondos Bancarios
         if (atacante.getBankBalance().compareTo(apuesta) < 0 || defensor.getBankBalance().compareTo(apuesta) < 0) {
-            leader.sendMessage(NexoColor.parse("<red>Uno de los clanes no tiene fondos suficientes para la apuesta."));
+            leader.sendMessage(NexoColor.parse("&#FF5555[!] Auditoría Fallida: Uno de los sindicatos no posee liquidez para cubrir la apuesta."));
             return;
         }
 
@@ -55,8 +55,8 @@ public class WarManager {
 
         // 3. Validación Industrial Estricta
         if (contadorSuministros < COSTO_SUMINISTROS) {
-            leader.sendMessage(NexoColor.parse("<#FF5555>¡Suministros insuficientes para la campaña militar!"));
-            leader.sendMessage(NexoColor.parse("<gray>Necesitas <white>" + COSTO_SUMINISTROS + "x Suministros Militares <gray>fabricados en las Factorías."));
+            leader.sendMessage(NexoColor.parse("&#FF5555[!] Logística Deficiente: &#AAAAAASuministros insuficientes para sostener una campaña militar."));
+            leader.sendMessage(NexoColor.parse("&#AAAAAARequerido: &#FFFFFF" + COSTO_SUMINISTROS + "x Suministros Militares &#AAAAAA(Ensamblables en Factorías)."));
             return; // ⛔ Cancelamos la guerra, no hay economía que la respalde
         }
 
@@ -92,12 +92,10 @@ public class WarManager {
         guerrasActivas.put(warId, contrato);
         saveWarToDatabase(contrato);
 
-        // 7. Anuncio Global de Inicio
-        String msg = "<gold><bold>⚔ GUERRA DE HONOR:</bold> <white>El clan <yellow>" + atacante.getName() +
-                "</yellow> y <yellow>" + defensor.getName() +
-                "</yellow> han congelado <green>🪙 " + apuesta.multiply(BigDecimal.valueOf(2)) + "</green> en el Escrow!";
-        Bukkit.broadcast(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(msg));
-        Bukkit.broadcastMessage("§e⏳ Tienen 5 minutos de Gracia para prepararse antes de que caigan las Zonas Seguras.");
+        // 7. Anuncio Global de Inicio (Estilo Ciberpunk)
+        Bukkit.broadcast(NexoColor.parse("&#FFAA00<bold>⚔ CONTRATO DE EXTERMINIO FIRMADO:</bold>"));
+        Bukkit.broadcast(NexoColor.parse("&#FFFFFF" + atacante.getName() + " &#AAAAAAy &#FFFFFF" + defensor.getName() + " &#AAAAAAhan bloqueado &#55FF55🪙 " + apuesta.multiply(BigDecimal.valueOf(2)) + " &#AAAAAAen la bóveda de Escrow."));
+        Bukkit.broadcast(NexoColor.parse("&#00E5FF[!] Fase de Preparación Iniciada: &#AAAAAA5 minutos para el colapso de escudos perimetrales."));
     }
 
     // ⏱️ EL RELOJ MAESTRO
@@ -118,8 +116,8 @@ public class WarManager {
                             guerrasActivas.put(guerra.warId(), activa);
                             actualizarGuerraEnBD(activa);
 
-                            Bukkit.broadcastMessage("§4§l⚔ ¡LA GUERRA HA COMENZADO! ⚔");
-                            Bukkit.broadcastMessage("§c¡Las Zonas Seguras enemigas han caído! A por las " + KILLS_TO_WIN + " bajas.");
+                            Bukkit.broadcast(NexoColor.parse("&#FF5555<bold>⚠ ¡ALERTA DE CONFLICTO ACTIVO! ⚠</bold>"));
+                            Bukkit.broadcast(NexoColor.parse("&#AAAAAALos escudos corporativos han caído. Fuego autorizado. Condición de victoria: &#FF5555" + KILLS_TO_WIN + " bajas."));
                         }
                     }
                 }
@@ -156,7 +154,7 @@ public class WarManager {
         );
         guerrasActivas.put(guerra.warId(), actualizada);
 
-        asesino.sendMessage("§a⚔ ¡Baja confirmada para tu clan! (" + (esAtacante ? killsA : killsD) + "/" + KILLS_TO_WIN + ")");
+        asesino.sendMessage(NexoColor.parse("&#55FF55[✓] Baja Confirmada: &#AAAAAAProgreso táctico de tu sindicato: &#00E5FF" + (esAtacante ? killsA : killsD) + "/" + KILLS_TO_WIN));
 
         if (killsA >= KILLS_TO_WIN || killsD >= KILLS_TO_WIN) {
             terminarGuerra(actualizada, clanAsesino);
@@ -180,9 +178,8 @@ public class WarManager {
                 clan.depositMoney(premio.doubleValue());
                 clansPlugin.getClanManager().saveBankAsync(clan);
 
-                String msg = "<gold><bold>🏆 ¡GUERRA TERMINADA!</bold> <white>El clan <yellow>" + clan.getName() +
-                        "</yellow> ha masacrado a sus enemigos y se lleva el botín de <green>🪙 " + premio + "</green>!";
-                Bukkit.broadcast(net.kyori.adventure.text.minimessage.MiniMessage.miniMessage().deserialize(msg));
+                Bukkit.broadcast(NexoColor.parse("&#55FF55<bold>🏆 AUDITORÍA FINALIZADA:</bold>"));
+                Bukkit.broadcast(NexoColor.parse("&#AAAAAAEl sindicato &#FFFFFF" + clan.getName() + " &#AAAAAAha masacrado a sus objetivos y asegura los fondos congelados de &#55FF55🪙 " + premio + "&#AAAAAA."));
             }
         });
     }

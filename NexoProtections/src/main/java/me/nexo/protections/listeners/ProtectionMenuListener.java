@@ -1,5 +1,6 @@
 package me.nexo.protections.listeners;
 
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import me.nexo.protections.core.ProtectionStone;
 import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.Material;
@@ -20,7 +21,10 @@ public class ProtectionMenuListener implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (event.getView().getTitle().equals("§8Piedra de Protección")) {
+        // 🌟 Utilizamos el serializador de texto plano de Paper para ignorar los códigos HEX y evitar fallos
+        String tituloMenu = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+
+        if (tituloMenu.contains("Nexo de Protección")) {
             event.setCancelled(true); // Evitamos que se roben los ítems del menú
 
             if (event.getCurrentItem() == null) return;
@@ -37,7 +41,7 @@ public class ProtectionMenuListener implements Listener {
                 }
 
                 if (stone.getCurrentEnergy() >= stone.getMaxEnergy()) {
-                    player.sendMessage("§cLa piedra ya tiene su energía al máximo.");
+                    player.sendMessage(NexoColor.parse("&#FF5555[!] Batería al Máximo: &#AAAAAAEl escudo operativo ya posee reservas completas."));
                     player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     return;
                 }
@@ -46,7 +50,7 @@ public class ProtectionMenuListener implements Listener {
 
                 // 🌟 LÓGICA DE ALIMENTACIÓN
                 if (stone.getClanId() == null) {
-                    // Piedra Solitaria: Consume Vainilla
+                    // Piedra Solitaria: Consume Minerales Base
                     if (player.getInventory().contains(Material.DIAMOND)) {
                         quitarItem(player, Material.DIAMOND, 1);
                         stone.addEnergy(100);
@@ -73,10 +77,10 @@ public class ProtectionMenuListener implements Listener {
 
                 if (recargado) {
                     player.playSound(player.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1f, 2f);
-                    player.sendMessage("§a¡Has inyectado energía a la Piedra de Protección!");
-                    player.closeInventory(); // Cerramos para que vean los efectos
+                    player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>ENERGÍA INYECTADA:</bold> &#AAAAAAReservas del Nexo actualizadas y estabilizadas."));
+                    player.closeInventory(); // Cerramos para que vean los efectos en el bloque/holograma
                 } else {
-                    player.sendMessage("§cNo tienes los materiales necesarios para recargar esta piedra.");
+                    player.sendMessage(NexoColor.parse("&#FF5555[!] Combustible Insuficiente: &#AAAAAANo portas los catalizadores requeridos para la recarga del Nexo."));
                     player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 }
             }

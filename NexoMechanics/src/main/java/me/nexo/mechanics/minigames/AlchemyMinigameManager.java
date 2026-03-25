@@ -1,5 +1,6 @@
 package me.nexo.mechanics.minigames;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.mechanics.NexoMechanics;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -22,10 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AlchemyMinigameManager implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos el plugin de Mechanics en lugar del Core
     private final NexoMechanics plugin;
-
-    // Guardamos el soporte inestable: Ubicación -> Datos de Estabilización
     private final Map<Location, MezclaVolatil> mezclas = new ConcurrentHashMap<>();
 
     private static class MezclaVolatil {
@@ -60,13 +58,17 @@ public class AlchemyMinigameManager implements Listener {
 
             mezclas.put(b.getLocation(), new MezclaVolatil(resultados));
 
-            // Efectos de peligro
+            // Efectos de peligro (Alarma Ciberpunk)
             b.getWorld().playSound(b.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1f, 0.5f);
 
             // Avisamos a los jugadores cercanos
             for (Player p : b.getWorld().getPlayers()) {
                 if (p.getLocation().distance(b.getLocation()) <= 5) {
-                    p.sendTitle("§8§l[ §c§l! §8§l]", "§7¡La mezcla es inestable! (Shift x3)", 5, 40, 5);
+                    p.sendTitle(
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FF5555<bold>! PELIGRO !</bold>")),
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FFAA00Mezcla Inestable. Agáchate (Shift) x3 para estabilizar.")),
+                            5, 40, 5
+                    );
                 }
             }
         }
@@ -74,7 +76,7 @@ public class AlchemyMinigameManager implements Listener {
 
     @EventHandler
     public void alAgacharse(PlayerToggleSneakEvent event) {
-        if (!event.isSneaking()) return; // Solo cuenta cuando presiona el shift, no al soltarlo
+        if (!event.isSneaking()) return;
 
         Player p = event.getPlayer();
         Location pLoc = p.getLocation();
@@ -87,14 +89,14 @@ public class AlchemyMinigameManager implements Listener {
                 MezclaVolatil mezcla = entry.getValue();
                 mezcla.bombeos++;
 
-                // Efecto de "bombeo"
+                // Efecto de "bombeo" corporativo
                 p.playSound(locSoporte, Sound.ITEM_BUCKET_FILL, 0.5f, 1f + (mezcla.bombeos * 0.2f));
-                locSoporte.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, locSoporte.add(0.5, 1, 0.5), 5);
+                locSoporte.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, locSoporte.clone().add(0.5, 1, 0.5), 5);
 
                 if (mezcla.bombeos >= 3) {
                     // ¡Éxito!
                     p.playSound(locSoporte, Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
-                    p.sendMessage("§a🧪 ¡Mezcla estabilizada! Las pociones son ahora más puras.");
+                    p.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>MEZCLA ESTABILIZADA:</bold> &#AAAAAALa pureza de los químicos ha sido potenciada."));
 
                     aplicarPremio(locSoporte, mezcla.pocionesOriginales);
                     mezclas.remove(locSoporte);
@@ -130,11 +132,11 @@ public class AlchemyMinigameManager implements Listener {
                 ItemStack item = stand.getInventory().getItem(i);
                 if (item != null && item.getType() != Material.AIR) {
                     // Convierte en botella de agua básica
-                    stand.getInventory().setItem(i, new ItemStack(Material.GLASS_BOTTLE)); // O Potion_Water
+                    stand.getInventory().setItem(i, new ItemStack(Material.GLASS_BOTTLE));
                 }
             }
             loc.getWorld().playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 0.5f, 1.5f);
-            loc.getWorld().spawnParticle(Particle.SMOKE, loc.add(0.5, 0.5, 0.5), 20, 0.2, 0.2, 0.2, 0.05); // 1.21 Fix Particle name
+            loc.getWorld().spawnParticle(Particle.SMOKE, loc.clone().add(0.5, 0.5, 0.5), 20, 0.2, 0.2, 0.2, 0.05);
         }
     }
 

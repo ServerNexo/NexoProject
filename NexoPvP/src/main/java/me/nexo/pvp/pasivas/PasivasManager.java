@@ -10,6 +10,7 @@ import me.nexo.pvp.NexoPvP;
 // 🟢 MANTENEMOS ESTO: El Addon se comunica con la API del Core
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 
 import org.bukkit.Bukkit;
 import org.bukkit.Particle;
@@ -27,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class PasivasManager {
 
-    // 🟢 ARQUITECTURA: Cambiamos Main por NexoPvP
     private final NexoPvP plugin;
 
     // Control de tiempos y estados
@@ -35,7 +35,6 @@ public class PasivasManager {
     public final Map<UUID, Long> ultimoTroncoRoto = new ConcurrentHashMap<>();
     public final Map<UUID, Long> invulnerablesUltimaBatalla = new ConcurrentHashMap<>();
 
-    // 🟢 ARQUITECTURA: Pedimos NexoPvP en el constructor
     public PasivasManager(NexoPvP plugin) {
         this.plugin = plugin;
         iniciarTareasPeriodicas();
@@ -45,7 +44,7 @@ public class PasivasManager {
     // 🧠 LECTURA DE NIVELES (Híbrido NexoUser / AuraSkills)
     // ==========================================
     public int getNivel(Player p, dev.aurelium.auraskills.api.skill.Skill skill) {
-        // 🟢 ARQUITECTURA LIMPIA: Redirigir Combate, Minería y Agricultura a NexoUser (¡El Core nos responde!)
+        // 🟢 ARQUITECTURA LIMPIA: Redirigir Combate, Minería y Agricultura a NexoUser
         NexoUser nexoUser = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
         if (nexoUser != null) {
             if (skill == Skills.FIGHTING) return nexoUser.getCombateNivel();
@@ -88,7 +87,8 @@ public class PasivasManager {
                 if (invulnerablesUltimaBatalla.containsKey(id)) {
                     if (System.currentTimeMillis() > invulnerablesUltimaBatalla.get(id)) {
                         invulnerablesUltimaBatalla.remove(id);
-                        p.sendMessage("§cTu inmunidad de Última Batalla se ha desvanecido.");
+                        // 🌟 Mensaje Ciberpunk
+                        p.sendMessage(NexoColor.parse("&#FF5555[!] Escudo de Emergencia Agotado: &#AAAAAATu inmunidad táctica se ha desvanecido."));
                     }
                 }
             }

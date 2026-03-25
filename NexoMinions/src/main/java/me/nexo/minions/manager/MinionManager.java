@@ -1,6 +1,7 @@
 package me.nexo.minions.manager;
 
 import com.nexomc.nexo.api.NexoItems;
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
@@ -57,7 +58,8 @@ public class MinionManager {
             TextDisplay holograma = loc.getWorld().spawn(holoLoc, TextDisplay.class, holo -> {
                 holo.setBillboard(TextDisplay.Billboard.CENTER);
                 holo.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 0));
-                holo.setText("§eCargando Abeja...");
+                // 🌟 Título de Carga en formato Ciberpunk
+                holo.text(NexoColor.parse("&#FFAA00Iniciando Sistemas..."));
             });
 
             pdc.set(new NamespacedKey(plugin, "minion_holo_id"), PersistentDataType.STRING, holograma.getUniqueId().toString());
@@ -95,7 +97,7 @@ public class MinionManager {
                     }
                     cantidad -= dar;
                 }
-                player.sendMessage("§a📦 Has recuperado " + minion.getStoredItems() + " ítems que la Abeja tenía guardados.");
+                player.sendMessage(NexoColor.parse("&#00E5FF[📦] Extracción Remota: &#AAAAAAHas recuperado &#FFAA00" + minion.getStoredItems() + " ítems &#AAAAAAdel depósito del operario."));
             }
 
             if (minion.getEntity() != null) minion.getEntity().remove();
@@ -108,13 +110,13 @@ public class MinionManager {
                 addPlacedMinion(owner, -1);
 
                 if (owner.getUniqueId().equals(player.getUniqueId())) {
-                    owner.sendMessage("§a§l¡BZZZ! §eHas recogido tu Minion. §7(" + getPlacedMinions(owner) + "/" + getMaxMinions(owner) + ")");
+                    owner.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>PROTOCOLO DE DESMANTELAMIENTO:</bold> &#AAAAAAOperario recogido con éxito. &#00E5FF(" + getPlacedMinions(owner) + "/" + getMaxMinions(owner) + ")"));
                 } else {
-                    owner.sendMessage("§c⚠️ Un administrador ha recogido uno de tus Minions.");
-                    player.sendMessage("§aMinion recogido. El espacio le fue devuelto a su dueño legítimo.");
+                    owner.sendMessage(NexoColor.parse("&#FF5555[!] Alerta de Red: &#AAAAAAUn administrador corporativo ha desmantelado uno de tus operarios."));
+                    player.sendMessage(NexoColor.parse("&#55FF55[✓] Operario desmantelado. Cuota operativa restaurada al propietario original."));
                 }
             } else {
-                player.sendMessage("§c⚠️ ADVERTENCIA: El dueño del Minion está OFFLINE. Su límite de minions podría desincronizarse.");
+                player.sendMessage(NexoColor.parse("&#FF5555[!] Advertencia del Sistema: &#AAAAAAEl propietario de la unidad está desconectado. Sincronización de cuota pospuesta."));
             }
 
             plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "minion give " + player.getName() + " " + minion.getType().name() + " " + minion.getTier());

@@ -1,13 +1,13 @@
 package me.nexo.minions.listeners;
 
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
-import me.nexo.protections.NexoProtections; // 🌟 IMPORT AÑADIDO
-import me.nexo.protections.core.ProtectionStone; // 🌟 IMPORT AÑADIDO
-import me.nexo.protections.core.ClaimAction; // 🌟 IMPORT AÑADIDO
+import me.nexo.protections.NexoProtections;
+import me.nexo.protections.core.ProtectionStone;
+import me.nexo.protections.core.ClaimAction;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
@@ -52,7 +52,7 @@ public class MinionListener implements Listener {
             if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
                 ProtectionStone stone = NexoProtections.getClaimManager().getStoneAt(event.getClickedBlock().getLocation());
                 if (stone != null && !stone.hasPermission(player.getUniqueId(), ClaimAction.BUILD)) {
-                    player.sendMessage(ChatColor.RED + "🛡️ ¡No puedes establecer minions en territorio enemigo!");
+                    player.sendMessage(NexoColor.parse("&#FF5555[!] Acceso Denegado: Territorio corporativo ajeno."));
                     player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                     return; // 🛑 Cortamos el flujo
                 }
@@ -68,7 +68,7 @@ public class MinionListener implements Listener {
                     int placedMinions = plugin.getMinionManager().getPlacedMinions(player);
 
                     if (placedMinions >= maxMinions) {
-                        player.sendMessage(ChatColor.RED + "🛡️ ¡Has alcanzado tu límite máximo de " + maxMinions + " minions!");
+                        player.sendMessage(NexoColor.parse("&#FF5555[!] Límite Operativo Alcanzado: &#AAAAAAMáximo de " + maxMinions + " operarios permitidos."));
                         player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                         return; // 🛑 Detenemos el código aquí
                     }
@@ -83,9 +83,9 @@ public class MinionListener implements Listener {
                     plugin.getMinionManager().addPlacedMinion(player, 1);
 
                     item.setAmount(item.getAmount() - 1);
-                    player.sendMessage(ChatColor.GREEN + "🐝 ¡" + type.getDisplayName() + " ha comenzado a trabajar! §7(" + (placedMinions + 1) + "/" + maxMinions + ")");
+                    player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>OPERARIO DESPLEGADO:</bold> &#AAAAAAUnidad " + type.getDisplayName() + " en línea. &#00E5FF(" + (placedMinions + 1) + "/" + maxMinions + ")"));
                 } catch (IllegalArgumentException e) {
-                    event.getPlayer().sendMessage(ChatColor.RED + "Error: Este minion está corrupto.");
+                    event.getPlayer().sendMessage(NexoColor.parse("&#FF5555[!] Error de Firmware: El disco de datos de este operario está corrupto."));
                 }
             }
         }
@@ -110,7 +110,7 @@ public class MinionListener implements Listener {
 
                     // 1. Verificamos si el que rompe el bloque NO es el dueño
                     if (ownerStr != null && !event.getPlayer().getUniqueId().toString().equals(ownerStr) && !event.getPlayer().hasPermission("nexominions.admin")) {
-                        event.getPlayer().sendMessage(ChatColor.RED + "🛡️ ¡No puedes romper el suelo del Minion de otro jugador!");
+                        event.getPlayer().sendMessage(NexoColor.parse("&#FF5555[!] Infracción de Seguridad: No puedes desestabilizar la plataforma de un operario ajeno."));
                         event.setCancelled(true);
                         return;
                     }

@@ -1,11 +1,11 @@
 package me.nexo.minions.listeners;
 
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.minions.menu.MinionMenu;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
@@ -60,7 +60,7 @@ public class MenuListener implements Listener {
         if (slot == 31) {
             int cantidad = minion.getStoredItems();
             if (cantidad <= 0) {
-                player.sendMessage(ChatColor.RED + "La mochila está vacía.");
+                player.sendMessage(NexoColor.parse("&#FF5555[!] Extracción Denegada: El depósito del operario está vacío."));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -92,13 +92,13 @@ public class MenuListener implements Listener {
             if (!skillAura.isEmpty()) {
                 String comando = "skills addxp " + player.getName() + " " + skillAura + " " + xpGanada + " -s";
                 org.bukkit.Bukkit.getServer().dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), comando);
-                player.sendMessage(ChatColor.LIGHT_PURPLE + "✨ +" + xpGanada + " XP de " + nombreSkill);
+                player.sendMessage(NexoColor.parse("&#AA00AA✨ Datos Procesados: +" + xpGanada + " XP en " + nombreSkill));
             }
 
             minion.setStoredItems(0);
             minion.getEntity().getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);
 
-            player.sendMessage(ChatColor.GREEN + "¡Extraíste " + cantidad + " ítems!");
+            player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>EXTRACCIÓN COMPLETADA:</bold> &#AAAAAASolicitaste " + cantidad + " unidades a la red."));
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
 
             player.openInventory(new MinionMenu(plugin, minion).getInventory());
@@ -110,14 +110,14 @@ public class MenuListener implements Listener {
             plugin.getMinionManager().recogerMinion(player, minion.getEntity().getUniqueId());
         }
 
-        // ⬆️ Clic en Evolucionar (Slot 22)
+        // ⬆ Clic en Evolucionar (Slot 22)
         if (slot == 22) {
             int sigNivel = minion.getTier() + 1;
             if (sigNivel > 12) return;
 
             ConfigurationSection costo = plugin.getTiersConfig().getCostoEvolucion(minion.getType(), sigNivel);
             if (costo == null) {
-                player.sendMessage(ChatColor.RED + "El costo no está configurado.");
+                player.sendMessage(NexoColor.parse("&#FF5555[!] Error del Sistema: El esquema de evolución no está registrado."));
                 return;
             }
 
@@ -128,14 +128,14 @@ public class MenuListener implements Listener {
             boolean pagoExitoso = cobrarItems(player, reqCant, reqMat, reqNexo);
 
             if (!pagoExitoso) {
-                player.sendMessage(ChatColor.RED + "No tienes los materiales necesarios para evolucionar.");
+                player.sendMessage(NexoColor.parse("&#FF5555[!] Recursos Insuficientes: &#AAAAAANo dispones de los materiales para instalar la mejora."));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             minion.setTier(sigNivel);
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-            player.sendMessage(ChatColor.GREEN + "¡Tu Minion ha evolucionado al Nivel " + sigNivel + "!");
+            player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>ACTUALIZACIÓN COMPLETADA:</bold> &#AAAAAAFirmware de operario ascendido a Nivel " + sigNivel + "."));
             minion.getEntity().getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, minion.getEntity().getLocation().add(0, 1, 0), 50, 0.5, 0.5, 0.5, 0.1);
 
             player.openInventory(new MinionMenu(plugin, minion).getInventory());

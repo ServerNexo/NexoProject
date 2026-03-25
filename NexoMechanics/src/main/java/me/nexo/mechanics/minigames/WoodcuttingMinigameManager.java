@@ -1,5 +1,6 @@
 package me.nexo.mechanics.minigames;
 
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO
 import me.nexo.mechanics.NexoMechanics;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
@@ -18,14 +19,12 @@ import me.nexo.protections.NexoProtections;
 import me.nexo.protections.core.ProtectionStone;
 import me.nexo.protections.core.ClaimAction;
 
-
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WoodcuttingMinigameManager implements Listener {
 
-    // 🟢 ARQUITECTURA: Usamos el plugin de Mechanics
     private final NexoMechanics plugin;
     private final Map<UUID, NucleoActivo> nucleos = new ConcurrentHashMap<>();
 
@@ -70,9 +69,9 @@ public class WoodcuttingMinigameManager implements Listener {
                     int maxEnergia = 100 + ((user.getNexoNivel() - 1) * 20) + user.getEnergiaExtraAccesorios();
                     int nuevaEnergia = Math.min(user.getEnergiaMineria() + 10, maxEnergia);
                     user.setEnergiaMineria(nuevaEnergia);
-                    p.sendActionBar("§6§l¡Núcleo de Ámbar destruido! §e+10⚡");
+                    p.sendActionBar(NexoColor.parse("&#FFAA00[✓] <bold>NÚCLEO ORGÁNICO DESTRUIDO:</bold> &#AAAAAARecarga del traje &#55FF55(+10⚡)"));
                 } else {
-                    p.sendActionBar("§6§l¡Núcleo de Ámbar destruido!");
+                    p.sendActionBar(NexoColor.parse("&#FFAA00[✓] <bold>NÚCLEO ORGÁNICO DESTRUIDO</bold>"));
                 }
 
                 // Limpieza visual - CORREGIDO PARA 1.21
@@ -105,6 +104,9 @@ public class WoodcuttingMinigameManager implements Listener {
             // Efecto visual para llamar la atención
             p.getWorld().spawnParticle(Particle.WAX_ON, objetivo.getLocation().add(0.5, 0.5, 0.5), 15);
 
+            // Alerta Ciberpunk para el jugador
+            p.sendActionBar(NexoColor.parse("&#FF5555✨ <bold>¡ANOMALÍA BOTÁNICA!</bold> &#AAAAAAGolpea el núcleo inestable rápido."));
+
             // Tiene 3 segundos para reaccionar
             nucleos.put(p.getUniqueId(), new NucleoActivo(objetivo, System.currentTimeMillis() + 3000L, objetivo.getType()));
         }
@@ -129,6 +131,7 @@ public class WoodcuttingMinigameManager implements Listener {
                         // El jugador falló, el bloque vuelve a la normalidad - CORREGIDO PARA 1.21
                         p.sendBlockChange(entry.getValue().bloque().getLocation(), Bukkit.createBlockData(entry.getValue().tipoOriginal()));
                         p.playSound(p.getLocation(), Sound.BLOCK_CANDLE_EXTINGUISH, 0.5f, 1f);
+                        p.sendActionBar(NexoColor.parse("&#555555[!] La biomasa se ha endurecido. Oportunidad perdida."));
                     }
                     nucleos.remove(entry.getKey());
                 }

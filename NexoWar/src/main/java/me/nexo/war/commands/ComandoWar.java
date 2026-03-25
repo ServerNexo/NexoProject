@@ -4,6 +4,7 @@ import me.nexo.clans.NexoClans;
 import me.nexo.clans.core.NexoClan;
 import me.nexo.core.NexoCore;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import me.nexo.war.NexoWar;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -42,19 +43,19 @@ public class ComandoWar implements CommandExecutor {
         NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
 
         if (user == null || !user.hasClan()) {
-            player.sendMessage("§cDebes pertenecer a un clan para participar en Guerras de Honor.");
+            player.sendMessage(NexoColor.parse("&#FF5555[!] Acceso Denegado: &#AAAAAADebes pertenecer a un sindicato para participar en Conflictos Corporativos."));
             return true;
         }
 
         if (!user.getClanRole().equals("LIDER") && !user.getClanRole().equals("OFICIAL")) {
-            player.sendMessage("§cSolo los Líderes y Oficiales pueden gestionar las guerras.");
+            player.sendMessage(NexoColor.parse("&#FF5555[!] Autoridad Insuficiente: &#AAAAAASolo Directores y Oficiales pueden gestionar Contratos de Exterminio."));
             return true;
         }
 
         if (args.length == 0) {
-            player.sendMessage("§e⚔ §lComandos de Guerra:");
-            player.sendMessage("§f/war challenge <TagClan> <Apuesta> §7- Desafía a un clan rival.");
-            player.sendMessage("§f/war accept §7- Acepta el desafío pendiente y comienza el Período de Gracia.");
+            player.sendMessage(NexoColor.parse("&#FFAA00⚔ <bold>TERMINAL DE CONFLICTOS:</bold>"));
+            player.sendMessage(NexoColor.parse("&#00E5FF/war challenge <Tag> <Fondos> &#AAAAAA- Inicia un contrato de hostilidad contra un sindicato rival."));
+            player.sendMessage(NexoColor.parse("&#00E5FF/war accept &#AAAAAA- Firma el contrato pendiente e inicia el Período de Preparación."));
             return true;
         }
 
@@ -66,7 +67,7 @@ public class ComandoWar implements CommandExecutor {
         // ==========================================
         if (sub.equals("challenge")) {
             if (args.length < 3) {
-                player.sendMessage("§cUso correcto: /war challenge <TagClanEnemigo> <Apuesta>");
+                player.sendMessage(NexoColor.parse("&#FF5555[!] Sintaxis de Red: &#AAAAAA/war challenge <TagRival> <Fondos>"));
                 return true;
             }
 
@@ -76,7 +77,7 @@ public class ComandoWar implements CommandExecutor {
                 apuesta = new BigDecimal(args[2]);
                 if (apuesta.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
             } catch (NumberFormatException e) {
-                player.sendMessage("§cLa apuesta debe ser un número válido mayor a 0.");
+                player.sendMessage(NexoColor.parse("&#FF5555[!] Error Financiero: &#AAAAAALos fondos asignados deben ser mayores a 0."));
                 return true;
             }
 
@@ -86,12 +87,12 @@ public class ComandoWar implements CommandExecutor {
 
             // 1. Verificamos fondos del atacante
             if (atacante.getBankBalance().compareTo(apuesta) < 0) {
-                player.sendMessage("§cEl banco de tu clan no tiene fondos suficientes para respaldar esta apuesta.");
+                player.sendMessage(NexoColor.parse("&#FF5555[!] Fondos Insuficientes: &#AAAAAALa bóveda de tu sindicato no puede respaldar esta operación."));
                 return true;
             }
 
             // 2. Buscamos al clan enemigo en la base de datos (Asíncrono para no dar lag)
-            player.sendMessage("§7Buscando clan rival y verificando sus fondos...");
+            player.sendMessage(NexoColor.parse("&#AAAAAA[⟳] Escaneando red en busca del sindicato rival y auditando sus reservas..."));
             CompletableFuture.runAsync(() -> {
                 String sql = "SELECT id FROM nexo_clans WHERE tag = ?";
                 try (Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
@@ -102,7 +103,7 @@ public class ComandoWar implements CommandExecutor {
                     if (rs.next()) {
                         UUID targetId = UUID.fromString(rs.getString("id"));
                         if (targetId.equals(atacante.getId())) {
-                            player.sendMessage("§cNo puedes declarar la guerra a tu propio clan. ¿Estás loco?");
+                            player.sendMessage(NexoColor.parse("&#FF5555[!] Error Lógico: &#AAAAAANo puedes emitir un contrato de exterminio contra tu propia facción."));
                             return;
                         }
 
@@ -110,32 +111,32 @@ public class ComandoWar implements CommandExecutor {
                         clansPlugin.getClanManager().loadClanAsync(targetId, defensor -> {
                             if (defensor == null) return;
                             if (defensor.getBankBalance().compareTo(apuesta) < 0) {
-                                player.sendMessage("§cEl clan enemigo es demasiado pobre. No pueden cubrir la apuesta de 🪙 " + apuesta);
+                                player.sendMessage(NexoColor.parse("&#FF5555[!] Auditoría Fallida: &#AAAAAAEl objetivo no posee liquidez para cubrir la cuota de &#FFAA00🪙 " + apuesta));
                                 return;
                             }
 
                             // 4. Registrar la propuesta
                             desafiosPendientes.put(targetId, new DesafioPendiente(atacante.getId(), apuesta));
-                            player.sendMessage("§a¡El desafío de sangre ha sido enviado a " + defensor.getName() + "!");
+                            player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>CONTRATO EMITIDO:</bold> &#AAAAAADeclaración de hostilidad enviada a " + defensor.getName() + "."));
 
                             // 5. Notificar a los líderes del clan enemigo conectados
                             for (Player p : Bukkit.getOnlinePlayers()) {
                                 NexoUser tu = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(p.getUniqueId());
                                 if (tu != null && tu.getClanId() != null && tu.getClanId().equals(targetId) && (tu.getClanRole().equals("LIDER") || tu.getClanRole().equals("OFICIAL"))) {
                                     p.sendMessage(" ");
-                                    p.sendMessage("§4§l⚔ ¡DECLARACIÓN DE GUERRA!");
-                                    p.sendMessage("§eEl clan §c" + atacante.getName() + " §eha puesto §6🪙 " + apuesta + " §esobre la mesa.");
-                                    p.sendMessage("§eSi aceptan, el dinero de ambos bancos será congelado. El ganador se lo lleva TODO.");
-                                    p.sendMessage("§7Usa §a/war accept §7para aceptar el desafío.");
+                                    p.sendMessage(NexoColor.parse("&#FF5555<bold>⚔ ¡ALERTA DE CONFLICTO CORPORATIVO!</bold>"));
+                                    p.sendMessage(NexoColor.parse("&#AAAAAAEl sindicato &#FF5555" + atacante.getName() + " &#AAAAAAha invertido &#FFAA00🪙 " + apuesta + " &#AAAAAApara financiar tu exterminio."));
+                                    p.sendMessage(NexoColor.parse("&#AAAAAASi firmas, los activos de ambas bóvedas serán congelados. El vencedor se lleva el total del fondo."));
+                                    p.sendMessage(NexoColor.parse("&#AAAAAAEjecuta &#00E5FF/war accept &#AAAAAApara firmar el contrato."));
                                     p.sendMessage(" ");
                                 }
                             }
                         });
                     } else {
-                        player.sendMessage("§cNo se encontró ningún clan con el tag " + targetTag);
+                        player.sendMessage(NexoColor.parse("&#FF5555[!] Objetivo No Encontrado: &#AAAAAANingún sindicato registrado con el tag " + targetTag));
                     }
                 } catch (Exception e) {
-                    player.sendMessage("§cError de base de datos al buscar el clan.");
+                    player.sendMessage(NexoColor.parse("&#FF5555[!] Error de Conexión: &#AAAAAAFalla al consultar la base de datos central."));
                 }
             });
             return true;
@@ -147,11 +148,11 @@ public class ComandoWar implements CommandExecutor {
         if (sub.equals("accept")) {
             DesafioPendiente desafio = desafiosPendientes.remove(user.getClanId());
             if (desafio == null) {
-                player.sendMessage("§cTu clan no tiene ningún desafío de guerra pendiente.");
+                player.sendMessage(NexoColor.parse("&#FF5555[!] Sin Contratos: &#AAAAAATu sindicato no tiene solicitudes de hostilidad pendientes."));
                 return true;
             }
 
-            player.sendMessage("§7Iniciando preparativos de guerra...");
+            player.sendMessage(NexoColor.parse("&#AAAAAA[⟳] Procesando firmas e iniciando despliegue táctico..."));
             clansPlugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(defensor -> {
                 clansPlugin.getClanManager().loadClanAsync(desafio.clanAtacanteId(), atacante -> {
                     if (atacante != null) {

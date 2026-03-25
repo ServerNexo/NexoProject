@@ -1,5 +1,6 @@
 package me.nexo.pvp.pvp;
 
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -45,12 +46,12 @@ public class PvPListener implements Listener {
                     }
 
                     if (!ignorarProteccion) {
-                        atacante.sendMessage("§cNo puedes atacar en una Zona Segura.");
+                        atacante.sendMessage(NexoColor.parse("&#FF5555[!] Bloqueo de Armamento: &#AAAAAAEl objetivo se encuentra en una zona neutral."));
                         event.setCancelled(true);
                         return; // Cortamos el evento antes de que entren en combate
                     } else {
                         // Opcional: Avisarle que está en territorio enemigo
-                        // atacante.sendMessage("§4⚔ ¡Estás derramando sangre en territorio enemigo!");
+                        // atacante.sendMessage(NexoColor.parse("&#FF5555[!] ALERTA TÁCTICA: Fuego autorizado en territorio hostil."));
                     }
                 }
             }
@@ -66,7 +67,7 @@ public class PvPListener implements Listener {
     }
 
     // ==========================================
-    // 🏆 SISTEMA DE HONOR Y BOUNTY (Intacto)
+    // 🏆 SISTEMA DE HONOR Y BOUNTY
     // ==========================================
     @EventHandler
     public void onMuerte(PlayerDeathEvent event) {
@@ -81,13 +82,15 @@ public class PvPListener implements Listener {
 
             int honorActual = manager.puntosHonor.getOrDefault(idAsesino, 0) + 1;
             manager.puntosHonor.put(idAsesino, honorActual);
-            asesino.sendMessage("§e⚔ ¡Has derrotado a " + victima.getName() + "! §6(+1 Honor)");
+            asesino.sendMessage(NexoColor.parse("&#FFAA00⚔ <bold>OBJETIVO NEUTRALIZADO:</bold> &#AAAAAA" + victima.getName() + " &#55FF55(+1 Honor)"));
 
             int rachaVictima = manager.rachaAsesinatos.getOrDefault(idVictima, 0);
 
             if (rachaVictima >= 3) {
-                Bukkit.broadcastMessage("§e§l[CAZARRECOMPENSAS] §f" + asesino.getName() + " §aha cobrado la recompensa por la cabeza de §c" + victima.getName() + "§a!");
-                asesino.sendMessage("§6💎 ¡Bounty Reclamado! Ganaste +5 de Honor extra y un Diamante.");
+                // 🌟 CORRECCIÓN: Usamos Bukkit.broadcast() para enviar el Component
+                Bukkit.broadcast(NexoColor.parse("&#00E5FF<bold>[CAZARRECOMPENSAS]</bold> &#FFFFFF" + asesino.getName() + " &#AAAAAAha cobrado el contrato por la cabeza de &#FF5555" + victima.getName() + "&#AAAAAA!"));
+
+                asesino.sendMessage(NexoColor.parse("&#00E5FF[💎] <bold>Bounty Reclamado:</bold> &#AAAAAATransferencia de +5 Honor y recurso primario completada."));
                 manager.puntosHonor.put(idAsesino, honorActual + 5);
                 asesino.getInventory().addItem(new ItemStack(Material.DIAMOND));
                 asesino.playSound(asesino.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
@@ -97,9 +100,11 @@ public class PvPListener implements Listener {
             manager.rachaAsesinatos.put(idAsesino, rachaAsesino);
 
             if (rachaAsesino == 3) {
-                Bukkit.broadcastMessage("§4§l[SE BUSCA] §c" + asesino.getName() + " §7está en una racha de sangre (3 Kills). ¡Hay recompensa por su cabeza!");
+                // 🌟 CORRECCIÓN: Usamos Bukkit.broadcast()
+                Bukkit.broadcast(NexoColor.parse("&#FF5555<bold>[OBJETIVO PRIORITARIO]</bold> &#FFFFFF" + asesino.getName() + " &#AAAAAAestá en racha letal (3 Kills). ¡Contrato de caza emitido!"));
             } else if (rachaAsesino > 3) {
-                Bukkit.broadcastMessage("§4§l[IMPARABLE] §c" + asesino.getName() + " §7ha llegado a " + rachaAsesino + " Kills!");
+                // 🌟 CORRECCIÓN: Usamos Bukkit.broadcast()
+                Bukkit.broadcast(NexoColor.parse("&#FF5555<bold>[AMENAZA NIVEL OMEGA]</bold> &#FFFFFF" + asesino.getName() + " &#AAAAAAha alcanzado " + rachaAsesino + " Kills consecutivas!"));
             }
         }
 
@@ -112,7 +117,8 @@ public class PvPListener implements Listener {
         if (manager.estaEnCombate(p)) {
             p.setHealth(0.0);
             manager.enCombate.remove(p.getUniqueId());
-            Bukkit.broadcastMessage("§c☠ §l" + p.getName() + " §cse desconectó cobardemente en combate.");
+            // 🌟 CORRECCIÓN: Usamos Bukkit.broadcast() en lugar de Bukkit.broadcastMessage()
+            Bukkit.broadcast(NexoColor.parse("&#FF5555☠ <bold>DESCONEXIÓN COBARDE:</bold> &#FFFFFF" + p.getName() + " &#AAAAAAevadió el combate y sus sistemas fueron purgados."));
         }
     }
 }

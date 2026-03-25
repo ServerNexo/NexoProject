@@ -1,5 +1,6 @@
 package me.nexo.mechanics.minigames;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.mechanics.NexoMechanics;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
@@ -17,7 +18,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class CombatComboManager implements Listener {
 
-    // 🟢 ARQUITECTURA: Ahora usamos el plugin de Mechanics
     private final NexoMechanics plugin;
 
     private final Map<UUID, Integer> combos = new ConcurrentHashMap<>();
@@ -42,7 +42,7 @@ public class CombatComboManager implements Listener {
 
             // Efecto visual/sonoro según el combo
             p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f + (comboActual * 0.1f));
-            p.sendActionBar("§c§l⚔ ¡COMBO x" + comboActual + "!");
+            p.sendActionBar(NexoColor.parse("&#FF5555<bold>⚔ ¡RACHA DE COMBATE x" + comboActual + "!</bold>"));
 
             // Activar Frenesí al llegar a 10
             if (comboActual == 10) {
@@ -56,7 +56,11 @@ public class CombatComboManager implements Listener {
         UUID id = p.getUniqueId();
         enFrenesi.put(id, System.currentTimeMillis() + 10000L); // 10 segundos
 
-        p.sendTitle("§4§l¡FRENESÍ!", "§cEnergía infinita y Velocidad", 5, 40, 5);
+        p.sendTitle(
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FF5555<bold>¡FRENESÍ!</bold>")),
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FFAA00Energía de Núcleo Infinita")),
+                5, 40, 5
+        );
         p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1.5f);
         p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1, false, false, true));
 
@@ -71,8 +75,8 @@ public class CombatComboManager implements Listener {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline()) {
                 p.setWorldBorder(null); // Quita la pantalla roja
-                p.sendMessage("§8El Frenesí se ha desvanecido...");
-                enFrenesi.remove(id); // 🟢 FIX: Limpiamos el mapa al terminar
+                p.sendMessage(NexoColor.parse("&#AAAAAAEl Frenesí se ha desvanecido. Sistemas retornando a la normalidad."));
+                enFrenesi.remove(id); // Limpiamos el mapa al terminar
             }
         }, 200L);
     }
@@ -85,7 +89,7 @@ public class CombatComboManager implements Listener {
                 if (ahora - ultimoKill.getOrDefault(id, 0L) > 3000) {
                     combos.remove(id);
                     Player p = Bukkit.getPlayer(id);
-                    if (p != null) p.sendActionBar("§8Combo perdido...");
+                    if (p != null) p.sendActionBar(NexoColor.parse("&#555555Racha de combate finalizada."));
                 }
             }
         }, 10L, 10L);

@@ -25,7 +25,8 @@ public class ComandoProteccion implements CommandExecutor {
         if (!(sender instanceof Player player)) return true;
 
         if (!player.hasPermission("nexo.admin")) {
-            player.sendMessage(NexoColor.parse("<red>No tienes permiso para generar un Nexo."));
+            // 🌟 Alerta corporativa de permisos
+            player.sendMessage(NexoColor.parse("&#FF5555[!] Acceso Denegado: &#AAAAAACredenciales insuficientes para solicitar hardware de nivel administrador."));
             return true;
         }
 
@@ -33,19 +34,22 @@ public class ComandoProteccion implements CommandExecutor {
         ItemStack stone = new ItemStack(Material.BEACON);
         ItemMeta meta = stone.getItemMeta();
 
-        // ¡Usamos el nuevo Motor de Color!
-        meta.displayName(NexoColor.parse("<gradient:#00FFAA:#0055FF><bold>Nexo de Protección</bold></gradient>"));
-        meta.lore(List.of(
-                NexoColor.parse("&7Coloca este bloque para reclamar"),
-                NexoColor.parse("&7un territorio y habilitar la"),
-                NexoColor.parse("&7construcción de Factorías."),
-                NexoColor.parse(" "),
-                NexoColor.parse("&#00ff00[!] Clic para colocar")
-        ));
+        if (meta != null) {
+            // ¡Usamos el nuevo Motor de Color con nuestra Paleta Ciberpunk!
+            meta.displayName(NexoColor.parse("&#00E5FF<bold>NEXO DE PROTECCIÓN TÁCTICA</bold>"));
+            meta.lore(List.of(
+                    NexoColor.parse("&#AAAAAADespliega este hardware para asegurar"),
+                    NexoColor.parse("&#AAAAAAun perímetro corporativo y autorizar"),
+                    NexoColor.parse("&#AAAAAAla construcción de instalaciones seguras."),
+                    NexoColor.parse(" "),
+                    NexoColor.parse("&#55FF55► Clic derecho para inicializar despliegue")
+            ));
 
-        stone.setItemMeta(meta);
+            stone.setItemMeta(meta);
+        }
+
         player.getInventory().addItem(stone);
-        player.sendMessage(NexoColor.parse("&#00ff00¡Has recibido un Nexo de Protección!"));
+        player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>SUMINISTRO AUTORIZADO:</bold> &#AAAAAANexo de Protección Táctica transferido a tu inventario."));
 
         return true;
     }

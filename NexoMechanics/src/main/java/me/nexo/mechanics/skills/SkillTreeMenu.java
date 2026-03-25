@@ -22,7 +22,7 @@ public class SkillTreeMenu {
         NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
 
         if (user == null) {
-            p.sendMessage(NexoColor.parse("<red>Tus datos no han cargado. Intenta de nuevo."));
+            p.sendMessage(NexoColor.parse("&#FF5555[!] Sincronización neuronal incompleta. Aguarda un momento."));
             return;
         }
 
@@ -37,13 +37,13 @@ public class SkillTreeMenu {
 
             attachment.setPermission(permiso, true);
 
-            p.sendMessage(NexoColor.parse("<green>¡Has desbloqueado una nueva tecnología industrial!"));
-            p.sendMessage(NexoColor.parse("<gray>Puntos restantes: <aqua>" + user.getKnowledgePoints()));
+            p.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>NODO DESBLOQUEADO:</bold> &#AAAAAANueva tecnología industrial integrada a tu sistema."));
+            p.sendMessage(NexoColor.parse("&#555555Puntos de Conocimiento restantes: &#00E5FF" + user.getKnowledgePoints()));
 
             // 💾 Aquí delegas a un CompletableFuture para guardar el nuevo permiso en tu BD Supabase
 
         } else {
-            p.sendMessage(NexoColor.parse("<red>Conocimiento insuficiente. Obtén más puntos farmeando/minando."));
+            p.sendMessage(NexoColor.parse("&#FF5555[!] Conocimiento Insuficiente. &#AAAAAARequieres más experiencia práctica para procesar este nodo."));
         }
     }
 

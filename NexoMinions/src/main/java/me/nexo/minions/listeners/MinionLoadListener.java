@@ -1,5 +1,6 @@
 package me.nexo.minions.listeners;
 
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
@@ -39,7 +40,7 @@ public class MinionLoadListener implements Listener {
             // Si ya está en la memoria (Manager), lo ignoramos
             if (plugin.getMinionManager().getMinion(display.getUniqueId()) != null) continue;
 
-            // ¡Es un Minion huerfano! Lo leemos y lo reconectamos
+            // ¡Es un Minion huérfano! Lo leemos y lo reconectamos
             UUID ownerId = UUID.fromString(pdc.get(MinionKeys.OWNER, PersistentDataType.STRING));
             MinionType type = MinionType.valueOf(pdc.get(MinionKeys.TYPE, PersistentDataType.STRING));
             int tier = pdc.getOrDefault(MinionKeys.TIER, PersistentDataType.INTEGER, 1);
@@ -72,19 +73,20 @@ public class MinionLoadListener implements Listener {
                 }
             }
 
-            // 🌟 3. SISTEMA ANTI-ERRORES: Si el holograma se borró por error, lo recreamos
+            // 🌟 3. SISTEMA ANTI-ERRORES: Si el holograma se borró por error, lo recreamos (Con Paleta Ciberpunk)
             if (holograma == null) {
                 Location holoLoc = display.getLocation().clone().add(0, 1.2, 0);
                 holograma = display.getWorld().spawn(holoLoc, TextDisplay.class, holo -> {
                     holo.setBillboard(TextDisplay.Billboard.CENTER);
                     holo.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 0));
-                    holo.setText("§eCargando Abeja...");
+                    // Parseo Nativo de Paper 1.21 en HEX
+                    holo.text(NexoColor.parse("&#FFAA00Iniciando Sistemas..."));
                 });
                 // Actualizamos la ID del nuevo holograma en el Minion
                 pdc.set(new NamespacedKey(plugin, "minion_holo_id"), PersistentDataType.STRING, holograma.getUniqueId().toString());
             }
 
-            // 🌟 4. Recreamos la Abeja con el nuevo constructor
+            // 🌟 4. Recreamos al Operario con el nuevo constructor
             ActiveMinion minion = new ActiveMinion(plugin, display, hitbox, holograma, ownerId, type, tier, nextAction, stored);
 
             // 🌟 5. LA MAGIA: Calculamos el trabajo mientras el servidor/chunk estaba apagado

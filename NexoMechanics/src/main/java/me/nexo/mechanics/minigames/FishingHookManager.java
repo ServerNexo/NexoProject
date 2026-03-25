@@ -1,5 +1,6 @@
 package me.nexo.mechanics.minigames;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.mechanics.NexoMechanics;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
@@ -53,7 +54,7 @@ public class FishingHookManager implements Listener {
                         int maxEnergia = 100 + ((user.getNexoNivel() - 1) * 20) + user.getEnergiaExtraAccesorios();
 
                         user.setEnergiaMineria(Math.min(energiaAct + 5, maxEnergia));
-                        p.sendMessage("§b🎣 ¡Pesca perfecta! §e+5⚡ Energía");
+                        p.sendMessage(NexoColor.parse("&#00E5FF[✓] <bold>EXTRACCIÓN ACUÁTICA:</bold> &#AAAAAAReservas recargadas &#FFAA00(+5⚡)"));
                     }
                 }
             }
