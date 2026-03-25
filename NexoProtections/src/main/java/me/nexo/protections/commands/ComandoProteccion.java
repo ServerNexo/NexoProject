@@ -3,12 +3,14 @@ package me.nexo.protections.commands;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.protections.NexoProtections;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
 
@@ -25,17 +27,14 @@ public class ComandoProteccion implements CommandExecutor {
         if (!(sender instanceof Player player)) return true;
 
         if (!player.hasPermission("nexo.admin")) {
-            // 🌟 Alerta corporativa de permisos
             player.sendMessage(NexoColor.parse("&#FF5555[!] Acceso Denegado: &#AAAAAACredenciales insuficientes para solicitar hardware de nivel administrador."));
             return true;
         }
 
-        // 🌟 GENERAMOS LA PIEDRA DE PROTECCIÓN
         ItemStack stone = new ItemStack(Material.BEACON);
         ItemMeta meta = stone.getItemMeta();
 
         if (meta != null) {
-            // ¡Usamos el nuevo Motor de Color con nuestra Paleta Ciberpunk!
             meta.displayName(NexoColor.parse("&#00E5FF<bold>NEXO DE PROTECCIÓN TÁCTICA</bold>"));
             meta.lore(List.of(
                     NexoColor.parse("&#AAAAAADespliega este hardware para asegurar"),
@@ -44,6 +43,10 @@ public class ComandoProteccion implements CommandExecutor {
                     NexoColor.parse(" "),
                     NexoColor.parse("&#55FF55► Clic derecho para inicializar despliegue")
             ));
+
+            // 🌟 CHIP DE IDENTIFICACIÓN: Marca este faro matemáticamente como un Escudo Nexo
+            NamespacedKey key = new NamespacedKey(plugin, "is_protection_stone");
+            meta.getPersistentDataContainer().set(key, PersistentDataType.BYTE, (byte) 1);
 
             stone.setItemMeta(meta);
         }
