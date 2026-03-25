@@ -101,13 +101,10 @@ public class ProtectionListener implements Listener {
         ItemStack itemInHand = event.getItemInHand();
         if (block.getType() == Material.BEACON && itemInHand.hasItemMeta()) {
 
-            // 🌟 LECTURA DE CHIP: Verificamos matemáticamente si es un Nexo de Protección
             if (!itemInHand.getItemMeta().getPersistentDataContainer().has(isProtectionStoneKey, PersistentDataType.BYTE)) {
-                return; // Es un faro normal de Minecraft
+                return;
             }
 
-            // 🌟 COLOCACIÓN OPTIMISTA: NO cancelamos el evento.
-            // Dejamos que Minecraft ponga el bloque y reste 1 ítem del inventario automáticamente.
             Location loc = block.getLocation();
 
             // 1. Registramos en la RAM al instante
@@ -134,20 +131,17 @@ public class ProtectionListener implements Listener {
             // 3. Verificamos los límites en la Base de Datos (en segundo plano)
             limitManager.canPlaceNewStone(player).thenAccept(canPlace -> {
                 if (!canPlace) {
-                    // 🚨 ROLLBACK: Si superó el límite, destruimos el faro y le devolvemos el ítem.
                     Bukkit.getScheduler().runTask(NexoProtections.getPlugin(NexoProtections.class), () -> {
                         block.setType(Material.AIR);
                         claimManager.removeStoneFromCache(newStone);
                         player.closeInventory();
 
-                        // Borramos la hitbox que acabamos de crear
                         loc.getWorld().getNearbyEntities(hitboxLoc, 1, 1, 1).forEach(ent -> {
                             if (ent instanceof Interaction && ent.getPersistentDataContainer().has(nexoHitboxKey, PersistentDataType.BYTE)) {
                                 ent.remove();
                             }
                         });
 
-                        // Reembolsamos el ítem
                         ItemStack refundItem = itemInHand.clone();
                         refundItem.setAmount(1);
                         player.getInventory().addItem(refundItem);
@@ -157,7 +151,6 @@ public class ProtectionListener implements Listener {
                     return;
                 }
 
-                // ÉXITO: Guardamos en base de datos.
                 CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>ESCUDO OPERATIVO DESPLEGADO:</bold> &#AAAAAASellando un radio de &#00E5FF" + radius + " bloques&#AAAAAA a la red.");
 
                 CompletableFuture.runAsync(() -> {
@@ -182,13 +175,12 @@ public class ProtectionListener implements Listener {
         }
     }
 
-    // 🌟 NUEVO EVENTO: Interacción con la Hitbox invisible
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    // 🌟 QUITAMOS EL 'ignoreCancelled = true' PARA QUE FUNCIONE INCLUSO EN EL SPAWN
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onHitboxInteract(PlayerInteractEntityEvent event) {
         if (event.getHand() == EquipmentSlot.OFF_HAND) return;
         if (!(event.getRightClicked() instanceof Interaction hitbox)) return;
 
-        // Verificamos que sea una Hitbox de un Nexo de Protección
         if (hitbox.getPersistentDataContainer().has(nexoHitboxKey, PersistentDataType.BYTE)) {
             event.setCancelled(true);
             Player player = event.getPlayer();
@@ -197,43 +189,47 @@ public class ProtectionListener implements Listener {
             ProtectionStone stone = claimManager.getStoneAt(blockLoc);
 
             if (stone != null) {
-                if (stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) {
+                // 🌟 BYPASS ABSOLUTO: Si eres el dueño, el menú abre sí o sí.
+                if (stone.getOwnerId().equals(player.getUniqueId()) || stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) {
                     me.nexo.protections.menu.ProtectionMenu.openMenu(player, stone);
                 } else {
                     CrossplayUtils.sendMessage(player, "&#FF5555[!] Autorización Denegada: &#AAAAAANo posees las credenciales para administrar este Nexo.");
                 }
+            } else {
+                CrossplayUtils.sendMessage(player, "&#FF5555[!] Falla de Conexión: &#AAAAAAEl Nexo no está sincronizado en esta ubicación.");
             }
         }
     }
 
-    // El evento normal interceptará clics en puertas/cofres, y también atrapará clics directos al Faro
-    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    // 🌟 QUITAMOS EL 'ignoreCancelled = true' PARA QUE FUNCIONE INCLUSO EN EL SPAWN
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onInteract(PlayerInteractEvent event) {
         if (event.getHand() == EquipmentSlot.OFF_HAND) return;
         if (event.getClickedBlock() == null) return;
 
         Block block = event.getClickedBlock();
-        ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
         Player player = event.getPlayer();
 
-        if (stone != null) {
-            // 🌟 CORRECCIÓN APLICADA: Si el clic golpea el Faro físico (esquivando la hitbox)
-            if (block.getType() == Material.BEACON && event.getAction().isRightClick()) {
-
-                // 1. Bloqueamos el menú Vanilla por la fuerza bruta
+        if (block.getType() == Material.BEACON && event.getAction().isRightClick()) {
+            ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
+            if (stone != null) {
+                // Forzamos el bloqueo del menú Vanilla
                 event.setCancelled(true);
                 event.setUseInteractedBlock(org.bukkit.event.Event.Result.DENY);
 
-                // 2. ¡ABRIMOS NUESTRO MENÚ CORPORATIVO DIRECTAMENTE!
-                if (stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) {
+                // 🌟 BYPASS ABSOLUTO: Si eres el dueño, el menú abre sí o sí.
+                if (stone.getOwnerId().equals(player.getUniqueId()) || stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) {
                     me.nexo.protections.menu.ProtectionMenu.openMenu(player, stone);
                 } else {
                     CrossplayUtils.sendMessage(player, "&#FF5555[!] Autorización Denegada: &#AAAAAANo posees las credenciales para administrar este Nexo.");
                 }
                 return;
             }
+        }
 
-            // Lógica normal de proteger cofres, barriles y shulkers
+        // Lógica de protección para puertas y cofres
+        ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
+        if (stone != null) {
             String typeName = block.getType().name();
             ClaimAction action = (typeName.contains("CHEST") || typeName.contains("BARREL") || typeName.contains("SHULKER"))
                     ? ClaimAction.OPEN_CONTAINER : ClaimAction.INTERACT;
