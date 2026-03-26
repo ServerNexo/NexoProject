@@ -33,7 +33,6 @@ public class MenuListener implements Listener {
 
         // Permitimos mover ítems en el propio inventario del jugador
         if (event.getClickedInventory() != null && event.getClickedInventory().equals(event.getWhoClicked().getInventory())) {
-            // Si hace shift-click, podría estar metiendo un ítem en las ranuras de mejora
             if (event.isShiftClick()) guardarMejorasAsync(menu);
             return;
         }
@@ -50,7 +49,7 @@ public class MenuListener implements Listener {
         if (!esSlotDeMejora) {
             event.setCancelled(true);
         } else {
-            // Si tocó una mejora, la guardamos instantáneamente (1 tick después de que se coloque)
+            // Si tocó una mejora, la guardamos instantáneamente
             guardarMejorasAsync(menu);
         }
 
@@ -59,13 +58,17 @@ public class MenuListener implements Listener {
         Player player = (Player) event.getWhoClicked();
         ActiveMinion minion = menu.getMinion();
 
-        // 📦 Clic en Extraer Materiales (Buscamos la Tolva en lugar del Slot 31)
-        if (clickedItem.getType() == org.bukkit.Material.HOPPER && clickedItem.hasItemMeta() && clickedItem.getItemMeta().hasDisplayName() &&
-                net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName()).contains("INICIAR EXTRACCIÓN")) {
+        String plainName = "";
+        if (clickedItem.hasItemMeta() && clickedItem.getItemMeta().hasDisplayName()) {
+            plainName = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName());
+        }
+
+        // 📦 Clic en Cosechar Tributo (Buscamos la Tolva)
+        if (clickedItem.getType() == org.bukkit.Material.HOPPER && plainName.contains("COSECHAR")) {
 
             int cantidad = minion.getStoredItems();
             if (cantidad <= 0) {
-                player.sendMessage(NexoColor.parse("&#FF5555[!] Extracción Denegada: El depósito del operario está vacío."));
+                player.sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFLas fauces de la criatura están vacías."));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -98,15 +101,15 @@ public class MenuListener implements Listener {
             if (!skillAura.isEmpty()) {
                 String comando = "skills addxp " + player.getName() + " " + skillAura + " " + xpGanada + " -s";
                 org.bukkit.Bukkit.getServer().dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), comando);
-                player.sendMessage(NexoColor.parse("&#AA00AA✨ Datos Procesados: +" + xpGanada + " XP en " + nombreSkill));
+                player.sendMessage(NexoColor.parse("&#9933FF✨ Conocimiento Arcano: +" + xpGanada + " XP en " + nombreSkill));
             }
 
-            // Resetear Monolito
+            // Resetear Minion
             minion.setStoredItems(0);
             minion.getEntity().getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);
 
-            player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>EXTRACCIÓN COMPLETADA:</bold> &#AAAAAASolicitaste " + cantidad + " unidades a la red."));
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
+            player.sendMessage(NexoColor.parse("&#CC66FF[✓] <bold>TRIBUTO COSECHADO:</bold> &#E6CCFFHas reclamado " + cantidad + " ofrendas materiales."));
+            player.playSound(player.getLocation(), Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f, 2f);
 
             // 🌟 BEDROCK FIX: Cerrar menú y esperar antes de reabrir
             player.closeInventory();
@@ -115,22 +118,21 @@ public class MenuListener implements Listener {
             }, 3L);
         }
 
-        // 🧨 Clic en Recoger Minion (Buscamos la Barrera en lugar del Slot 35)
-        if (clickedItem.getType() == org.bukkit.Material.BARRIER && clickedItem.hasItemMeta() && clickedItem.getItemMeta().hasDisplayName() &&
-                net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName()).contains("DESMANTELAR")) {
+        // 🧨 Clic en Desterrar (Buscamos la Barrera)
+        if (clickedItem.getType() == org.bukkit.Material.BARRIER && plainName.contains("DESTERRAR")) {
 
             player.closeInventory();
             plugin.getMinionManager().recogerMinion(player, minion.getEntity().getUniqueId());
         }
 
-        // ⬆ Clic en Evolucionar (Buscamos la Nether Star en lugar del Slot 22)
+        // ⬆ Clic en Ascender / Evolucionar (Buscamos la Nether Star)
         if (clickedItem.getType() == org.bukkit.Material.NETHER_STAR) {
             int sigNivel = minion.getTier() + 1;
             if (sigNivel > 12) return; // Si ya es nivel máximo, el botón no hace nada
 
             ConfigurationSection costo = plugin.getTiersConfig().getCostoEvolucion(minion.getType(), sigNivel);
             if (costo == null) {
-                player.sendMessage(NexoColor.parse("&#FF5555[!] Error del Sistema: El esquema de evolución no está registrado."));
+                player.sendMessage(NexoColor.parse("&#FF3366[!] Error Arcano: &#E6CCFFEl ritual no está en los textos sagrados."));
                 return;
             }
 
@@ -141,15 +143,15 @@ public class MenuListener implements Listener {
             boolean pagoExitoso = cobrarItems(player, reqCant, reqMat, reqNexo);
 
             if (!pagoExitoso) {
-                player.sendMessage(NexoColor.parse("&#FF5555[!] Recursos Insuficientes: &#AAAAAANo dispones de los materiales para instalar la mejora."));
+                player.sendMessage(NexoColor.parse("&#FF3366[!] Ritual Fallido: &#E6CCFFNo posees los sacrificios necesarios para la ascensión."));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             minion.setTier(sigNivel);
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-            player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>ACTUALIZACIÓN COMPLETADA:</bold> &#AAAAAAFirmware de operario ascendido a Nivel " + sigNivel + "."));
-            minion.getEntity().getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, minion.getEntity().getLocation().add(0, 1, 0), 50, 0.5, 0.5, 0.5, 0.1);
+            player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.5f, 1.5f);
+            player.sendMessage(NexoColor.parse("&#9933FF[✓] <bold>RITUAL COMPLETADO:</bold> &#E6CCFFEl esclavo ha ascendido a Nivel " + sigNivel + "."));
+            minion.getEntity().getWorld().spawnParticle(org.bukkit.Particle.SCULK_SOUL, minion.getEntity().getLocation().add(0, 1, 0), 50, 0.5, 0.5, 0.5, 0.1);
 
             // 🌟 BEDROCK FIX: Cerrar menú y esperar antes de reabrir
             player.closeInventory();
@@ -174,14 +176,12 @@ public class MenuListener implements Listener {
         guardarMejorasInstantaneo(menu, event.getInventory());
     }
 
-    // Tarea asíncrona de 1 tick para leer el inventario DESPUÉS de que se coloque el ítem
     private void guardarMejorasAsync(MinionMenu menu) {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             guardarMejorasInstantaneo(menu, menu.getInventory());
         }, 1L);
     }
 
-    // Guarda las mejoras en la entidad (ArmorStand/Bee)
     private void guardarMejorasInstantaneo(MinionMenu menu, org.bukkit.inventory.Inventory inv) {
         ActiveMinion minion = menu.getMinion();
         for (int i = 0; i < 4; i++) {

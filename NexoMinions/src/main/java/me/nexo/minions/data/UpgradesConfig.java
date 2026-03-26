@@ -19,7 +19,8 @@ public class UpgradesConfig {
         cargarConfig();
     }
 
-    private void cargarConfig() {
+    // 🌟 SELLO ROTO: Ahora es PUBLIC para permitir el ritual de recarga
+    public void cargarConfig() {
         File configFile = new File(plugin.getDataFolder(), "upgrades.yml");
         if (!configFile.exists()) {
             configFile.getParentFile().mkdirs();

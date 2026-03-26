@@ -16,7 +16,8 @@ public class TiersConfig {
         cargarConfig();
     }
 
-    private void cargarConfig() {
+    // 🌟 CAMBIO CLAVE: Ahora es PUBLIC para que el comando Reload pueda usarlo
+    public void cargarConfig() {
         File configFile = new File(plugin.getDataFolder(), "tiers.yml");
         if (!configFile.exists()) {
             configFile.getParentFile().mkdirs();

@@ -1,6 +1,6 @@
 package me.nexo.minions.listeners;
 
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT PARA LA PALETA GÓTICA DEL VACÍO
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.manager.ActiveMinion;
@@ -62,8 +62,8 @@ public class MinionInteractListener implements Listener {
 
         String ownerStr = hitbox.getPersistentDataContainer().get(MinionKeys.OWNER, PersistentDataType.STRING);
         if (ownerStr != null && !player.getUniqueId().toString().equals(ownerStr) && !player.hasPermission("nexominions.admin")) {
-            // 🌟 Alerta Ciberpunk de Infracción
-            player.sendMessage(NexoColor.parse("&#FF5555[!] Infracción de Seguridad: &#AAAAAAEste operario está enlazado a la red de otra entidad."));
+            // 🌟 Alerta Gótica de Infracción
+            player.sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFEste esclavo obedece únicamente la voluntad de su Maestro."));
             return false;
         }
         return true;

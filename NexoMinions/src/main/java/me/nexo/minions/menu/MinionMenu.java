@@ -28,8 +28,8 @@ public class MinionMenu implements InventoryHolder {
         this.plugin = plugin;
         this.minion = minion;
 
-        // 🌟 BEDROCK FIX: Tamaño Dinámico
-        net.kyori.adventure.text.Component titulo = NexoColor.parse("&#434343<bold>»</bold> &#FFAA00Terminal del Operario");
+        // 🌟 BEDROCK FIX + TEMÁTICA GÓTICA DEL VACÍO
+        net.kyori.adventure.text.Component titulo = NexoColor.parse("&#434343<bold>»</bold> &#9933FFSello del Esclavo");
         int tamano = CrossplayUtils.getOptimizedMenuSize(player, 36); // Base 36, Bedrock ajustará a lo que necesite
 
         // Medida de seguridad: Si Bedrock lo bajó a 27, forzamos a 36 porque el Minion ocupa 4 filas reales de contenido
@@ -49,11 +49,11 @@ public class MinionMenu implements InventoryHolder {
         }
         for (int i = 0; i < tamano; i++) inv.setItem(i, cristal);
 
-        // 🌟 ÍCONOS DE GUÍA (Fila 1)
-        crearIconoGuia(1, Material.COAL, "&#FF5555🔥 Celda de Combustión", "Inyecta catalizadores térmicos aquí", "para sobrecargar el procesador del operario.", "&#FFAA00⬇ Inserte módulo debajo ⬇");
-        crearIconoGuia(2, Material.DROPPER, "&#00E5FF📦 Módulo Compactador", "Conecta unidades compactadoras para", "ensamblar materiales en formato de bloque.", "&#FFAA00⬇ Inserte módulo debajo ⬇");
-        crearIconoGuia(6, Material.CHEST, "&#55FF55🧰 Unidad de Expansión", "Instala expansores de memoria para", "aumentar la capacidad de almacenaje.", "&#FFAA00⬇ Inserte módulo debajo ⬇");
-        crearIconoGuia(7, Material.HOPPER, "&#FFAA00🔄 Enlace Logístico", "Configura un emisor logístico para", "enviar recursos a contenedores externos.", "&#FFAA00⬇ Inserte módulo debajo ⬇");
+        // 🌑 ÍCONOS DE MAGIA OSCURA (Fila 1)
+        crearIconoGuia(1, Material.COAL, "&#FF3366🔥 Llama Abismal", "Sacrifica combustible puro aquí", "para acelerar el tormento del esclavo.", "&#CC66FF⬇ Deposita la ofrenda ⬇");
+        crearIconoGuia(2, Material.DROPPER, "&#CC66FF📦 Runas de Compresión", "Inscribe runas antiguas para", "fusionar la materia en su forma pura.", "&#CC66FF⬇ Deposita la runa ⬇");
+        crearIconoGuia(6, Material.CHEST, "&#9933FF🧰 Fauces Insaciables", "Otorga cofres y reliquias para", "expandir el estómago de esta criatura.", "&#CC66FF⬇ Deposita la mejora ⬇");
+        crearIconoGuia(7, Material.HOPPER, "&#CC66FF🔄 Vínculo Umbrío", "Forja un pacto de sangre para", "drenar la materia a tus propios cofres.", "&#CC66FF⬇ Deposita el vínculo ⬇");
 
         // 🌟 HUECOS DE MEJORAS (Fila 2)
         for (int i = 0; i < 4; i++) {
@@ -65,46 +65,46 @@ public class MinionMenu implements InventoryHolder {
             }
         }
 
-        // 📊 ESTADÍSTICAS CENTRALES (Slot central de la fila 2)
+        // 📊 ESTADO DEL ESCLAVO (Slot central de la fila 2)
         ItemStack stats = new ItemStack(minion.getType().getTargetMaterial());
         ItemMeta metaStats = stats.getItemMeta();
         if (metaStats != null) {
-            metaStats.displayName(NexoColor.parse("&#FFAA00⭐ <bold>" + minion.getType().getDisplayName() + "</bold> &#AAAAAA(Nv. " + minion.getTier() + ")"));
+            metaStats.displayName(NexoColor.parse("&#9933FF⭐ <bold>" + minion.getType().getDisplayName() + "</bold> &#E6CCFF(Nv. " + minion.getTier() + ")"));
             List<net.kyori.adventure.text.Component> loreStats = new ArrayList<>();
-            loreStats.add(NexoColor.parse("&#AAAAAACapacidad Ocupada: &#55FF55" + minion.getStoredItems() + " uds"));
+            loreStats.add(NexoColor.parse("&#E6CCFFMateria Devorada: &#CC66FF" + minion.getStoredItems() + " uds"));
 
             double vel = (1.0 - minion.getSpeedMultiplier()) * 100;
-            loreStats.add(NexoColor.parse("&#AAAAAARendimiento: " + (vel > 0 ? "&#00E5FF⚡ +" + (int)vel + "%" : "&#FFAA00Estándar")));
+            loreStats.add(NexoColor.parse("&#E6CCFFAgonía (Eficiencia): " + (vel > 0 ? "&#FF3366⚡ +" + (int)vel + "%" : "&#9933FFLetargo (Base)")));
 
-            if (minion.tieneMejora("COMPACTOR")) loreStats.add(NexoColor.parse("&#AA00AA📦 Protocolo de Compresión [ON]"));
-            if (minion.tieneMejora("STORAGE_LINK")) loreStats.add(NexoColor.parse("&#FFAA00🔄 Red Logística [CONECTADA]"));
+            if (minion.tieneMejora("COMPACTOR")) loreStats.add(NexoColor.parse("&#9933FF📦 Sello de Amalgama [ACTIVO]"));
+            if (minion.tieneMejora("STORAGE_LINK")) loreStats.add(NexoColor.parse("&#CC66FF🔄 Nexo Logístico [CONECTADO]"));
 
             metaStats.lore(loreStats);
             stats.setItemMeta(metaStats);
         }
         inv.setItem(13, stats);
 
-        // 🌟 BOTÓN DE EVOLUCIÓN (Slot central de la fila 3)
+        // ⬆ EL RITUAL DE ASCENSIÓN (Slot central de la fila 3)
         ItemStack evolucion = new ItemStack(Material.NETHER_STAR);
         ItemMeta metaEvo = evolucion.getItemMeta();
         if (metaEvo != null) {
             int sigNivel = minion.getTier() + 1;
 
             if (sigNivel > 12) {
-                metaEvo.displayName(NexoColor.parse("&#00E5FF✨ <bold>POTENCIAL MÁXIMO ALCANZADO</bold>"));
+                metaEvo.displayName(NexoColor.parse("&#CC66FF✨ <bold>CÚSPIDE DEL ABISMO ALCANZADA</bold>"));
             } else {
-                metaEvo.displayName(NexoColor.parse("&#55FF55⬆ <bold>ACTUALIZAR FIRMWARE A NV. " + sigNivel + "</bold>"));
+                metaEvo.displayName(NexoColor.parse("&#9933FF⬆ <bold>ASCENDER AL VACÍO A NV. " + sigNivel + "</bold>"));
                 List<net.kyori.adventure.text.Component> loreEvo = new ArrayList<>();
-                loreEvo.add(NexoColor.parse("&#AAAAAAHaz clic para instalar la nueva versión en el operario."));
+                loreEvo.add(NexoColor.parse("&#E6CCFFRealiza el ritual para empoderar a la entidad."));
                 loreEvo.add(NexoColor.parse(" "));
-                loreEvo.add(NexoColor.parse("&#FFAA00Coste de Instalación:"));
+                loreEvo.add(NexoColor.parse("&#CC66FFTributo Requerido:"));
 
                 ConfigurationSection costo = plugin.getTiersConfig().getCostoEvolucion(minion.getType(), sigNivel);
                 if (costo != null) {
-                    String reqName = costo.getString("nexo_id", costo.getString("material", "Desconocido"));
-                    loreEvo.add(NexoColor.parse("&#FF5555▶ " + costo.getInt("cantidad") + "x " + reqName));
+                    String reqName = costo.getString("nexo_id", costo.getString("material", "Alma Perdida"));
+                    loreEvo.add(NexoColor.parse("&#FF3366▶ " + costo.getInt("cantidad") + "x " + reqName));
                 } else {
-                    loreEvo.add(NexoColor.parse("&#FF5555[!] Esquema no detectado en tiers.yml"));
+                    loreEvo.add(NexoColor.parse("&#FF3366[!] Ritual no detectado en tiers.yml"));
                 }
                 metaEvo.lore(loreEvo);
             }
@@ -112,7 +112,7 @@ public class MinionMenu implements InventoryHolder {
         }
         inv.setItem(22, evolucion);
 
-        // 🌟 BOTÓN DE EXTRACCIÓN (Relativo: Penúltima posición central, asumiendo 36 slots será la 31)
+        // 📦 COSECHAR ALMAS (Relativo: Penúltima posición central)
         String tipoMinion = minion.getType().name();
         int xpAcumulada = minion.getStoredItems() * 2;
         String tipoSkill = "";
@@ -126,29 +126,29 @@ public class MinionMenu implements InventoryHolder {
         ItemStack extraer = new ItemStack(Material.HOPPER);
         ItemMeta metaExtraer = extraer.getItemMeta();
         if (metaExtraer != null) {
-            metaExtraer.displayName(NexoColor.parse("&#00E5FF📦 <bold>INICIAR EXTRACCIÓN</bold>"));
+            metaExtraer.displayName(NexoColor.parse("&#CC66FF📦 <bold>COSECHAR TRIBUTO</bold>"));
 
             List<net.kyori.adventure.text.Component> loreExtraer = new ArrayList<>();
-            loreExtraer.add(NexoColor.parse("&#AAAAAATransfiere el inventario del operario a tu sistema."));
+            loreExtraer.add(NexoColor.parse("&#E6CCFFReclama toda la materia que el esclavo ha juntado."));
             loreExtraer.add(NexoColor.parse(" "));
-            loreExtraer.add(NexoColor.parse("&#FFFFFFVolumen Procesado: &#FFAA00" + minion.getStoredItems() + " uds"));
+            loreExtraer.add(NexoColor.parse("&#FFFFFFOfrendas Listas: &#CC66FF" + minion.getStoredItems() + " uds"));
 
             if (!tipoSkill.isEmpty() && minion.getStoredItems() > 0) {
-                loreExtraer.add(NexoColor.parse("&#FFFFFFDatos de " + tipoSkill + ": &#AA00AA+" + xpAcumulada + " XP"));
+                loreExtraer.add(NexoColor.parse("&#FFFFFFConocimiento Arcano (" + tipoSkill + "): &#9933FF+" + xpAcumulada + " XP"));
             }
 
             loreExtraer.add(NexoColor.parse(" "));
-            loreExtraer.add(NexoColor.parse("&#55FF55► ¡Clic para recolectar lote completo!"));
+            loreExtraer.add(NexoColor.parse("&#9933FF► ¡Clic para reclamar tu ofrenda!"));
             metaExtraer.lore(loreExtraer);
             extraer.setItemMeta(metaExtraer);
         }
         inv.setItem(tamano - 5, extraer); // Posición 31 en un menú de 36
 
-        // 🌟 BOTÓN DE DESMANTELAR (Relativo: Esquina inferior derecha)
+        // 🧨 DESTERRAR ESCLAVO (Relativo: Esquina inferior derecha)
         ItemStack romper = new ItemStack(Material.BARRIER);
         ItemMeta metaRomper = romper.getItemMeta();
         if (metaRomper != null) {
-            metaRomper.displayName(NexoColor.parse("&#FF5555🧨 <bold>DESMANTELAR OPERARIO</bold>"));
+            metaRomper.displayName(NexoColor.parse("&#FF3366🧨 <bold>DESTERRAR ESCLAVO</bold>"));
             romper.setItemMeta(metaRomper);
         }
         inv.setItem(tamano - 1, romper); // Posición 35 en un menú de 36
@@ -161,7 +161,7 @@ public class MinionMenu implements InventoryHolder {
             meta.displayName(NexoColor.parse(tituloHex));
             List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
             for (String linea : loreLines) {
-                lore.add(NexoColor.parse("&#AAAAAA" + linea.replace("&#FFAA00", "&#FFAA00")));
+                lore.add(NexoColor.parse("&#E6CCFF" + linea));
             }
             meta.lore(lore);
             item.setItemMeta(meta);
