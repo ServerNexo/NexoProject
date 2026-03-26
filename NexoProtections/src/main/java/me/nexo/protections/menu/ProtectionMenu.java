@@ -19,22 +19,22 @@ public class ProtectionMenu {
         int tamanoOptimo = CrossplayUtils.getOptimizedMenuSize(player, 27);
         Inventory inv = Bukkit.createInventory(null, tamanoOptimo, tituloCrossplay);
 
-        // SLOT 11: ACÓLITOS (MIEMBROS)
+        // SLOT 11: ACÓLITOS
         ItemStack members = new ItemStack(Material.WITHER_SKELETON_SKULL);
         ItemMeta memMeta = members.getItemMeta();
         if (memMeta != null) {
             memMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#9933FF<bold>ACÓLITOS DEL PACTO</bold>"));
             memMeta.lore(List.of(
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFInvoca o destierra a las almas"),
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFque tienen permitido pisar estas tierras."),
+                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFExplora y destierra a las almas"),
+                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFvinculadas a este Monolito."),
                     CrossplayUtils.parseCrossplay(player, " "),
-                    CrossplayUtils.parseCrossplay(player, "&#CC66FF► Clic para gestionar acólitos")
+                    CrossplayUtils.parseCrossplay(player, "&#CC66FF► Clic para abrir el registro")
             ));
             members.setItemMeta(memMeta);
         }
         inv.setItem(11, members);
 
-        // SLOT 13: INFORMACIÓN DEL MONOLITO
+        // SLOT 13: NÚCLEO
         ItemStack info = new ItemStack(Material.LODESTONE);
         ItemMeta infoMeta = info.getItemMeta();
         if (infoMeta != null) {
@@ -43,24 +43,22 @@ public class ProtectionMenu {
             lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFSeñor Oscuro: &#FFFFFF" + Bukkit.getOfflinePlayer(stone.getOwnerId()).getName()));
             lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFTipo de Culto: &#CC66FF" + (stone.getClanId() == null ? "Solitario" : "Sindicato")));
             lore.add(CrossplayUtils.parseCrossplay(player, " "));
-
             double porcentaje = (stone.getCurrentEnergy() / stone.getMaxEnergy()) * 100;
             String colorEnergia = porcentaje > 50 ? "&#CC66FF" : (porcentaje > 20 ? "&#9933FF" : "&#FF3366");
-
             lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFEsencia Consumida: " + colorEnergia + String.format("%.1f", stone.getCurrentEnergy()) + " &#FFFFFF/ &#CC66FF" + stone.getMaxEnergy()));
             infoMeta.lore(lore);
             info.setItemMeta(infoMeta);
         }
         inv.setItem(13, info);
 
-        // SLOT 15: LEYES DEL DOMINIO (FLAGS)
+        // SLOT 15: FLAGS
         ItemStack flags = new ItemStack(Material.SOUL_TORCH);
         ItemMeta flagMeta = flags.getItemMeta();
         if (flagMeta != null) {
             flagMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF3366<bold>LEYES DEL DOMINIO</bold>"));
             flagMeta.lore(List.of(
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFAltera las leyes naturales"),
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFdentro de tu territorio (PvP, Fuego, etc)."),
+                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFAltera las leyes naturales y"),
+                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFfísicas de los forasteros."),
                     CrossplayUtils.parseCrossplay(player, " "),
                     CrossplayUtils.parseCrossplay(player, "&#CC66FF► Clic para dictar las leyes")
             ));
@@ -68,20 +66,20 @@ public class ProtectionMenu {
         }
         inv.setItem(15, flags);
 
-        // SLOT 22: INFUNDIR ESENCIA (RECARGA)
+        // SLOT 22: RECARGA
         ItemStack recharge = new ItemStack(Material.ECHO_SHARD);
         ItemMeta rechargeMeta = recharge.getItemMeta();
         if (rechargeMeta != null) {
             rechargeMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#CC66FF<bold>[ INFUNDIR ESENCIA ]</bold>"));
             rechargeMeta.lore(List.of(
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFOfrece sacrificios (Diamantes)"),
+                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFOfrece sacrificios (Diamantes o Ecos)"),
                     CrossplayUtils.parseCrossplay(player, "&#E6CCFFpara alimentar el vacío del Monolito.")
             ));
             recharge.setItemMeta(rechargeMeta);
         }
         inv.setItem(22, recharge);
 
-        // CRISTALES (Decoración Vacio)
+        // DECORACIÓN
         ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta glassMeta = glass.getItemMeta();
         if (glassMeta != null) {

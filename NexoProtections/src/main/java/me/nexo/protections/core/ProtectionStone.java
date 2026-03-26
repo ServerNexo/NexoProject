@@ -33,11 +33,20 @@ public class ProtectionStone {
         this.currentEnergy = 100.0;
         this.maxEnergy = 1000.0;
 
-        // Flags por defecto de una zona segura
+        // ==========================================
+        // 🌑 LEYES DEL DOMINIO (FLAGS) POR DEFECTO
+        // ==========================================
         this.environmentFlags.put("pvp", false);
         this.environmentFlags.put("mob-spawning", false);
         this.environmentFlags.put("tnt-damage", false);
         this.environmentFlags.put("fire-spread", false);
+
+        // 🌟 NUEVAS LEYES ESENCIALES (false = bloqueado para forasteros)
+        this.environmentFlags.put("interact", false);      // Usar Puertas, Botones, Palancas, Yunques
+        this.environmentFlags.put("containers", false);    // Abrir Cofres, Barriles, Shulkers
+        this.environmentFlags.put("item-pickup", false);   // Robar ítems tirados en el suelo
+        this.environmentFlags.put("item-drop", false);     // Tirar basura en la base
+        this.environmentFlags.put("animal-damage", false); // Matar Vacas, Ovejas, Perros
     }
 
     // ==========================================
@@ -91,7 +100,8 @@ public class ProtectionStone {
     public void addEnergy(double amount) { this.currentEnergy = Math.min(maxEnergy, this.currentEnergy + amount); }
     public void drainEnergy(double amount) { this.currentEnergy = Math.max(0, this.currentEnergy - amount); }
 
-    public boolean getFlag(String flagName) { return environmentFlags.getOrDefault(flagName, true); }
+    // 🌟 CORRECCIÓN: El valor por defecto ahora es FALSE (bloqueado) por seguridad.
+    public boolean getFlag(String flagName) { return environmentFlags.getOrDefault(flagName, false); }
     public void setFlag(String flagName, boolean value) { environmentFlags.put(flagName, value); }
     public Map<String, Boolean> getFlags() { return environmentFlags; }
 
