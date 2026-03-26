@@ -3,9 +3,11 @@ package me.nexo.minions.menu;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -19,32 +21,41 @@ public class MinionMenu implements InventoryHolder {
     private final ActiveMinion minion;
     private final NexoMinions plugin;
 
+    // Slots dinámicos basados en la Fila 2 (índice 9 a 17) para que nunca se salgan del inventario
     public static final int[] UPGRADE_SLOTS = {10, 11, 15, 16};
 
-    public MinionMenu(NexoMinions plugin, ActiveMinion minion) {
+    public MinionMenu(NexoMinions plugin, ActiveMinion minion, Player player) {
         this.plugin = plugin;
         this.minion = minion;
-        // 🌟 Título con Component Nativo de Paper para soportar HEX
-        this.inv = Bukkit.createInventory(this, 36, NexoColor.parse("&#434343<bold>»</bold> &#FFAA00Terminal del Operario"));
-        configurarMenu();
+
+        // 🌟 BEDROCK FIX: Tamaño Dinámico
+        net.kyori.adventure.text.Component titulo = NexoColor.parse("&#434343<bold>»</bold> &#FFAA00Terminal del Operario");
+        int tamano = CrossplayUtils.getOptimizedMenuSize(player, 36); // Base 36, Bedrock ajustará a lo que necesite
+
+        // Medida de seguridad: Si Bedrock lo bajó a 27, forzamos a 36 porque el Minion ocupa 4 filas reales de contenido
+        if (tamano < 36) tamano = 36;
+
+        this.inv = Bukkit.createInventory(this, tamano, titulo);
+        configurarMenu(tamano);
     }
 
-    private void configurarMenu() {
+    private void configurarMenu(int tamano) {
+        // 🌟 Llenar fondo de cristal negro
         ItemStack cristal = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta metaCristal = cristal.getItemMeta();
         if (metaCristal != null) {
             metaCristal.displayName(NexoColor.parse(" "));
             cristal.setItemMeta(metaCristal);
         }
-        for (int i = 0; i < 36; i++) inv.setItem(i, cristal);
+        for (int i = 0; i < tamano; i++) inv.setItem(i, cristal);
 
-        // 🌟 ÍCONOS DE GUÍA (Rol Ciberpunk)
+        // 🌟 ÍCONOS DE GUÍA (Fila 1)
         crearIconoGuia(1, Material.COAL, "&#FF5555🔥 Celda de Combustión", "Inyecta catalizadores térmicos aquí", "para sobrecargar el procesador del operario.", "&#FFAA00⬇ Inserte módulo debajo ⬇");
         crearIconoGuia(2, Material.DROPPER, "&#00E5FF📦 Módulo Compactador", "Conecta unidades compactadoras para", "ensamblar materiales en formato de bloque.", "&#FFAA00⬇ Inserte módulo debajo ⬇");
         crearIconoGuia(6, Material.CHEST, "&#55FF55🧰 Unidad de Expansión", "Instala expansores de memoria para", "aumentar la capacidad de almacenaje.", "&#FFAA00⬇ Inserte módulo debajo ⬇");
         crearIconoGuia(7, Material.HOPPER, "&#FFAA00🔄 Enlace Logístico", "Configura un emisor logístico para", "enviar recursos a contenedores externos.", "&#FFAA00⬇ Inserte módulo debajo ⬇");
 
-        // Huecos de mejoras vacíos/llenos
+        // 🌟 HUECOS DE MEJORAS (Fila 2)
         for (int i = 0; i < 4; i++) {
             ItemStack upgrade = minion.getUpgrades()[i];
             if (upgrade != null && !upgrade.getType().isAir()) {
@@ -54,7 +65,7 @@ public class MinionMenu implements InventoryHolder {
             }
         }
 
-        // 📊 Estadísticas Centrales
+        // 📊 ESTADÍSTICAS CENTRALES (Slot central de la fila 2)
         ItemStack stats = new ItemStack(minion.getType().getTargetMaterial());
         ItemMeta metaStats = stats.getItemMeta();
         if (metaStats != null) {
@@ -73,7 +84,7 @@ public class MinionMenu implements InventoryHolder {
         }
         inv.setItem(13, stats);
 
-        // 🌟 EL BOTÓN DE EVOLUCIÓN
+        // 🌟 BOTÓN DE EVOLUCIÓN (Slot central de la fila 3)
         ItemStack evolucion = new ItemStack(Material.NETHER_STAR);
         ItemMeta metaEvo = evolucion.getItemMeta();
         if (metaEvo != null) {
@@ -101,7 +112,7 @@ public class MinionMenu implements InventoryHolder {
         }
         inv.setItem(22, evolucion);
 
-        // 🌟 EL NUEVO BOTÓN DE EXTRACCIÓN (Muestra Materiales y Experiencia)
+        // 🌟 BOTÓN DE EXTRACCIÓN (Relativo: Penúltima posición central, asumiendo 36 slots será la 31)
         String tipoMinion = minion.getType().name();
         int xpAcumulada = minion.getStoredItems() * 2;
         String tipoSkill = "";
@@ -131,16 +142,16 @@ public class MinionMenu implements InventoryHolder {
             metaExtraer.lore(loreExtraer);
             extraer.setItemMeta(metaExtraer);
         }
-        inv.setItem(31, extraer);
+        inv.setItem(tamano - 5, extraer); // Posición 31 en un menú de 36
 
-        // Botón Recoger Minion
+        // 🌟 BOTÓN DE DESMANTELAR (Relativo: Esquina inferior derecha)
         ItemStack romper = new ItemStack(Material.BARRIER);
         ItemMeta metaRomper = romper.getItemMeta();
         if (metaRomper != null) {
             metaRomper.displayName(NexoColor.parse("&#FF5555🧨 <bold>DESMANTELAR OPERARIO</bold>"));
             romper.setItemMeta(metaRomper);
         }
-        inv.setItem(35, romper);
+        inv.setItem(tamano - 1, romper); // Posición 35 en un menú de 36
     }
 
     private void crearIconoGuia(int slot, Material mat, String tituloHex, String... loreLines) {
@@ -150,7 +161,6 @@ public class MinionMenu implements InventoryHolder {
             meta.displayName(NexoColor.parse(tituloHex));
             List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
             for (String linea : loreLines) {
-                // Las líneas pasadas como parámetro ya llevan HEX, así que las parseamos directo
                 lore.add(NexoColor.parse("&#AAAAAA" + linea.replace("&#FFAA00", "&#FFAA00")));
             }
             meta.lore(lore);

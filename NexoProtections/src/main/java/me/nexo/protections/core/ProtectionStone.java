@@ -132,18 +132,28 @@ public class ProtectionStone {
         hologram.customName(text);
     }
 
+    // 🌟 NUEVO REMOVE: Fuerza la búsqueda en el centro exacto para evitar Fantasmas
     public void removeHologram() {
         if (!Bukkit.isPrimaryThread()) {
             Bukkit.getScheduler().runTask(me.nexo.protections.NexoProtections.getInstance(), this::removeHologram);
             return;
         }
-        Location loc = getCenterLocationIfLoaded();
-        if (loc == null) return;
+
+        World w = Bukkit.getWorld(box.world());
+        if (w == null) return;
+
+        int cx = (box.minX() + box.maxX()) / 2;
+        int cz = (box.minZ() + box.maxZ()) / 2;
+
+        Location centerCol = new Location(w, cx + 0.5, 100, cz + 0.5);
         NamespacedKey holoKey = new NamespacedKey(me.nexo.protections.NexoProtections.getInstance(), "nexo_holo");
-        for (Entity e : loc.getWorld().getNearbyEntities(loc, 2, 3, 2)) {
-            if (e.getPersistentDataContainer().has(holoKey, PersistentDataType.STRING)) {
+
+        for (Entity e : w.getNearbyEntities(centerCol, 2, 320, 2)) {
+            if (e instanceof ArmorStand && e.getPersistentDataContainer().has(holoKey, PersistentDataType.STRING)) {
                 String id = e.getPersistentDataContainer().get(holoKey, PersistentDataType.STRING);
-                if (stoneId.toString().equals(id)) e.remove();
+                if (stoneId.toString().equals(id)) {
+                    e.remove();
+                }
             }
         }
     }

@@ -1,13 +1,10 @@
 package me.nexo.core;
 
-import me.nexo.core.user.NexoUser;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-
-import java.util.UUID;
 
 public class PlayerListener implements Listener {
 
@@ -20,33 +17,20 @@ public class PlayerListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player p = event.getPlayer();
-        UUID uuid = p.getUniqueId();
 
-        // 🌟 1. Creamos el perfil temporal con Nivel 1 y 0 de XP en todo
-        // Añadimos null y "NONE" al final para el sistema de clanes
-        NexoUser usuario = new NexoUser(
-                uuid,           // UUID
-                p.getName(),    // Nombre
-                1, 0,           // Nexo: Nivel 1, 0 XP
-                1, 0,           // Combate: Nivel 1, 0 XP
-                1, 0,           // Minería: Nivel 1, 0 XP
-                1, 0,           // Agricultura: Nivel 1, 0 XP
-                null, "NONE"    // 🌟 NUEVO: Sin clan por defecto
-        );
-
-        // 🌟 2. Lo guardamos en tu ultra-rápida caché de Caffeine
-        plugin.getUserManager().addUserToCache(usuario);
-
-        // (Aquí podrías añadir una llamada asíncrona a tu DatabaseManager para cargar stats de Supabase)
+        // 🌟 CARGA DE DATOS REAL (Supabase)
+        // Esto buscará tu info en la base de datos. Si no existes, te creará.
+        // Si ya existes, cargará tus niveles, XP y tu CLAN a la RAM.
+        plugin.getDatabaseManager().cargarJugador(p);
     }
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        UUID uuid = event.getPlayer().getUniqueId();
+        Player p = event.getPlayer();
 
-        // (Aquí podrías llamar a tu DatabaseManager para guardar los stats en Supabase antes de borrar la caché)
-
-        // 🌟 Removemos al jugador de la RAM para evitar fugas de memoria
-        plugin.getUserManager().removeUserFromCache(uuid);
+        // 🌟 GUARDADO DE DATOS (Supabase)
+        // Esto tomará tus stats de la RAM, las subirá a Supabase,
+        // y luego el mismo método se encarga de borrarte de la caché para liberar memoria.
+        plugin.getDatabaseManager().guardarJugador(p);
     }
 }

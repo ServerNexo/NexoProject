@@ -34,18 +34,24 @@ public class ProtectionFlagsMenu {
         inv.setItem(21, createFlagItem(player, Material.HOPPER, "Robar Ítems del Suelo", "item-pickup", stone));
         inv.setItem(22, createFlagItem(player, Material.ROTTEN_FLESH, "Tirar Basura (Drop)", "item-drop", stone));
 
-        // Decoración y Botón Volver
+        // 🌟 CORRECCIÓN BEDROCK: Decoración calculada hacia atrás (Última fila)
+        int inicioUltimaFila = tamano - 9;
+
         ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
         ItemMeta gMeta = glass.getItemMeta();
         gMeta.displayName(CrossplayUtils.parseCrossplay(player, " "));
         glass.setItemMeta(gMeta);
-        for (int i = 36; i < 45; i++) inv.setItem(i, glass);
+        for (int i = inicioUltimaFila; i < tamano; i++) {
+            inv.setItem(i, glass);
+        }
 
         ItemStack back = new ItemStack(Material.ENDER_PEARL);
         ItemMeta backMeta = back.getItemMeta();
         backMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#9933FF<bold>VOLVER AL MONOLITO</bold>"));
         back.setItemMeta(backMeta);
-        inv.setItem(40, back);
+
+        // Slot central de la última fila
+        inv.setItem(tamano - 5, back);
 
         player.openInventory(inv);
     }

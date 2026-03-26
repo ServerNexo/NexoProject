@@ -35,8 +35,8 @@ public class MinionInteractListener implements Listener {
         if (displayIdStr != null) {
             ActiveMinion minion = plugin.getMinionManager().getMinion(UUID.fromString(displayIdStr));
             if (minion != null) {
-                // 🌟 EL CAMBIO MAESTRO: Ahora le pasamos el 'plugin' al menú para que pueda leer tiers.yml
-                event.getPlayer().openInventory(new MinionMenu(plugin, minion).getInventory());
+                // 🌟 EL CAMBIO MAESTRO: Le pasamos el 'plugin' y ahora también al 'Jugador' para la compatibilidad Bedrock
+                event.getPlayer().openInventory(new MinionMenu(plugin, minion, event.getPlayer()).getInventory());
             }
         }
     }

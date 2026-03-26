@@ -1,6 +1,6 @@
 package me.nexo.minions.listeners;
 
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
+import me.nexo.core.utils.NexoColor;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.manager.ActiveMinion;
@@ -39,6 +39,7 @@ public class MenuListener implements Listener {
         }
 
         int slot = event.getRawSlot();
+        ItemStack clickedItem = event.getCurrentItem();
 
         // Verificamos si hizo clic en un hueco de mejora
         boolean esSlotDeMejora = false;
@@ -49,15 +50,19 @@ public class MenuListener implements Listener {
         if (!esSlotDeMejora) {
             event.setCancelled(true);
         } else {
-            // 🌟 NUEVO: Si tocó una mejora, la guardamos instantáneamente (1 tick después de que se coloque)
+            // Si tocó una mejora, la guardamos instantáneamente (1 tick después de que se coloque)
             guardarMejorasAsync(menu);
         }
+
+        if (clickedItem == null) return;
 
         Player player = (Player) event.getWhoClicked();
         ActiveMinion minion = menu.getMinion();
 
-        // 📦 Clic en Extraer Materiales (Slot 31)
-        if (slot == 31) {
+        // 📦 Clic en Extraer Materiales (Buscamos la Tolva en lugar del Slot 31)
+        if (clickedItem.getType() == org.bukkit.Material.HOPPER && clickedItem.hasItemMeta() && clickedItem.getItemMeta().hasDisplayName() &&
+                net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName()).contains("INICIAR EXTRACCIÓN")) {
+
             int cantidad = minion.getStoredItems();
             if (cantidad <= 0) {
                 player.sendMessage(NexoColor.parse("&#FF5555[!] Extracción Denegada: El depósito del operario está vacío."));
@@ -65,12 +70,13 @@ public class MenuListener implements Listener {
                 return;
             }
 
+            // Entregar Materiales
             HashMap<Integer, ItemStack> sobrante = player.getInventory().addItem(new ItemStack(minion.getType().getTargetMaterial(), cantidad));
             for (ItemStack drop : sobrante.values()) {
                 player.getWorld().dropItemNaturally(player.getLocation(), drop);
             }
 
-            // 🌟 2. ENTREGAR LA EXPERIENCIA (Soporte para 5 Profesiones de AuraSkills)
+            // Entregar Experiencia
             String tipoMinion = minion.getType().name();
             double xpGanada = cantidad * 2.0;
 
@@ -85,7 +91,7 @@ public class MenuListener implements Listener {
                 skillAura = "foraging"; nombreSkill = "Tala";
             } else if (tipoMinion.contains("FISH") || tipoMinion.contains("SALMON")) {
                 skillAura = "fishing"; nombreSkill = "Pesca";
-            } else if (tipoMinion.contains("FLESH") || tipoMinion.contains("BONE") || tipoMinion.contains("SPIDER") || tipoMinion.contains("GUNPOWDER") || tipoMinion.contains("SLIME") || tipoMinion.contains("BLAZE")) {
+            } else if (tipoMinion.contains("FLESH") || tipoMinion.contains("BONE") || tipoMinion.contains("SPIDER") || tipoMinion.contains("GUNPOWDER") || tipoMinion.contains("SLIME") || tipoMinion.contains("BLAZE") || tipoMinion.contains("ROTTEN")) {
                 skillAura = "fighting"; nombreSkill = "Combate";
             }
 
@@ -95,25 +101,32 @@ public class MenuListener implements Listener {
                 player.sendMessage(NexoColor.parse("&#AA00AA✨ Datos Procesados: +" + xpGanada + " XP en " + nombreSkill));
             }
 
+            // Resetear Monolito
             minion.setStoredItems(0);
             minion.getEntity().getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);
 
             player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>EXTRACCIÓN COMPLETADA:</bold> &#AAAAAASolicitaste " + cantidad + " unidades a la red."));
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
 
-            player.openInventory(new MinionMenu(plugin, minion).getInventory());
+            // 🌟 BEDROCK FIX: Cerrar menú y esperar antes de reabrir
+            player.closeInventory();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                player.openInventory(new MinionMenu(plugin, minion, player).getInventory());
+            }, 3L);
         }
 
-        // 🧨 Clic en Recoger Minion (Slot 35)
-        if (slot == 35) {
+        // 🧨 Clic en Recoger Minion (Buscamos la Barrera en lugar del Slot 35)
+        if (clickedItem.getType() == org.bukkit.Material.BARRIER && clickedItem.hasItemMeta() && clickedItem.getItemMeta().hasDisplayName() &&
+                net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName()).contains("DESMANTELAR")) {
+
             player.closeInventory();
             plugin.getMinionManager().recogerMinion(player, minion.getEntity().getUniqueId());
         }
 
-        // ⬆ Clic en Evolucionar (Slot 22)
-        if (slot == 22) {
+        // ⬆ Clic en Evolucionar (Buscamos la Nether Star en lugar del Slot 22)
+        if (clickedItem.getType() == org.bukkit.Material.NETHER_STAR) {
             int sigNivel = minion.getTier() + 1;
-            if (sigNivel > 12) return;
+            if (sigNivel > 12) return; // Si ya es nivel máximo, el botón no hace nada
 
             ConfigurationSection costo = plugin.getTiersConfig().getCostoEvolucion(minion.getType(), sigNivel);
             if (costo == null) {
@@ -138,7 +151,11 @@ public class MenuListener implements Listener {
             player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>ACTUALIZACIÓN COMPLETADA:</bold> &#AAAAAAFirmware de operario ascendido a Nivel " + sigNivel + "."));
             minion.getEntity().getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, minion.getEntity().getLocation().add(0, 1, 0), 50, 0.5, 0.5, 0.5, 0.1);
 
-            player.openInventory(new MinionMenu(plugin, minion).getInventory());
+            // 🌟 BEDROCK FIX: Cerrar menú y esperar antes de reabrir
+            player.closeInventory();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                player.openInventory(new MinionMenu(plugin, minion, player).getInventory());
+            }, 3L);
         }
     }
 
@@ -157,14 +174,14 @@ public class MenuListener implements Listener {
         guardarMejorasInstantaneo(menu, event.getInventory());
     }
 
-    // 🌟 NUEVO: Tarea asíncrona de 1 tick para leer el inventario DESPUÉS de que se coloque el ítem
+    // Tarea asíncrona de 1 tick para leer el inventario DESPUÉS de que se coloque el ítem
     private void guardarMejorasAsync(MinionMenu menu) {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             guardarMejorasInstantaneo(menu, menu.getInventory());
         }, 1L);
     }
 
-    // Guarda las mejoras en la abeja
+    // Guarda las mejoras en la entidad (ArmorStand/Bee)
     private void guardarMejorasInstantaneo(MinionMenu menu, org.bukkit.inventory.Inventory inv) {
         ActiveMinion minion = menu.getMinion();
         for (int i = 0; i < 4; i++) {

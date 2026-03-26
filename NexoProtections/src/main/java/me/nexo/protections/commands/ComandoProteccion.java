@@ -8,7 +8,6 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
-import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -51,20 +50,16 @@ public class ComandoProteccion implements CommandExecutor {
             }
 
             me.nexo.protections.core.ClaimBox box = stone.getBox();
-            World world = Bukkit.getWorld(box.world());
-            if (world != null) {
-                double y = player.getLocation().getY() + 1.0; // Las partículas se dibujan a la altura del pecho del jugador
+            double y = player.getLocation().getY() + 1.0; // Las partículas se dibujan a la altura del pecho del jugador
 
-                // Dibujamos los bordes en el Eje X
-                for (int x = box.minX(); x <= box.maxX(); x += 2) { // De 2 en 2 para no saturar los FPS
-                    world.spawnParticle(Particle.DRAGON_BREATH, x + 0.5, y, box.minZ() + 0.5, 5, 0, 0.2, 0, 0.02);
-                    world.spawnParticle(Particle.DRAGON_BREATH, x + 0.5, y, box.maxZ() + 0.5, 5, 0, 0.2, 0, 0.02);
-                }
-                // Dibujamos los bordes en el Eje Z
-                for (int z = box.minZ(); z <= box.maxZ(); z += 2) {
-                    world.spawnParticle(Particle.DRAGON_BREATH, box.minX() + 0.5, y, z + 0.5, 5, 0, 0.2, 0, 0.02);
-                    world.spawnParticle(Particle.DRAGON_BREATH, box.maxX() + 0.5, y, z + 0.5, 5, 0, 0.2, 0, 0.02);
-                }
+            // 🛠️ CORRECCIÓN: Usar PORTAL (no requiere parámetros extra como Float)
+            for (int x = box.minX(); x <= box.maxX(); x++) {
+                player.spawnParticle(Particle.PORTAL, x + 0.5, y, box.minZ() + 0.5, 3, 0, 0, 0, 0);
+                player.spawnParticle(Particle.PORTAL, x + 0.5, y, box.maxZ() + 0.5, 3, 0, 0, 0, 0);
+            }
+            for (int z = box.minZ(); z <= box.maxZ(); z++) {
+                player.spawnParticle(Particle.PORTAL, box.minX() + 0.5, y, z + 0.5, 3, 0, 0, 0, 0);
+                player.spawnParticle(Particle.PORTAL, box.maxX() + 0.5, y, z + 0.5, 3, 0, 0, 0, 0);
             }
 
             player.sendMessage(NexoColor.parse("&#CC66FF[✓] <bold>VISIÓN DEL VACÍO:</bold> &#E6CCFFLas fronteras de este dominio han sido reveladas a tus ojos."));
