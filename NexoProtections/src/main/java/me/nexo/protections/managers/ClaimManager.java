@@ -1,5 +1,6 @@
 package me.nexo.protections.managers;
 
+import me.nexo.protections.core.ClaimBox; // 🌟 IMPORT AÑADIDO
 import me.nexo.protections.core.ProtectionStone;
 import org.bukkit.Location;
 
@@ -16,6 +17,31 @@ public class ClaimManager {
 
     // Búsqueda directa por ID (para comandos o integraciones)
     private final Map<UUID, ProtectionStone> stonesById = new ConcurrentHashMap<>();
+
+    // 🌟 NUEVO: Radar de Solapamiento (Evita que pongan piedras muy juntas)
+    public boolean hasOverlappingClaim(ClaimBox newBox) {
+        int minChunkX = newBox.minX() >> 4;
+        int maxChunkX = newBox.maxX() >> 4;
+        int minChunkZ = newBox.minZ() >> 4;
+        int maxChunkZ = newBox.maxZ() >> 4;
+
+        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                String chunkKey = newBox.world() + "_" + cx + "_" + cz;
+                List<ProtectionStone> stonesInChunk = spatialGrid.get(chunkKey);
+
+                if (stonesInChunk != null) {
+                    for (ProtectionStone stone : stonesInChunk) {
+                        // Si choca con CUALQUIER piedra en este sector, abortamos
+                        if (stone.getBox().intersects(newBox)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false; // Zona libre, se puede aterrizar el escudo
+    }
 
     // 🌟 Registra una piedra en la memoria RAM
     public void addStoneToCache(ProtectionStone stone) {

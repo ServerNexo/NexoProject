@@ -16,4 +16,14 @@ public record ClaimBox(String world, int minX, int minY, int minZ, int maxX, int
                 y >= minY && y <= maxY &&
                 z >= minZ && z <= maxZ;
     }
+
+    // 🌟 NUEVO: Fórmula Matemática AABB para detectar choques entre dos terrenos
+    public boolean intersects(ClaimBox other) {
+        if (!this.world.equals(other.world())) return false;
+
+        // Si los cubos se solapan en los 3 ejes (X, Y, Z), entonces hay colisión.
+        return this.minX <= other.maxX() && this.maxX >= other.minX() &&
+                this.minY <= other.maxY() && this.maxY >= other.minY() &&
+                this.minZ <= other.maxZ() && this.maxZ >= other.minZ();
+    }
 }
