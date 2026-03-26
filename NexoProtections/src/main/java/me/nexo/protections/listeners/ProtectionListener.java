@@ -13,6 +13,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -42,8 +43,6 @@ public class ProtectionListener implements Listener {
         this.claimManager = claimManager;
         this.limitManager = limitManager;
         this.core = NexoCore.getPlugin(NexoCore.class);
-
-        // 🌟 Llave maestra del sistema
         this.isProtectionStoneKey = new NamespacedKey(NexoProtections.getPlugin(NexoProtections.class), "is_protection_stone");
     }
 
@@ -53,9 +52,13 @@ public class ProtectionListener implements Listener {
         Block block = event.getBlock();
         ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
 
-        // 🌟 Actualizado a LODESTONE (Magnetita)
+        // 🌑 ROMPER EL MONOLITO (MAGNETITA)
         if (stone != null && block.getType() == Material.LODESTONE) {
             if (stone.getOwnerId().equals(player.getUniqueId())) {
+
+                // 🌟 HOLOGRAMA: Destruimos el texto flotante antes de borrar la piedra
+                stone.removeHologram();
+
                 claimManager.removeStoneFromCache(stone);
 
                 CompletableFuture.runAsync(() -> {
@@ -66,18 +69,20 @@ public class ProtectionListener implements Listener {
                     } catch (Exception e) { e.printStackTrace(); }
                 });
 
-                CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>PROTOCOLO DE DESMANTELAMIENTO:</bold> &#AAAAAANexo de protección desconectado exitosamente.");
+                CrossplayUtils.sendMessage(player, "&#CC66FF[✓] <bold>RITUAL DESHECHO:</bold> &#E6CCFFEl Monolito del Vacío ha sido desmantelado con éxito.");
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1f, 0.5f);
                 return;
             } else {
                 event.setCancelled(true);
-                CrossplayUtils.sendMessage(player, "&#FF5555[!] Infracción de Seguridad: &#AAAAAASolo el propietario puede desmantelar este Nexo.");
+                CrossplayUtils.sendMessage(player, "&#FF3366[!] Herejía: &#E6CCFFSolo el Señor de este Dominio puede destruir el Monolito.");
                 return;
             }
         }
 
+        // 🌑 ROMPER BLOQUES NORMALES EN TERRITORIO AJENO
         if (stone != null && !stone.hasPermission(player.getUniqueId(), ClaimAction.BREAK)) {
             event.setCancelled(true);
-            CrossplayUtils.sendMessage(player, "&#FF5555[!] Infracción de Seguridad: &#AAAAAATerritorio corporativo ajeno. No tienes permisos de minería.");
+            CrossplayUtils.sendMessage(player, "&#FF3366[!] Dominio Sellado: &#E6CCFFEl vacío protege estas tierras. No puedes alterar su forma.");
         }
     }
 
@@ -89,12 +94,13 @@ public class ProtectionListener implements Listener {
         ProtectionStone existingStone = claimManager.getStoneAt(block.getLocation());
         if (existingStone != null && !existingStone.hasPermission(player.getUniqueId(), ClaimAction.BUILD)) {
             event.setCancelled(true);
-            CrossplayUtils.sendMessage(player, "&#FF5555[!] Acceso Denegado: &#AAAAAANo puedes construir estructuras en el sector de otra entidad.");
+            CrossplayUtils.sendMessage(player, "&#FF3366[!] Dominio Sellado: &#E6CCFFNo puedes invocar estructuras en tierras ajenas.");
             return;
         }
 
         ItemStack itemInHand = event.getItemInHand();
-        // 🌟 Actualizado a LODESTONE
+
+        // 🌑 INVOCAR UN NUEVO MONOLITO
         if (block.getType() == Material.LODESTONE && itemInHand.hasItemMeta()) {
 
             if (!itemInHand.getItemMeta().getPersistentDataContainer().has(isProtectionStoneKey, PersistentDataType.BYTE)) {
@@ -109,35 +115,41 @@ public class ProtectionListener implements Listener {
 
             ClaimBox newBox = new ClaimBox(loc.getWorld().getName(), loc.getBlockX()-radius, -64, loc.getBlockZ()-radius, loc.getBlockX()+radius, 320, loc.getBlockZ()+radius);
 
-            // 🌟 NUEVO: ESCANEO DE COLISIONES
-            // Si el radar detecta que esta caja choca con otra que ya está guardada en el ClaimManager
             if (claimManager.hasOverlappingClaim(newBox)) {
-                event.setCancelled(true); // Cancelamos para que no se coloque ni te gaste el ítem
-                CrossplayUtils.sendMessage(player, "&#FF5555[!] Error Crítico: &#AAAAAAEl campo electromagnético de tu Nexo colisiona con otra zona corporativa cercana.");
+                event.setCancelled(true);
+                CrossplayUtils.sendMessage(player, "&#FF3366[!] Energía Corrupta: &#E6CCFFEl aura de este Monolito colisiona con otro sello cercano. Aléjate más.");
                 return;
             }
 
             ProtectionStone newStone = new ProtectionStone(newStoneId, player.getUniqueId(), clanId, newBox);
             claimManager.addStoneToCache(newStone);
 
-            CrossplayUtils.sendActionBar(player, "&#AAAAAA[⟳] Sincronizando escudo con la red central...");
+            // 🌟 HOLOGRAMA: Invocamos el texto flotante
+            newStone.updateHologram();
+
+            CrossplayUtils.sendActionBar(player, "&#9933FF[⟳] Conectando con el Abismo...");
 
             limitManager.canPlaceNewStone(player).thenAccept(canPlace -> {
                 if (!canPlace) {
                     Bukkit.getScheduler().runTask(NexoProtections.getPlugin(NexoProtections.class), () -> {
                         block.setType(Material.AIR);
+
+                        // Si falla el límite, borramos el holograma que acabamos de crear
+                        newStone.removeHologram();
+
                         claimManager.removeStoneFromCache(newStone);
 
                         ItemStack refundItem = itemInHand.clone();
                         refundItem.setAmount(1);
                         player.getInventory().addItem(refundItem);
 
-                        CrossplayUtils.sendMessage(player, "&#FF5555[!] Cuota Excedida: &#AAAAAAHas alcanzado el límite máximo de protecciones permitidas.");
+                        CrossplayUtils.sendMessage(player, "&#FF3366[!] Límite Alcanzado: &#E6CCFFTu alma no soporta mantener más Monolitos.");
                     });
                     return;
                 }
 
-                CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>ESCUDO OPERATIVO DESPLEGADO:</bold> &#AAAAAASellando un radio de &#00E5FF" + radius + " bloques&#AAAAAA a la red.");
+                CrossplayUtils.sendMessage(player, "&#CC66FF[✓] <bold>SELLO INVOCADO:</bold> &#E6CCFFEl Vacío ahora reclama un radio de &#9933FF" + radius + " bloques&#E6CCFF.");
+                player.playSound(loc, Sound.BLOCK_RESPAWN_ANCHOR_SET_SPAWN, 1f, 0.5f);
 
                 CompletableFuture.runAsync(() -> {
                     String sql = "INSERT INTO nexo_protections (stone_id, owner_id, clan_id, world_name, min_x, min_y, min_z, max_x, max_y, max_z) VALUES (CAST(? AS UUID), CAST(? AS UUID), " + (clanId == null ? "NULL" : "CAST(? AS UUID)") + ", ?, ?, ?, ?, ?, ?, ?)";
@@ -169,31 +181,17 @@ public class ProtectionListener implements Listener {
         Block block = event.getClickedBlock();
         Player player = event.getPlayer();
 
-        // 🌟 Actualizado a LODESTONE. ¡Al no tener interfaz, el clic se registra instantáneo!
+        // 🌑 ABRIR EL MENÚ DEL MONOLITO
         if (block.getType() == Material.LODESTONE && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
             ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
             if (stone != null) {
-                event.setCancelled(true); // Evita que ponga un bloque si tiene uno en la mano
+                event.setCancelled(true);
 
                 if (stone.getOwnerId().equals(player.getUniqueId()) || stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) {
-                    // ¡ABRIMOS EL MENÚ DIRECTAMENTE SIN DELAYS!
                     me.nexo.protections.menu.ProtectionMenu.openMenu(player, stone);
                 } else {
-                    CrossplayUtils.sendMessage(player, "&#FF5555[!] Autorización Denegada: &#AAAAAANo posees las credenciales para administrar este Nexo.");
+                    CrossplayUtils.sendMessage(player, "&#FF3366[!] Herejía: &#E6CCFFEl Monolito rechaza tu tacto.");
                 }
-                return;
-            }
-        }
-
-        ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
-        if (stone != null) {
-            String typeName = block.getType().name();
-            ClaimAction action = (typeName.contains("CHEST") || typeName.contains("BARREL") || typeName.contains("SHULKER"))
-                    ? ClaimAction.OPEN_CONTAINER : ClaimAction.INTERACT;
-
-            if (!stone.hasPermission(player.getUniqueId(), action)) {
-                event.setCancelled(true);
-                CrossplayUtils.sendActionBar(player, "&#FF5555[!] Acceso Restringido: Propiedad privada asegurada.");
             }
         }
     }

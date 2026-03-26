@@ -1,9 +1,13 @@
 package me.nexo.protections.core;
 
-import me.nexo.clans.NexoClans;
-import me.nexo.clans.core.ClanMember;
-import me.nexo.clans.core.NexoClan;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -14,10 +18,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ProtectionStone {
     private final UUID stoneId;
     private final UUID ownerId;
-    private final UUID clanId; // Nullable (Si es null, es una piedra solitaria)
+    private final UUID clanId;
     private final ClaimBox box;
 
-    // Sistema de Mantenimiento (Upkeep)
     private double currentEnergy;
     private double maxEnergy;
 
@@ -29,59 +32,119 @@ public class ProtectionStone {
         this.ownerId = ownerId;
         this.clanId = clanId;
         this.box = box;
-
         this.currentEnergy = 100.0;
         this.maxEnergy = 1000.0;
 
-        // ==========================================
-        // 🌑 LEYES DEL DOMINIO (FLAGS) POR DEFECTO
-        // ==========================================
         this.environmentFlags.put("pvp", false);
         this.environmentFlags.put("mob-spawning", false);
         this.environmentFlags.put("tnt-damage", false);
         this.environmentFlags.put("fire-spread", false);
-
-        // 🌟 NUEVAS LEYES ESENCIALES (false = bloqueado para forasteros)
-        this.environmentFlags.put("interact", false);      // Usar Puertas, Botones, Palancas, Yunques
-        this.environmentFlags.put("containers", false);    // Abrir Cofres, Barriles, Shulkers
-        this.environmentFlags.put("item-pickup", false);   // Robar ítems tirados en el suelo
-        this.environmentFlags.put("item-drop", false);     // Tirar basura en la base
-        this.environmentFlags.put("animal-damage", false); // Matar Vacas, Ovejas, Perros
+        this.environmentFlags.put("interact", false);
+        this.environmentFlags.put("containers", false);
+        this.environmentFlags.put("item-pickup", false);
+        this.environmentFlags.put("item-drop", false);
+        this.environmentFlags.put("animal-damage", false);
     }
 
-    // ==========================================
-    // 🛡️ MATRIZ DE PERMISOS HÍBRIDA (RBAC)
-    // ==========================================
     public boolean hasPermission(UUID playerId, ClaimAction action) {
-        // 1. El dueño absoluto (el que la colocó) siempre tiene permiso total
         if (playerId.equals(ownerId)) return true;
-
-        // 2. Si la piedra NO tiene energía, las defensas caen y se vuelve "ruinas" vulnerables
         if (currentEnergy <= 0) return true;
 
-        // 3. Lógica Solitaria (Sin Clan)
         if (clanId == null) {
-            // Si es su amigo, le dejamos hacer todo. Si no, bloqueado.
             return trustedFriends.contains(playerId);
-        }
-        // 4. Lógica de Clan
-        else {
+        } else {
             me.nexo.core.NexoCore core = me.nexo.core.NexoCore.getPlugin(me.nexo.core.NexoCore.class);
             if (core != null) {
                 me.nexo.core.user.NexoUser user = core.getUserManager().getUserOrNull(playerId);
-
-                // Verificamos si el usuario está en la memoria, si tiene clan y si es el clan de esta piedra
                 if (user != null && user.hasClan() && clanId.equals(user.getClanId())) {
                     String role = user.getClanRole().toUpperCase();
-
-                    // Líderes y Oficiales tienen acceso total para construir y destruir
                     if (role.equals("LIDER") || role.equals("OFICIAL")) return true;
-
-                    // Miembros normales solo pueden interactuar y abrir cofres/puertas
                     if (role.equals("MIEMBRO") && (action == ClaimAction.INTERACT || action == ClaimAction.OPEN_CONTAINER)) return true;
                 }
             }
             return false;
+        }
+    }
+
+    // ==========================================
+    // 🔮 SISTEMA DE HOLOGRAMAS TIER S
+    // ==========================================
+
+    // Encuentra el bloque sin forzar la carga del chunk (Anti-Lag)
+    public Location getCenterLocationIfLoaded() {
+        World w = Bukkit.getWorld(box.world());
+        if (w == null) return null;
+
+        int cx = (box.minX() + box.maxX()) / 2;
+        int cz = (box.minZ() + box.maxZ()) / 2;
+
+        if (!w.isChunkLoaded(cx >> 4, cz >> 4)) return null;
+
+        for (int y = 319; y >= -64; y--) {
+            Block b = w.getBlockAt(cx, y, cz);
+            if (b.getType() == org.bukkit.Material.LODESTONE) {
+                return b.getLocation();
+            }
+        }
+        return null;
+    }
+
+    public void updateHologram() {
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(me.nexo.protections.NexoProtections.getInstance(), this::updateHologram);
+            return;
+        }
+
+        Location loc = getCenterLocationIfLoaded();
+        if (loc == null) return; // Si no hay nadie cerca, no desperdiciamos RAM
+
+        Location holoLoc = loc.clone().add(0.5, 1.2, 0.5);
+        ArmorStand hologram = null;
+        NamespacedKey holoKey = new NamespacedKey(me.nexo.protections.NexoProtections.getInstance(), "nexo_holo");
+
+        for (Entity e : loc.getWorld().getNearbyEntities(loc, 2, 3, 2)) {
+            if (e instanceof ArmorStand && e.getPersistentDataContainer().has(holoKey, PersistentDataType.STRING)) {
+                String id = e.getPersistentDataContainer().get(holoKey, PersistentDataType.STRING);
+                if (stoneId.toString().equals(id)) {
+                    hologram = (ArmorStand) e;
+                    break;
+                }
+            }
+        }
+
+        if (hologram == null) {
+            hologram = loc.getWorld().spawn(holoLoc, ArmorStand.class, as -> {
+                as.setVisible(false);
+                as.setMarker(true); // Para que los jugadores no puedan golpearlo ni interactuar
+                as.setGravity(false);
+                as.setCustomNameVisible(true);
+                as.getPersistentDataContainer().set(holoKey, PersistentDataType.STRING, stoneId.toString());
+            });
+        }
+
+        String ownerName = Bukkit.getOfflinePlayer(ownerId).getName();
+        if (ownerName == null) ownerName = "Desconocido";
+
+        double percentage = (currentEnergy / maxEnergy) * 100;
+        String color = percentage > 50 ? "&#CC66FF" : (percentage > 20 ? "&#9933FF" : "&#FF3366");
+
+        net.kyori.adventure.text.Component text = me.nexo.core.utils.NexoColor.parse("&#9933FF<bold>MONOLITO</bold> &#FFFFFF| &#E6CCFF" + ownerName + " &#FFFFFF| " + color + String.format("%.0f", currentEnergy) + " ✦");
+        hologram.customName(text);
+    }
+
+    public void removeHologram() {
+        if (!Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTask(me.nexo.protections.NexoProtections.getInstance(), this::removeHologram);
+            return;
+        }
+        Location loc = getCenterLocationIfLoaded();
+        if (loc == null) return;
+        NamespacedKey holoKey = new NamespacedKey(me.nexo.protections.NexoProtections.getInstance(), "nexo_holo");
+        for (Entity e : loc.getWorld().getNearbyEntities(loc, 2, 3, 2)) {
+            if (e.getPersistentDataContainer().has(holoKey, PersistentDataType.STRING)) {
+                String id = e.getPersistentDataContainer().get(holoKey, PersistentDataType.STRING);
+                if (stoneId.toString().equals(id)) e.remove();
+            }
         }
     }
 
@@ -97,10 +160,16 @@ public class ProtectionStone {
     public double getMaxEnergy() { return maxEnergy; }
     public void setMaxEnergy(double maxEnergy) { this.maxEnergy = maxEnergy; }
 
-    public void addEnergy(double amount) { this.currentEnergy = Math.min(maxEnergy, this.currentEnergy + amount); }
-    public void drainEnergy(double amount) { this.currentEnergy = Math.max(0, this.currentEnergy - amount); }
+    // Al añadir o quitar energía, el holograma se actualiza mágicamente
+    public void addEnergy(double amount) {
+        this.currentEnergy = Math.min(maxEnergy, this.currentEnergy + amount);
+        updateHologram();
+    }
+    public void drainEnergy(double amount) {
+        this.currentEnergy = Math.max(0, this.currentEnergy - amount);
+        updateHologram();
+    }
 
-    // 🌟 CORRECCIÓN: El valor por defecto ahora es FALSE (bloqueado) por seguridad.
     public boolean getFlag(String flagName) { return environmentFlags.getOrDefault(flagName, false); }
     public void setFlag(String flagName, boolean value) { environmentFlags.put(flagName, value); }
     public Map<String, Boolean> getFlags() { return environmentFlags; }

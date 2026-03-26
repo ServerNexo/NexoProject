@@ -87,6 +87,10 @@ public class ProtectionMenuListener implements Listener {
                 String flagId = event.getCurrentItem().getItemMeta().getPersistentDataContainer().get(key, PersistentDataType.STRING);
                 boolean actual = stone.getFlag(flagId);
                 stone.setFlag(flagId, !actual); // Invierte la ley
+
+                // 🌟 GUARDADO ASÍNCRONO EN SUPABASE
+                claimManager.saveStoneDataAsync(stone);
+
                 player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, 1f, 0.5f);
                 me.nexo.protections.menu.ProtectionFlagsMenu.openMenu(player, stone); // Refresca
             }
@@ -115,7 +119,11 @@ public class ProtectionMenuListener implements Listener {
                 String targetUuidStr = event.getCurrentItem().getItemMeta().getPersistentDataContainer().get(uuidKey, PersistentDataType.STRING);
                 UUID targetUuid = UUID.fromString(targetUuidStr);
 
-                stone.removeFriend(targetUuid); // Lo desterramos
+                stone.removeFriend(targetUuid); // Lo desterramos de la RAM
+
+                // 🌟 GUARDADO ASÍNCRONO EN SUPABASE
+                claimManager.saveStoneDataAsync(stone);
+
                 player.sendMessage(NexoColor.parse("&#FF3366[!] DESTIERRO: &#E6CCFFEl alma ha sido expulsada de tu Monolito."));
                 player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1f);
                 me.nexo.protections.menu.ProtectionMembersMenu.openMenu(player, stone); // Refresca
