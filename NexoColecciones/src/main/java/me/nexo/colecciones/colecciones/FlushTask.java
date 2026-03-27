@@ -18,8 +18,9 @@ public class FlushTask extends BukkitRunnable {
 
     @Override
     public void run() {
-        String sql = "INSERT INTO nexo_collections (uuid, collections_data) VALUES (?, ?::jsonb) " +
-                "ON CONFLICT (uuid) DO UPDATE SET collections_data = EXCLUDED.collections_data";
+        // 🌟 NUEVO SQL: Inyectamos 'claimed_tiers' a la base de datos de Supabase
+        String sql = "INSERT INTO nexo_collections (uuid, collections_data, claimed_tiers) VALUES (?, ?::jsonb, ?::jsonb) " +
+                "ON CONFLICT (uuid) DO UPDATE SET collections_data = EXCLUDED.collections_data, claimed_tiers = EXCLUDED.claimed_tiers";
 
         try (Connection conn = hikari.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -33,7 +34,13 @@ public class FlushTask extends BukkitRunnable {
             for (CollectionProfile profile : plugin.getCollectionManager().getPerfiles().values()) {
                 if (profile.isNeedsFlush()) {
                     ps.setString(1, profile.getPlayerUUID().toString());
-                    ps.setString(2, gson.toJson(profile.getProgress()));
+
+                    // 🌟 Empaquetamos en JSON el progreso base
+                    ps.setString(2, gson.toJson(profile.getProgressMap()));
+
+                    // 🌟 Empaquetamos en JSON la nueva memoria de recompensas reclamadas
+                    ps.setString(3, gson.toJson(profile.getClaimedTiersMap()));
+
                     ps.addBatch();
 
                     profile.setNeedsFlush(false);

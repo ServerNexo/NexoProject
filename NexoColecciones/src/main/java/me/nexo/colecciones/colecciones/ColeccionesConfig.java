@@ -1,22 +1,26 @@
 package me.nexo.colecciones.colecciones;
 
-// 🟢 ARQUITECTURA: Importamos el plugin principal de tu nuevo Addon
 import me.nexo.colecciones.NexoColecciones;
+import me.nexo.colecciones.data.CollectionCategory;
+import me.nexo.colecciones.data.CollectionItem;
+import me.nexo.colecciones.data.Tier;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class ColeccionesConfig {
 
-    // 🟢 ARQUITECTURA: Cambiamos Main por NexoColecciones
     private final NexoColecciones plugin;
     private FileConfiguration config;
     private File configFile;
 
-    // 🟢 ARQUITECTURA: Pedimos NexoColecciones en el constructor
     public ColeccionesConfig(NexoColecciones plugin) {
         this.plugin = plugin;
         crearConfig();
@@ -27,7 +31,6 @@ public class ColeccionesConfig {
 
         if (!configFile.exists()) {
             configFile.getParentFile().mkdirs();
-            // Esto copiará el archivo de resources a la carpeta del plugin
             plugin.saveResource("colecciones.yml", false);
         }
 
@@ -51,7 +54,74 @@ public class ColeccionesConfig {
     }
 
     // ==========================================================
-    // 🔍 MÉTODOS DE LECTURA
+    // 🦇 NUEVO MOTOR DE ENSAMBLAJE (FASE 1)
+    // ==========================================================
+
+    /**
+     * Lee el colecciones.yml y construye todas las Categorías, Colecciones y Tiers en memoria.
+     */
+    public Map<String, CollectionCategory> cargarCategoriasEnRam() {
+        Map<String, CollectionCategory> categoriasMap = new HashMap<>();
+
+        // 1. Leer Categorías
+        ConfigurationSection catSec = config.getConfigurationSection("categorias");
+        if (catSec != null) {
+            for (String key : catSec.getKeys(false)) {
+                String nombre = catSec.getString(key + ".nombre", "&7" + key);
+                Material icono = Material.getMaterial(catSec.getString(key + ".icono", "STONE").toUpperCase());
+                if (icono == null) icono = Material.STONE;
+                int slot = catSec.getInt(key + ".slot", 0);
+
+                categoriasMap.put(key, new CollectionCategory(key, nombre, icono, slot));
+            }
+        }
+
+        // 2. Leer Colecciones y Asignarlas a su Categoría
+        ConfigurationSection colSec = config.getConfigurationSection("colecciones");
+        if (colSec != null) {
+            for (String colKey : colSec.getKeys(false)) {
+                String catId = colSec.getString(colKey + ".categoria", "");
+                CollectionCategory categoria = categoriasMap.get(catId);
+
+                if (categoria == null) continue; // Si la categoría no existe, ignora esta colección
+
+                Material icono = Material.getMaterial(colSec.getString(colKey + ".icono", "STONE").toUpperCase());
+                if (icono == null) icono = Material.STONE;
+
+                String nexoId = colSec.getString(colKey + ".nexo_id", "");
+                String nombre = colSec.getString(colKey + ".nombre", "&7" + colKey);
+                int slotMenu = colSec.getInt(colKey + ".slot_en_menu", 0);
+
+                // 3. Leer los Tiers de esta colección
+                Map<Integer, Tier> tiersMap = new HashMap<>();
+                ConfigurationSection tierSec = colSec.getConfigurationSection(colKey + ".tiers");
+
+                if (tierSec != null) {
+                    for (String tKey : tierSec.getKeys(false)) {
+                        try {
+                            int nivel = Integer.parseInt(tKey);
+                            long requerido = tierSec.getLong(tKey + ".requerido", 100);
+                            List<String> recompensas = tierSec.getStringList(tKey + ".recompensas");
+                            List<String> lore = tierSec.getStringList(tKey + ".lore_recompensa");
+
+                            tiersMap.put(nivel, new Tier(nivel, requerido, recompensas, lore));
+                        } catch (NumberFormatException ignored) {
+                            // Ignora claves que no sean números
+                        }
+                    }
+                }
+
+                // Ensamblamos el ítem y lo metemos a la categoría
+                CollectionItem item = new CollectionItem(colKey, catId, nombre, icono, nexoId, slotMenu, tiersMap);
+                categoria.addItem(item);
+            }
+        }
+
+        return categoriasMap;
+    }
+
+    // ==========================================================
+    // 🔍 MÉTODOS DE COMPATIBILIDAD (Para no romper Slayers)
     // ==========================================================
 
     public boolean esColeccion(String id) {

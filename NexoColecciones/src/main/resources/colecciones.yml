@@ -1,212 +1,62 @@
 # ==========================================
-# 🌟 MOTOR DE COLECCIONES NEXO (15 NIVELES)
+# 🦇 NEXO COLECCIONES - GRIMORIO DEL VACÍO
 # ==========================================
+
+categorias:
+  mineria:
+    nombre: "&#FFAA00Minería Profunda"
+    icono: IRON_PICKAXE
+    slot: 11
+  combate:
+    nombre: "&#FF3366Cacería de Sangre"
+    icono: IRON_SWORD
+    slot: 15
+
 colecciones:
-  TALA:
-    OAK_LOG:
-      nombre: "&eMadera de Roble"
-      recompensas:
-        1:
-          - "nexo msg %player% &a¡Desbloqueaste el Nivel 1 de Roble!"
-          - "give %player% iron_axe 1"
-        5:
-          - "nexo msg %player% &a¡Nivel 5! Has desbloqueado Madera Refinada."
-          - "nexoitems give %player% madera_refinada 1"
-        10:
-          - "nexo msg %player% &a¡Nivel 10! Un minion talador se une a ti."
-          - "minion give %player% OAK_LOG 1"
-        15:
-          - "nexo msg %player% &6&l¡ROBLE AL MÁXIMO! Recibes el Hacha Treecapitator."
-          - "nexoitems give %player% hacha_treecapitator 1"
-    BIRCH_LOG:
-      nombre: "&fMadera de Abedul"
-      recompensas:
-        1: [ "nexo msg %player% &a¡Abedul Nivel 1!" ]
-        15: [ "nexo msg %player% &6¡Abedul Maximizado!" ]
-    SPRUCE_LOG:
-      nombre: "&6Madera de Abeto"
-    JUNGLE_LOG:
-      nombre: "&2Madera de Selva"
-    ACACIA_LOG:
-      nombre: "&6Madera de Acacia"
-    DARK_OAK_LOG:
-      nombre: "&8Madera de Roble Oscuro"
-    CHERRY_LOG:
-      nombre: "&dMadera de Cerezo"
-    MANGROVE_LOG:
-      nombre: "&4Madera de Manglar"
+  # --- EJEMPLO 1: MINERÍA ---
+  obsidiana:
+    categoria: "mineria"
+    icono: OBSIDIAN
+    nexo_id: ""
+    nombre: "&#5500FFObsidiana"
+    slot_en_menu: 10
+    tiers:
+      1:
+        requerido: 50
+        recompensas:
+          - "[comando] eco give {player} 1000"
+        lore_recompensa:
+          - "&#AAAAAARecompensa:"
+          - "&#55FF55+$1,000"
+      2:
+        requerido: 250
+        recompensas:
+          - "[permiso] nexocraft.minion.obsidiana"
+          - "[comando] skill xp add {player} mining 500 silent"
+        lore_recompensa:
+          - "&#AAAAAARecompensas:"
+          - "&#E6CCFFDesbloquea Esclavo de Obsidiana"
+          - "&#9933FF+500 XP Minería"
 
-  FARMING:
-    WHEAT:
-      nombre: "&eTrigo"
-      recompensas:
-        1:
-          - "nexo msg %player% &a¡Desbloqueaste el Nivel 1 de Trigo!"
-        5:
-          - "nexo msg %player% &a¡Desbloqueaste las Azadas Automáticas!"
-          - "nexoitems give %player% azada_automatica 1"
-        10:
-          - "nexo msg %player% &a¡Recibes un Minion Granjero!"
-          - "minion give %player% WHEAT 1"
-        15:
-          - "nexo msg %player% &6&l¡TRIGO MAXIMIZADO! Recibes Fardos Mutantes para el Monolito."
-          - "nexoitems give %player% fardo_mutante 3"
-    CARROTS:
-      nombre: "&6Zanahoria"
-      recompensas:
-        15:
-          - "nexo msg %player% &6&l¡ZANAHORIA AL MÁXIMO! Recibes Botas de Velocidad."
-          - "nexoitems give %player% botas_velocidad 1"
-    POTATOES:
-      nombre: "&ePatata"
-    MELON:
-      nombre: "&aMelón"
-    PUMPKIN:
-      nombre: "&6Calabaza"
-    SUGAR_CANE:
-      nombre: "&aCaña de Azúcar"
-    NETHER_WART:
-      nombre: "&cVerruga del Nether"
-    COCOA:
-      nombre: "&6Cacao"
-
-  MINA:
-    COAL_ORE:
-      nombre: "&8Carbón"
-      recompensas:
-        1:
-          - "nexo msg %player% &a¡Nivel 1 de Carbón!"
-        5:
-          - "nexo msg %player% &a¡Desbloqueaste la Auto-fundición!"
-          - "lp user %player% permission set nexomecanics.autofundicion"
-    IRON_ORE:
-      nombre: "&fHierro"
-      recompensas:
-        15:
-          - "nexo msg %player% &6&l¡HIERRO MAXIMIZADO! Desbloqueas Armaduras Pesadas."
-          - "nexoitems give %player% pechera_pesada 1"
-    GOLD_ORE:
-      nombre: "&eOro"
-    LAPIS_ORE:
-      nombre: "&9Lapis"
-    REDSTONE_ORE:
-      nombre: "&cRedstone"
-    DIAMOND_ORE:
-      nombre: "&bDiamante"
-      recompensas:
-        15:
-          - "nexo msg %player% &b&l¡DIAMANTE MAXIMIZADO! Recibes Piedras de Reforja Mítica."
-          - "nexoitems give %player% piedra_reforja_mitica 1"
-    EMERALD_ORE:
-      nombre: "&aEsmeralda"
-    OBSIDIAN:
-      nombre: "&5Obsidiana"
-    ANCIENT_DEBRIS:
-      nombre: "&4Escombros Ancestrales"
-
-  FISHING:
-    COD:
-      nombre: "&7Bacalao"
-      recompensas:
-        1:
-          - "nexo msg %player% &a¡Nivel 1 de Pesca! Recibes cebos básicos."
-          - "nexoitems give %player% cebo_basico 16"
-    SALMON:
-      nombre: "&cSalmón"
-    PUFFERFISH:
-      nombre: "&ePez Globo"
-    TROPICAL_FISH:
-      nombre: "&6Pez Tropical"
-    LILY_PAD:
-      nombre: "&2Nenúfares"
-    SPONGE:
-      nombre: "&eEsponja"
-      recompensas:
-        15:
-          - "nexo msg %player% &e&l¡ESPONJA AL MÁXIMO! Desbloqueas la Armadura de Esponja."
-          - "nexoitems give %player% set_esponja 1"
-    PRISMARINE_SHARD:
-      nombre: "&3Prismarina"
-      recompensas:
-        15:
-          - "nexo msg %player% &3&l¡PRISMARINA AL MÁXIMO! Aumenta tu probabilidad de pescar Bosses."
-          - "lp user %player% permission set nexomecanics.fishing.boss_chance"
-
-  FIGHTING:
-    ZOMBIE:
-      nombre: "&2Zombie (Carne Podrida)"
-      recompensas:
-        10:
-          - "nexo msg %player% &a¡Eres un experto cazando Zombies! Recibes una Espada Custom."
-          - "nexoitems give %player% espada_cazador 1"
-    SKELETON:
-      nombre: "&fEsqueleto (Huesos)"
-      recompensas:
-        15:
-          - "nexo msg %player% &f&l¡ESQUELETOS ERRADICADOS! Recibes Llaves de Dungeons Instanciadas."
-          - "nexoitems give %player% llave_dungeon_esqueleto 1"
-    CREEPER:
-      nombre: "&aCreeper (Pólvora)"
-    SPIDER:
-      nombre: "&4Araña (Hilo/Ojos)"
-    ENDERMAN:
-      nombre: "&3Enderman (Perlas)"
-      recompensas:
-        15:
-          - "nexo msg %player% &5&l¡ENDERMANS DOMINADOS! Recibes Ojos de Invocación de World Boss."
-          - "nexoitems give %player% ojo_worldboss 1"
-    BLAZE:
-      nombre: "&6Blaze (Varas)"
-    SLIME:
-      nombre: "&aSlime (Bolas)"
-
-  ALQUIMIA:
-    GLOWSTONE_DUST:
-      nombre: "&ePolvo de Piedra Luminosa"
-      recompensas:
-        10:
-          - "nexo msg %player% &a¡Desbloqueaste Catalizadores de Refinería!"
-          - "nexoitems give %player% catalizador_refineria 1"
-    GHAST_TEAR:
-      nombre: "&fLágrima de Ghast"
-    MAGMA_CREAM:
-      nombre: "&6Crema de Magma"
-      recompensas:
-        15:
-          - "nexo msg %player% &6&l¡CREMA DE MAGMA AL MÁXIMO! Desbloqueas Anillos de Inmunidad."
-          - "nexoitems give %player% anillo_inmunidad 1"
-    FERMENTED_SPIDER_EYE:
-      nombre: "&4Ojo de Araña Fermentado"
-    BLAZE_POWDER:
-      nombre: "&6Polvo de Blaze"
-
-  ENCANTAMIENTOS:
-    BOOK:
-      nombre: "&fLibros"
-      recompensas:
-        10:
-          - "nexo msg %player% &a¡Desbloqueaste Artefactos Exp Share!"
-          - "nexoitems give %player% exp_share 1"
-        15:
-          - "nexo msg %player% &d&l¡LIBROS AL MÁXIMO! Desbloqueas Libros Max Level Custom."
-          - "nexoitems give %player% libro_maximo 1"
-    EXPERIENCE_BOTTLE:
-      nombre: "&aBotellas de Experiencia"
-    LAPIS_LAZULI:
-      nombre: "&9Lapislázuli"
-      recompensas:
-        15:
-          - "nexo msg %player% &9&l¡LAPISLÁZULI AL MÁXIMO! Tienes descuentos permanentes en Reforjas."
-          - "lp user %player% permission set nexomecanics.reforjas.descuento"
-slayers:
-  # El ID interno de la misión
-  ZOMBIE_TIER_1:
-    nombre: "&2Cacería: El Rey Putrefacto"
-    mob_para_farmear: "ZOMBIE" # El mob normal que debe matar para llenar la barra
-    kills_requeridas: 50       # Cuántos debe matar para que aparezca el Boss
-    boss_tipo: "ZOMBIE"        # Qué entidad va a aparecer al final
-    boss_nombre: "&4&lRey Zombie"
-    recompensas:
-      - "nexo msg %player% &a¡Has derrotado al Rey Zombie!"
-      - "eco give %player% 5000"
-      - "nexoitems give %player% carne_corrupta 1"
+  # --- EJEMPLO 2: SLAYER / COMBATE ---
+  carne_podrida:
+    categoria: "combate"
+    icono: ROTTEN_FLESH
+    nexo_id: ""
+    nombre: "&#11FF11Restos Corruptos"
+    slot_en_menu: 10
+    tiers:
+      1:
+        requerido: 100
+        recompensas:
+          - "[comando] eco give {player} 500"
+        lore_recompensa:
+          - "&#AAAAAARecompensa:"
+          - "&#55FF55+$500"
+      2:
+        requerido: 500
+        recompensas:
+          - "[comando] nexopvp pasiva add {player} daño 1"
+        lore_recompensa:
+          - "&#AAAAAARecompensa:"
+          - "&#FF3366+1% Daño Permanente"

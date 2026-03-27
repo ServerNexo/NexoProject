@@ -121,10 +121,10 @@ public class MenuListener implements Listener {
             }
 
             if (!skillAura.isEmpty()) {
-                // 🌟 BYPASS DE SKRIPT: Usamos 'auraskills' directamente
-                String comando = "auraskills xp add " + player.getName() + " " + skillAura + " " + xpGanada + " silent";
+                // 🌟 RUTA DIRECTA: Usando el comando exacto que confirmaste en tu servidor (sin decimales)
+                String comando = "skill xp add " + player.getName() + " " + skillAura + " " + (int)xpGanada + " silent";
                 org.bukkit.Bukkit.getServer().dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), comando);
-                player.sendMessage(NexoColor.parse("&#9933FF✨ Conocimiento Arcano: +" + xpGanada + " XP en " + nombreSkill));
+                player.sendMessage(NexoColor.parse("&#9933FF✨ Conocimiento Arcano: +" + (int)xpGanada + " XP en " + nombreSkill));
             }
 
             // Resetear Minion

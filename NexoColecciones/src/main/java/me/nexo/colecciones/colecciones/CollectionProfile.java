@@ -1,74 +1,75 @@
 package me.nexo.colecciones.colecciones;
 
-import me.nexo.colecciones.NexoColecciones;
-import org.bukkit.Bukkit;
-import org.bukkit.configuration.ConfigurationSection;
-
-import java.util.List;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class CollectionProfile {
     private final UUID playerUUID;
+
+    // Memoria de cantidad recolectada (ID de Colección -> Cantidad)
     private final ConcurrentHashMap<String, Integer> progress;
+
+    // 🌟 NUEVO: Memoria de Tiers reclamados manualmente (ID de Colección -> Set de Niveles cobrados)
+    private final ConcurrentHashMap<String, Set<Integer>> claimedTiers;
+
     private boolean needsFlush = false;
 
-    public CollectionProfile(UUID playerUUID, ConcurrentHashMap<String, Integer> loadedProgress) {
+    public CollectionProfile(UUID playerUUID, Map<String, Integer> loadedProgress, Map<String, Set<Integer>> loadedClaimedTiers) {
         this.playerUUID = playerUUID;
-        this.progress = loadedProgress != null ? loadedProgress : new ConcurrentHashMap<>();
+        this.progress = loadedProgress != null ? new ConcurrentHashMap<>(loadedProgress) : new ConcurrentHashMap<>();
+        this.claimedTiers = loadedClaimedTiers != null ? new ConcurrentHashMap<>(loadedClaimedTiers) : new ConcurrentHashMap<>();
     }
+
+    // ==========================================================
+    // 🧮 GESTIÓN DE PROGRESO BASE
+    // ==========================================================
 
     // Método para leer el progreso actual en la RAM
     public int getProgress(String id) {
         return this.progress.getOrDefault(id, 0);
     }
 
-    // Método para añadir progreso y marcar para guardar
-    public void addProgress(String id, int amount, boolean isSlayer) {
+    // Método para añadir progreso silenciosamente (SIN RECLAMO AUTOMÁTICO)
+    public void addProgress(String id, int amount) {
         int oldAmount = progress.getOrDefault(id, 0);
-        int newAmount = oldAmount + amount;
-        progress.put(id, newAmount);
+        progress.put(id, oldAmount + amount);
         this.needsFlush = true; // Avisa al FlushTask que debe guardar esto
-
-        verificarMetas(id, oldAmount, newAmount, isSlayer);
     }
 
-    private void verificarMetas(String id, int oldAmt, int newAmt, boolean isSlayer) {
-        NexoColecciones plugin = NexoColecciones.getPlugin(NexoColecciones.class);
-        ConfigurationSection datos = isSlayer ? plugin.getColeccionesConfig().getDatosSlayer(id) : plugin.getColeccionesConfig().getDatosColeccion(id);
-        if (datos == null) return;
-
-        ConfigurationSection metas = datos.getConfigurationSection("metas");
-        if (metas == null) return;
-
-        for (String nivelStr : metas.getKeys(false)) {
-            int metaRequerida = metas.getInt(nivelStr);
-            if (oldAmt < metaRequerida && newAmt >= metaRequerida) {
-                otorgarRecompensa(datos, nivelStr);
-            }
-        }
+    // Fija un progreso exacto (útil para comandos de Admin)
+    public void setProgress(String id, int amount) {
+        progress.put(id, amount);
+        this.needsFlush = true;
     }
 
-    private void otorgarRecompensa(ConfigurationSection datos, String nivelStr) {
-        String nombreBonito = datos.getString("nombre_bonito", "Desconocido").replace("&", "§");
-        ConfigurationSection recompensa = datos.getConfigurationSection("recompensas." + nivelStr);
-        if (recompensa == null) return;
+    // ==========================================================
+    // 🎁 GESTIÓN DE TIERS (RECLAMO MANUAL)
+    // ==========================================================
 
-        Bukkit.getScheduler().runTask(NexoColecciones.getPlugin(NexoColecciones.class), () -> {
-            org.bukkit.entity.Player player = Bukkit.getPlayer(playerUUID);
-            if (player != null && player.isOnline()) {
-                player.sendMessage("§a§l¡NIVEL ALCANZADO! §fLlegaste al nivel §e" + nivelStr + " §fen §b" + nombreBonito);
-
-                List<String> comandos = recompensa.getStringList("comandos");
-                for (String cmd : comandos) {
-                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", player.getName()));
-                }
-            }
-        });
+    // 🌟 NUEVO: Verifica si un jugador ya cobró un Nivel en específico
+    public boolean hasClaimedTier(String collectionId, int tierLevel) {
+        Set<Integer> claimed = claimedTiers.get(collectionId);
+        return claimed != null && claimed.contains(tierLevel);
     }
+
+    // 🌟 NUEVO: Marca un Nivel como cobrado permanentemente
+    public void markTierAsClaimed(String collectionId, int tierLevel) {
+        // Si no existe un Set para esta colección, lo crea, y luego añade el Nivel
+        claimedTiers.computeIfAbsent(collectionId, k -> new HashSet<>()).add(tierLevel);
+        this.needsFlush = true;
+    }
+
+    // ==========================================================
+    // ⚙️ GETTERS DE ARQUITECTURA (Para Base de Datos)
+    // ==========================================================
 
     public boolean isNeedsFlush() { return needsFlush; }
     public void setNeedsFlush(boolean needsFlush) { this.needsFlush = needsFlush; }
-    public ConcurrentHashMap<String, Integer> getProgress() { return progress; }
+
+    public ConcurrentHashMap<String, Integer> getProgressMap() { return progress; }
+    public ConcurrentHashMap<String, Set<Integer>> getClaimedTiersMap() { return claimedTiers; }
     public UUID getPlayerUUID() { return playerUUID; }
 }

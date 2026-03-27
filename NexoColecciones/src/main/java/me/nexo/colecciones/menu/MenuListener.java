@@ -1,73 +1,96 @@
 package me.nexo.colecciones.menu;
 
 import me.nexo.colecciones.NexoColecciones;
-import me.nexo.colecciones.data.CollectionCategory;
-import me.nexo.colecciones.slayers.SlayerManager;
-import me.nexo.core.utils.NexoColor;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.Material;
+import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 public class MenuListener implements Listener {
 
+    private final NexoColecciones plugin;
+
+    public MenuListener(NexoColecciones plugin) {
+        this.plugin = plugin;
+    }
+
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        net.kyori.adventure.text.Component titleComp = event.getView().title();
+        // Solo respondemos si el inventario es nuestro Grimorio
+        if (!(event.getInventory().getHolder() instanceof ColeccionesMenu menu)) return;
+        event.setCancelled(true); // Bloquear que muevan o roben cristales
 
-        // Serializamos el Componente a texto plano (ej: "» Categorías de Colecciones") para hacer comprobaciones seguras
-        String plainTitle = PlainTextComponentSerializer.plainText().serialize(titleComp);
+        if (event.getClickedInventory() == null) return;
+        if (event.getClickedInventory().equals(event.getWhoClicked().getInventory())) return;
 
-        // 🌟 1. MENÚS DE COLECCIONES
-        if (titleComp.equals(NexoColor.parse(ColeccionesMenu.TITLE_MAIN)) || plainTitle.startsWith("» Colecciones:")) {
-            event.setCancelled(true);
+        Player player = (Player) event.getWhoClicked();
+        ItemStack item = event.getCurrentItem();
+        if (item == null || !item.hasItemMeta()) return;
 
-            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR || event.getCurrentItem().getItemMeta() == null) return;
+        ItemMeta meta = item.getItemMeta();
+        NamespacedKey actionKey = new NamespacedKey(plugin, "action");
 
-            Player player = (Player) event.getWhoClicked();
-            NexoColecciones plugin = NexoColecciones.getPlugin(NexoColecciones.class);
+        // Si no tiene llave de acción, ignoramos el clic (Ej: Clic en cristal negro)
+        if (!meta.getPersistentDataContainer().has(actionKey, PersistentDataType.STRING)) return;
 
-            // Clic en Menú Principal
-            if (titleComp.equals(NexoColor.parse(ColeccionesMenu.TITLE_MAIN))) {
-                String plainItemName = PlainTextComponentSerializer.plainText().serialize(event.getCurrentItem().getItemMeta().displayName());
-                try {
-                    CollectionCategory categoria = CollectionCategory.valueOf(plainItemName.toUpperCase());
-                    ColeccionesMenu.abrirSubMenu(player, plugin.getCollectionManager(), categoria);
-                } catch (IllegalArgumentException ignored) {}
-            }
-            // Clic en Sub-Menú
-            else if (plainTitle.startsWith("» Colecciones:")) {
-                if (event.getCurrentItem().getType() == Material.ARROW) {
-                    ColeccionesMenu.abrirMenuPrincipal(player);
-                }
-            }
-            return;
+        String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
+
+        // 🌟 BEDROCK FIX: Cerramos inventario, esperamos 3 ticks (3L) y abrimos el nuevo para evitar bugs
+        if (action.equals("open_category")) {
+            String catId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "category_id"), PersistentDataType.STRING);
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
+            player.closeInventory();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                new ColeccionesMenu(plugin, player, ColeccionesMenu.MenuType.CATEGORY).openCategory(catId);
+            }, 3L);
         }
+        else if (action.equals("open_item")) {
+            String itemId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING);
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
+            player.closeInventory();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                new ColeccionesMenu(plugin, player, ColeccionesMenu.MenuType.ITEM_TIERS).openItemTiers(itemId);
+            }, 3L);
+        }
+        else if (action.equals("claim_tier")) {
+            Integer tierNivel = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "tier_level"), PersistentDataType.INTEGER);
+            if (tierNivel != null) {
+                // Reclamar la recompensa en el Motor Central
+                plugin.getCollectionManager().reclamarRecompensa(player, menu.getItemId(), tierNivel);
 
-        // 🌟 2. MENÚ DE SLAYERS
-        if (titleComp.equals(NexoColor.parse(SlayerMenu.TITLE_MENU))) {
-            event.setCancelled(true);
-
-            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == Material.AIR || event.getCurrentItem().getItemMeta() == null) return;
-
-            // Extraemos el nombre en plano (ej: "ZOMBIE TIER 1")
-            String slayerName = PlainTextComponentSerializer.plainText().serialize(event.getCurrentItem().getItemMeta().displayName());
-            Player player = (Player) event.getWhoClicked();
-            NexoColecciones plugin = NexoColecciones.getPlugin(NexoColecciones.class);
-
-            // Buscamos el ID correcto comparando los nombres en plano
-            for (SlayerManager.SlayerTemplate template : plugin.getSlayerManager().getTemplates().values()) {
-                // Serializamos también el nombre de la plantilla desde la config para evitar fallos de lectura de color
-                String cleanTemplateName = PlainTextComponentSerializer.plainText().serialize(NexoColor.parse(template.name()));
-
-                if (cleanTemplateName.equalsIgnoreCase(slayerName)) {
-                    player.closeInventory();
-                    plugin.getSlayerManager().iniciarSlayer(player, template.id());
-                    break;
-                }
+                // Refrescar el menú actual (Dopamina visual de amarillo a verde)
+                player.closeInventory();
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    new ColeccionesMenu(plugin, player, ColeccionesMenu.MenuType.ITEM_TIERS).openItemTiers(menu.getItemId());
+                }, 3L);
             }
+        }
+        else if (action.equals("show_top")) {
+            String itemId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING);
+            player.closeInventory();
+            player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 0.5f, 1.5f);
+
+            // Llama a la Base de Datos para sacar el Top 5
+            plugin.getCollectionManager().calcularTopAsync(player, itemId);
+        }
+        else if (action.startsWith("back_")) {
+            String target = action.replace("back_", "");
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
+            player.closeInventory();
+
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (target.equals("main")) {
+                    new ColeccionesMenu(plugin, player, ColeccionesMenu.MenuType.MAIN).openMain();
+                } else {
+                    new ColeccionesMenu(plugin, player, ColeccionesMenu.MenuType.CATEGORY).openCategory(target);
+                }
+            }, 3L);
         }
     }
 }

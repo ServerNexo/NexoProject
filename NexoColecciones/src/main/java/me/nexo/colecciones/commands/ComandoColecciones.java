@@ -54,8 +54,8 @@ public class ComandoColecciones implements CommandExecutor {
             return true;
         }
 
-        // 🎒 ABRIR MENÚ
-        ColeccionesMenu.abrirMenuPrincipal(player);
+        // 🎒 ABRIR MENÚ PRINCIPAL (Nuevo Motor Visual del Vacío)
+        new ColeccionesMenu(plugin, player, ColeccionesMenu.MenuType.MAIN).openMain();
         return true;
     }
 }

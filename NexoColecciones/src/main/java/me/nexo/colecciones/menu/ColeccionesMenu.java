@@ -1,160 +1,264 @@
 package me.nexo.colecciones.menu;
 
-import me.nexo.colecciones.colecciones.CollectionManager;
+import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.colecciones.CollectionProfile;
 import me.nexo.colecciones.data.CollectionCategory;
 import me.nexo.colecciones.data.CollectionItem;
+import me.nexo.colecciones.data.Tier;
 import me.nexo.core.utils.NexoColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public class ColeccionesMenu {
+public class ColeccionesMenu implements InventoryHolder {
 
-    public static final String TITLE_MAIN = "&#434343<bold>»</bold> &#FFAA00Categorías de Colecciones";
-    public static final String TITLE_SUBMENU_PREFIX = "&#434343<bold>»</bold> &#00E5FFColecciones: &#FFAA00";
-    private static final String ERR_LOADING = "&#FF5555[!] Tus datos aún están sincronizándose con la red.";
+    private final NexoColecciones plugin;
+    private final Player player;
+    private Inventory inventory;
+    private final MenuType menuType;
 
-    // 🌟 1. MENÚ PRINCIPAL
-    public static void abrirMenuPrincipal(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(TITLE_MAIN));
+    // Datos de contexto
+    private String categoryId = "";
+    private String itemId = "";
 
-        inv.setItem(10, crearIconoCategoria(Material.IRON_PICKAXE, CollectionCategory.MINA));
-        inv.setItem(11, crearIconoCategoria(Material.IRON_HOE, CollectionCategory.FARMING));
-        inv.setItem(12, crearIconoCategoria(Material.IRON_AXE, CollectionCategory.TALA));
-        inv.setItem(13, crearIconoCategoria(Material.IRON_SWORD, CollectionCategory.FIGHTING));
-        inv.setItem(14, crearIconoCategoria(Material.FISHING_ROD, CollectionCategory.FISHING));
-        inv.setItem(15, crearIconoCategoria(Material.BREWING_STAND, CollectionCategory.ALQUIMIA));
-        inv.setItem(16, crearIconoCategoria(Material.ENCHANTING_TABLE, CollectionCategory.ENCANTAMIENTOS));
-
-        player.openInventory(inv);
+    public enum MenuType {
+        MAIN, CATEGORY, ITEM_TIERS
     }
 
-    // 🌟 TRADUCTOR VISUAL (Para que el jugador lea en Español)
-    private static String obtenerNombreCategoria(CollectionCategory cat) {
-        return switch (cat) {
-            case FARMING -> "Agricultura";
-            case FISHING -> "Pesca";
-            case FIGHTING -> "Combate";
-            case MINA -> "Minería";
-            case TALA -> "Tala";
-            case ALQUIMIA -> "Alquimia";
-            case ENCANTAMIENTOS -> "Encantamientos";
-            default -> cat.name();
-        };
+    public ColeccionesMenu(NexoColecciones plugin, Player player, MenuType type) {
+        this.plugin = plugin;
+        this.player = player;
+        this.menuType = type;
     }
 
-    private static ItemStack crearIconoCategoria(Material mat, CollectionCategory cat) {
-        ItemStack item = new ItemStack(mat);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            // Obtenemos el nombre traducido
-            String nombreBonito = obtenerNombreCategoria(cat);
-            meta.setDisplayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#55FF55<bold>" + nombreBonito + "</bold>")));
+    // ===========================================
+    // 📖 MENÚ 1: MENÚ PRINCIPAL (Categorías)
+    // ===========================================
+    public void openMain() {
+        this.inventory = Bukkit.createInventory(this, 27, NexoColor.parse("&#9933FFGrimorio del Vacío"));
 
-            List<String> lore = new ArrayList<>();
-            lore.add(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#AAAAAAHaz clic para explorar la")));
-            lore.add(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#AAAAAAbase de datos de esta rama.")));
-            meta.setLore(lore);
-
-            item.setItemMeta(meta);
-        }
-        return item;
-    }
-
-    // 🌟 2. SUB-MENÚ (Por Categoría)
-    public static void abrirSubMenu(Player player, CollectionManager manager, CollectionCategory categoria) {
-        // También traducimos el título del sub-menú
-        String nombreCategoriaBonito = obtenerNombreCategoria(categoria);
-        Inventory inv = Bukkit.createInventory(null, 54, NexoColor.parse(TITLE_SUBMENU_PREFIX + nombreCategoriaBonito));
-
-        CollectionProfile profile = manager.getProfile(player.getUniqueId());
-
-        if (profile == null) {
-            player.sendMessage(NexoColor.parse(ERR_LOADING));
-            return;
-        }
-
-        List<CollectionItem> itemsFiltrados = manager.getItemsRegistrados().values().stream()
-                .filter(item -> item.category() == categoria)
-                .sorted((i1, i2) -> i1.displayName().compareTo(i2.displayName()))
-                .collect(Collectors.toList());
-
-        for (CollectionItem item : itemsFiltrados) {
-            Material mat = Material.matchMaterial(item.itemId());
-            if (mat == null || !mat.isItem()) mat = obtenerIconoVisual(item.itemId());
-
-            ItemStack icono = new ItemStack(mat);
-            ItemMeta meta = icono.getItemMeta();
+        for (CollectionCategory cat : plugin.getCollectionManager().getCategorias().values()) {
+            ItemStack item = new ItemStack(cat.getIcono());
+            ItemMeta meta = item.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FFAA00<bold>" + item.displayName() + "</bold>")));
+                meta.displayName(NexoColor.parse(cat.getNombre()));
+                List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+                lore.add(NexoColor.parse("&#AAAAAAExplora las colecciones"));
+                lore.add(NexoColor.parse("&#AAAAAAde esta rama arcana."));
+                lore.add(net.kyori.adventure.text.Component.empty());
+                lore.add(NexoColor.parse("&#E6CCFF¡Clic para abrir!"));
+                meta.lore(lore);
+                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
 
-                int cantidad = profile.getProgress(item.itemId());
-                int nivel = manager.calcularNivel(cantidad);
+                // Llave para el listener
+                meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_category");
+                meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "category_id"), PersistentDataType.STRING, cat.getId());
+
+                item.setItemMeta(meta);
+            }
+            inventory.setItem(cat.getSlot(), item);
+        }
+
+        fillBorders();
+        player.openInventory(inventory);
+    }
+
+    // ===========================================
+    // ⚔️ MENÚ 2: CATEGORÍA (Ítems y Niebla)
+    // ===========================================
+    public void openCategory(String catId) {
+        this.categoryId = catId;
+        CollectionCategory cat = plugin.getCollectionManager().getCategorias().get(catId);
+        if (cat == null) return;
+
+        this.inventory = Bukkit.createInventory(this, 54, NexoColor.parse(cat.getNombre()));
+        CollectionProfile profile = plugin.getCollectionManager().getProfile(player.getUniqueId());
+
+        for (CollectionItem cItem : cat.getItems().values()) {
+            int progreso = profile != null ? profile.getProgress(cItem.getId()) : 0;
+            int nivelActual = plugin.getCollectionManager().calcularNivel(cItem, progreso);
+
+            ItemStack item;
+            ItemMeta meta;
+
+            if (progreso == 0) {
+                // 🌫️ Niebla de Guerra (No descubierto)
+                item = new ItemStack(Material.GRAY_DYE);
+                meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.displayName(NexoColor.parse("&#555555Ítem Desconocido"));
+                    List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+                    lore.add(NexoColor.parse("&#AAAAAAAún no has descubierto"));
+                    lore.add(NexoColor.parse("&#AAAAAAesta materia en el mundo."));
+                    meta.lore(lore);
+                }
+            } else {
+                // 💎 Descubierto
+                item = new ItemStack(cItem.getIcono());
+                meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.displayName(NexoColor.parse(cItem.getNombre()));
+                    List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+                    lore.add(NexoColor.parse("&#AAAAAANivel Alcanzado: &#9933FF" + nivelActual + " / " + cItem.getMaxTier()));
+                    lore.add(NexoColor.parse("&#AAAAAAProgreso Total: &#55FF55" + progreso));
+                    lore.add(net.kyori.adventure.text.Component.empty());
+                    lore.add(NexoColor.parse("&#E6CCFF¡Clic para ver las recompensas!"));
+                    meta.lore(lore);
+
+                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_item");
+                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING, cItem.getId());
+                }
+            }
+            if (meta != null) {
+                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                item.setItemMeta(meta);
+            }
+
+            inventory.setItem(cItem.getSlotMenu(), item);
+        }
+
+        addBackButton("main");
+        fillBorders();
+        player.openInventory(inventory);
+    }
+
+    // ===========================================
+    // 🎁 MENÚ 3: TIERS (Progreso y Reclamos)
+    // ===========================================
+    public void openItemTiers(String itemId) {
+        this.itemId = itemId;
+        CollectionItem cItem = plugin.getCollectionManager().getItemGlobal(itemId);
+        if (cItem == null) return;
+
+        this.inventory = Bukkit.createInventory(this, 45, NexoColor.parse("&#9933FFTiers de Colección"));
+        CollectionProfile profile = plugin.getCollectionManager().getProfile(player.getUniqueId());
+        int progreso = profile != null ? profile.getProgress(cItem.getId()) : 0;
+
+        // Colocamos los tiers en la fila del medio (slots 10-16)
+        int[] slotsCentro = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25};
+        int i = 0;
+
+        // Ordenamos los niveles de menor a mayor
+        List<Integer> niveles = new ArrayList<>(cItem.getTiers().keySet());
+        java.util.Collections.sort(niveles);
+
+        for (int nivel : niveles) {
+            if (i >= slotsCentro.length) break;
+            Tier tier = cItem.getTier(nivel);
+
+            boolean desbloqueado = progreso >= tier.getRequerido();
+            boolean reclamado = profile != null && profile.hasClaimedTier(cItem.getId(), nivel);
+
+            ItemStack item;
+            ItemMeta meta;
+
+            if (reclamado) {
+                // 🟩 RECLAMADO Y SEGURO
+                item = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
+                meta = item.getItemMeta();
+                meta.displayName(NexoColor.parse("&#55FF55<bold>NIVEL " + nivel + " COMPLETADO</bold>"));
+                List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+                lore.add(NexoColor.parse("&#AAAAAARequería: &#55FF55" + tier.getRequerido()));
+                lore.add(net.kyori.adventure.text.Component.empty());
+                lore.add(NexoColor.parse("&#55FF55[✓] El poder ya fluye en ti."));
+                meta.lore(lore);
+            } else if (desbloqueado) {
+                // 🟨 LISTO PARA RECLAMAR (Inyección Dopamina)
+                item = new ItemStack(Material.YELLOW_STAINED_GLASS_PANE);
+                meta = item.getItemMeta();
+                meta.displayName(NexoColor.parse("&#fbd72b<bold>⭐ NIVEL " + nivel + " ALCANZADO ⭐</bold>"));
+                meta.addEnchant(org.bukkit.enchantments.Enchantment.LURE, 1, true); // Brillo/Enchanted
 
                 List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                lore.add(NexoColor.parse("&#AAAAAAID de Registro: " + item.itemId()));
-                lore.add(NexoColor.parse(" "));
-                lore.add(NexoColor.parse("&#AAAAAANivel Actual: &#00E5FF" + nivel));
-
-                if (nivel < CollectionManager.TIERS.length) {
-                    int siguienteMeta = CollectionManager.TIERS[nivel];
-                    lore.add(NexoColor.parse("&#AAAAAAProgreso: &#FFAA00" + cantidad + " &#AAAAAA/ &#FFAA00" + siguienteMeta));
-                    lore.add(NexoColor.parse(" "));
-                    lore.add(NexoColor.parse("&#55FF55¡Producción requerida para mejorar!"));
-                } else {
-                    lore.add(NexoColor.parse("&#AAAAAAProgreso: &#FFAA00" + cantidad));
-                    lore.add(NexoColor.parse(" "));
-                    lore.add(NexoColor.parse("&#FFAA00<bold>¡MÁXIMA EFICIENCIA ALCANZADA!</bold>"));
+                lore.add(NexoColor.parse("&#AAAAAARequería: &#55FF55" + tier.getRequerido()));
+                lore.add(net.kyori.adventure.text.Component.empty());
+                for (String l : tier.getLoreRecompensa()) {
+                    lore.add(NexoColor.parse(l));
                 }
-                lore.add(NexoColor.parse(" "));
-                lore.add(NexoColor.parse("&#AAAAAAUsa &#FFAA00/col top " + item.itemId()));
-                lore.add(NexoColor.parse("&#AAAAAApara ver a los mejores del servidor."));
-
+                lore.add(net.kyori.adventure.text.Component.empty());
+                lore.add(NexoColor.parse("&#fbd72b¡Clic para reclamar el poder!"));
                 meta.lore(lore);
-                icono.setItemMeta(meta);
+
+                meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "claim_tier");
+                meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "tier_level"), PersistentDataType.INTEGER, nivel);
+            } else {
+                // 🟥 BLOQUEADO
+                item = new ItemStack(Material.RED_STAINED_GLASS_PANE);
+                meta = item.getItemMeta();
+                meta.displayName(NexoColor.parse("&#FF3366<bold>NIVEL " + nivel + " BLOQUEADO</bold>"));
+
+                List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+                lore.add(NexoColor.parse("&#AAAAAAProgreso: &#FF3366" + progreso + " / " + tier.getRequerido()));
+                lore.add(net.kyori.adventure.text.Component.empty());
+                lore.add(NexoColor.parse("&#AAAAAAMisterios aguardan a quienes"));
+                lore.add(NexoColor.parse("&#AAAAAAdemuestren su valía..."));
+                meta.lore(lore);
             }
-            inv.addItem(icono);
+
+            meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
+            item.setItemMeta(meta);
+            inventory.setItem(slotsCentro[i], item);
+            i++;
         }
 
-        // Botón de Volver
-        ItemStack volver = new ItemStack(Material.ARROW);
-        ItemMeta volverMeta = volver.getItemMeta();
-        if (volverMeta != null) {
-            volverMeta.displayName(NexoColor.parse("&#FF5555Regresar al Directorio Central"));
-            volver.setItemMeta(volverMeta);
-        }
-        inv.setItem(49, volver);
+        // 🔙 Botón de Volver
+        addBackButton(cItem.getCategoriaId());
 
-        player.openInventory(inv);
+        // 🏆 Ítem de TOP 5 GLOBAL (Leaderboards)
+        ItemStack info = new ItemStack(Material.NETHER_STAR);
+        ItemMeta iMeta = info.getItemMeta();
+        iMeta.displayName(NexoColor.parse("&#00fbffEstadísticas Globales"));
+        List<net.kyori.adventure.text.Component> iLore = new ArrayList<>();
+        iLore.add(NexoColor.parse("&#AAAAAATu progreso: &#55FF55" + progreso));
+        iLore.add(net.kyori.adventure.text.Component.empty());
+        iLore.add(NexoColor.parse("&#E6CCFF¡Clic para ver el Top 5 en Chat!"));
+        iMeta.lore(iLore);
+        iMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "show_top");
+        iMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING, cItem.getId());
+        info.setItemMeta(iMeta);
+        inventory.setItem(40, info); // Abajo en el centro
+
+        fillBorders();
+        player.openInventory(inventory);
     }
 
-    private static Material obtenerIconoVisual(String id) {
-        switch (id) {
-            case "CARROTS": return Material.CARROT;
-            case "POTATOES": return Material.POTATO;
-            case "COCOA": return Material.COCOA_BEANS;
-            case "BEETROOTS": return Material.BEETROOT;
-            case "SWEET_BERRY_BUSH": return Material.SWEET_BERRIES;
-            case "SUGAR_CANE": return Material.SUGAR_CANE;
-            case "NETHER_WART": return Material.NETHER_WART;
-            case "MELON": return Material.MELON;
-            case "PUMPKIN": return Material.PUMPKIN;
-            case "ZOMBIE": return Material.ROTTEN_FLESH;
-            case "SKELETON": return Material.BONE;
-            case "CREEPER": return Material.GUNPOWDER;
-            case "SPIDER": return Material.SPIDER_EYE;
-            case "ENDERMAN": return Material.ENDER_PEARL;
-            case "BLAZE": return Material.BLAZE_ROD;
-            case "SLIME": return Material.SLIME_BALL;
-            default: return Material.BARRIER;
+    // ===========================================
+    // 🛠️ HERRAMIENTAS
+    // ===========================================
+    private void addBackButton(String target) {
+        ItemStack back = new ItemStack(Material.ARROW);
+        ItemMeta meta = back.getItemMeta();
+        meta.displayName(NexoColor.parse("&#FF3366⬅ Volver"));
+        meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "back_" + target);
+        back.setItemMeta(meta);
+        inventory.setItem(inventory.getSize() - 5, back);
+    }
+
+    private void fillBorders() {
+        ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemMeta meta = glass.getItemMeta();
+        meta.displayName(net.kyori.adventure.text.Component.empty());
+        glass.setItemMeta(meta);
+
+        for (int j = 0; j < inventory.getSize(); j++) {
+            if (inventory.getItem(j) == null || inventory.getItem(j).getType().isAir()) {
+                inventory.setItem(j, glass);
+            }
         }
     }
+
+    @Override
+    public Inventory getInventory() { return inventory; }
+    public String getCategoryId() { return categoryId; }
+    public String getItemId() { return itemId; }
 }
