@@ -40,6 +40,7 @@ public class NexoEconomy extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new EconomyListener(this), this);
         getServer().getPluginManager().registerEvents(new me.nexo.economy.listeners.TradeListener(this), this);
         getServer().getPluginManager().registerEvents(new me.nexo.economy.blackmarket.BlackMarketListener(this), this); // 🌑 LISTENER MERCADO NEGRO
+        getServer().getPluginManager().registerEvents(new me.nexo.economy.bazar.BazaarMenuListener(this), this);
 
         // Registramos Comandos
         if (getCommand("eco") != null) {

@@ -195,4 +195,56 @@ public class ProtectionListener implements Listener {
             }
         }
     }
+
+    // ==========================================================
+    // 🚧 SISTEMA DE FRONTERAS Y CONTROL DE ACCESO (ENTRY)
+    // ==========================================================
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onPlayerMove(org.bukkit.event.player.PlayerMoveEvent event) {
+        if (event.getTo() == null) return;
+
+        // 🌟 OPTIMIZACIÓN: Solo calculamos si el jugador cruzó a un bloque nuevo
+        if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
+                event.getFrom().getBlockY() == event.getTo().getBlockY() &&
+                event.getFrom().getBlockZ() == event.getTo().getBlockZ()) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+
+        // Consultar el Cerebro: ¿De qué bloque a qué bloque se movió?
+        ProtectionStone fromClaim = claimManager.getStoneAt(event.getFrom());
+        ProtectionStone toClaim = claimManager.getStoneAt(event.getTo());
+
+        // Si cambió de dominio territorial (Ya sea entrando, saliendo, o cruzando entre dos dueños distintos)
+        if (fromClaim != toClaim) {
+
+            // 1. LÓGICA DE ENTRADA AL NUEVO TERRITORIO
+            if (toClaim != null) {
+
+                // 🌟 CORRECCIÓN: Se cambió hasFlag por getFlag para coincidir con la arquitectura
+                if (!toClaim.getFlag("ENTRY") && !toClaim.getOwnerId().equals(player.getUniqueId()) && !toClaim.hasPermission(player.getUniqueId(), ClaimAction.INTERACT) && !player.hasPermission("nexoprotections.admin")) {
+                    CrossplayUtils.sendMessage(player, "&#ff4b2b[!] Campo de Fuerza: &#e0e0e0Este dominio está cerrado para extraños.");
+
+                    // Empujarlo suavemente hacia atrás (Bedrock Friendly)
+                    org.bukkit.util.Vector pushback = event.getFrom().toVector().subtract(event.getTo().toVector()).normalize().multiply(0.5);
+                    pushback.setY(0.1);
+                    player.setVelocity(pushback);
+
+                    event.setCancelled(true);
+                    return;
+                }
+
+                // Título en la ActionBar informando a qué imperio ha entrado
+                String ownerName = org.bukkit.Bukkit.getOfflinePlayer(toClaim.getOwnerId()).getName();
+                if (ownerName == null) ownerName = "Desconocido";
+                CrossplayUtils.sendActionBar(player, "&#a8ff78🌿 Has entrado al dominio de " + ownerName);
+            }
+
+            // 2. LÓGICA DE SALIDA A ZONA SALVAJE
+            if (fromClaim != null && toClaim == null) {
+                CrossplayUtils.sendActionBar(player, "&#ff4b2b🌲 Has entrado a Zona Salvaje");
+            }
+        }
+    }
 }

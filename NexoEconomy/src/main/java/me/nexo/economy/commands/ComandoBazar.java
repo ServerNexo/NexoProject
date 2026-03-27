@@ -2,6 +2,7 @@ package me.nexo.economy.commands;
 
 import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
+import me.nexo.economy.bazar.BazaarMenu; // 🌟 IMPORT NUEVO PARA LA GUI
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -39,7 +40,16 @@ public class ComandoBazar implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) return true;
 
+        // 🌟 NUEVO: Si ponen solo /bazar, abre la interfaz gráfica
         if (args.length == 0) {
+            new BazaarMenu(plugin, player, BazaarMenu.MenuType.MAIN).openMain();
+            return true;
+        }
+
+        String subCommand = args[0].toLowerCase();
+
+        // ❓ /bazar help (Para mostrar los comandos de texto avanzados)
+        if (subCommand.equals("help")) {
             player.sendMessage(NexoColor.parse(BC_DIVIDER));
             player.sendMessage(NexoColor.parse(MSG_TITLE));
             player.sendMessage(NexoColor.parse(MSG_HELP_SELL));
@@ -48,8 +58,6 @@ public class ComandoBazar implements CommandExecutor {
             player.sendMessage(NexoColor.parse(BC_DIVIDER));
             return true;
         }
-
-        String subCommand = args[0].toLowerCase();
 
         // 📦 /bazar claim
         if (subCommand.equals("claim")) {

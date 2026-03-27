@@ -34,6 +34,9 @@ public class ProtectionFlagsMenu {
         inv.setItem(21, createFlagItem(player, Material.HOPPER, "Robar Ítems del Suelo", "item-pickup", stone));
         inv.setItem(22, createFlagItem(player, Material.ROTTEN_FLESH, "Tirar Basura (Drop)", "item-drop", stone));
 
+        // 🌟 PARCHE B: FLAG DE CONTROL DE ACCESO (Fronteras)
+        inv.setItem(23, createFlagItem(player, Material.IRON_DOOR, "Entrada de Forasteros", "ENTRY", stone));
+
         // 🌟 CORRECCIÓN BEDROCK: Decoración calculada hacia atrás (Última fila)
         int inicioUltimaFila = tamano - 9;
 
