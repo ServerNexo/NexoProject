@@ -1,5 +1,6 @@
 package me.nexo.economy.bazar;
 
+import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -12,8 +13,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.math.BigDecimal;
-
 public class BazaarMenuListener implements Listener {
 
     private final NexoEconomy plugin;
@@ -24,7 +23,11 @@ public class BazaarMenuListener implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!(event.getInventory().getHolder() instanceof BazaarMenu menu)) return;
+        // 🌟 Ahora detectamos clics tanto en el menú principal como en el de Mis Órdenes
+        boolean isBazaarMenu = event.getInventory().getHolder() instanceof BazaarMenu;
+        boolean isMyOrdersMenu = event.getInventory().getHolder() instanceof BazaarMyOrdersMenu;
+
+        if (!isBazaarMenu && !isMyOrdersMenu) return;
         event.setCancelled(true);
 
         if (event.getClickedInventory() == null) return;
@@ -41,7 +44,9 @@ public class BazaarMenuListener implements Listener {
 
         String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
 
+        // ==========================================
         // 🌟 NAVEGACIÓN (Fix de Bedrock de 3 ticks)
+        // ==========================================
         if (action.equals("open_category")) {
             String cat = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "category"), PersistentDataType.STRING);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
@@ -63,19 +68,6 @@ public class BazaarMenuListener implements Listener {
             player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
             plugin.getBazaarManager().reclamarBuzon(player);
         }
-        // 🌟 CREAR ORDENES (Por ahora simula 64 ítems a precio fijo. Puedes conectarlo a chat/yunque en el futuro)
-        else if (action.equals("create_buy_order")) {
-            String itemId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING);
-            player.closeInventory();
-            // EJEMPLO: Comprar 64 a 10.5 monedas cada uno.
-            plugin.getBazaarManager().crearOrdenCompra(player, itemId, 64, new BigDecimal("10.50"));
-        }
-        else if (action.equals("create_sell_order")) {
-            String itemId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING);
-            player.closeInventory();
-            // EJEMPLO: Vender 64 a 10 monedas cada uno.
-            plugin.getBazaarManager().crearOrdenVenta(player, itemId, 64, new BigDecimal("10.00"));
-        }
         else if (action.startsWith("back_")) {
             String target = action.replace("back_", "");
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
@@ -88,6 +80,45 @@ public class BazaarMenuListener implements Listener {
                     new BazaarMenu(plugin, player, BazaarMenu.MenuType.CATEGORY).openCategory(target.replace("cat_", ""));
                 }
             }, 3L);
+        }
+
+        // ==========================================
+        // ❌ GESTIÓN Y CANCELACIÓN DE ÓRDENES (FASE 2)
+        // ==========================================
+        else if (action.equals("open_my_orders")) {
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
+            player.closeInventory();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                new BazaarMyOrdersMenu(plugin, player).openMenu();
+            }, 3L);
+        }
+        else if (action.equals("cancel_order")) {
+            // Leer el ID como INTEGER porque lo cambiamos a SERIAL autoincremental
+            int orderId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "order_id"), PersistentDataType.INTEGER);
+            player.closeInventory();
+            plugin.getBazaarManager().cancelarOrden(player, orderId);
+        }
+
+        // ==========================================
+        // ✍️ CREAR ÓRDENES CON INPUT DE CHAT DINÁMICO (FASE 2)
+        // ==========================================
+        else if (action.equals("create_buy_order") || action.equals("create_sell_order")) {
+            String itemId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING);
+            player.closeInventory();
+
+            // Identificar si está comprando o vendiendo
+            String type = action.equals("create_buy_order") ? "BUY" : "SELL";
+
+            // Iniciar sesión asíncrona de chat
+            BazaarChatListener.activeSessions.put(player.getUniqueId(), new BazaarChatListener.OrderSession(itemId, type));
+
+            // Guiar al usuario visualmente
+            player.sendMessage(NexoColor.parse("&#fbd72b========================================"));
+            player.sendMessage(NexoColor.parse("&#00fbff[NEXO] Has iniciado una cotización para: &#fbd72b" + itemId));
+            player.sendMessage(NexoColor.parse("&#00fbffEscribe en el chat la &#a8ff78CANTIDAD TOTAL&#00fbff de ítems:"));
+            player.sendMessage(NexoColor.parse("&#AAAAAA(O escribe 'cancelar' para abortar)"));
+            player.sendMessage(NexoColor.parse("&#fbd72b========================================"));
+            player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
         }
     }
 }
