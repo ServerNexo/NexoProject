@@ -1,8 +1,11 @@
 package me.nexo.items.mochilas;
 
 import me.nexo.core.utils.NexoColor;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import me.nexo.items.NexoItems;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Bukkit;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -12,21 +15,65 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 public class MochilaListener implements Listener {
 
     private final MochilaManager manager;
+    private final NexoItems plugin; // 🌟 Añadido para el Selector de Mochilas
 
     // 🎨 Títulos y prefijos limpios para validaciones
     public static final String TITLE_PREFIX_PLAIN = "» Mochila Virtual #";
 
     public MochilaListener(MochilaManager manager) {
         this.manager = manager;
+        this.plugin = NexoItems.getPlugin(NexoItems.class); // Obtenemos el plugin de forma segura
     }
 
+    // ===============================================
+    // 🎒 LECTURA DE BOTONES PARA EL SELECTOR (PVMenu)
+    // ===============================================
+    @EventHandler
+    public void onPVMenuClick(InventoryClickEvent event) {
+        if (event.getInventory().getHolder() instanceof PVMenu) {
+            event.setCancelled(true); // Protege la interfaz para que no roben ítems
+            if (event.getCurrentItem() == null || !event.getCurrentItem().hasItemMeta()) return;
+
+            Player player = (Player) event.getWhoClicked();
+            ItemMeta meta = event.getCurrentItem().getItemMeta();
+            NamespacedKey pvKey = new NamespacedKey(plugin, "pv_action");
+            NamespacedKey hubKey = new NamespacedKey(plugin, "hub_action");
+
+            // Si le dio clic a una de las Mochilas
+            if (meta.getPersistentDataContainer().has(pvKey, PersistentDataType.INTEGER)) {
+                int mochilaId = meta.getPersistentDataContainer().get(pvKey, PersistentDataType.INTEGER);
+
+                player.playSound(player.getLocation(), Sound.BLOCK_ENDER_CHEST_OPEN, 0.5f, 1.0f);
+                player.closeInventory();
+
+                // Abre la mochila real forzando el comando con 3 ticks de retraso para Bedrock
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    player.performCommand("pv " + mochilaId);
+                }, 3L);
+            }
+            // Si le dio clic al botón de "Volver al Grimorio"
+            else if (meta.getPersistentDataContainer().has(hubKey, PersistentDataType.STRING)) {
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
+                player.closeInventory();
+
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    new me.nexo.core.hub.HubMenu(me.nexo.core.NexoCore.getPlugin(me.nexo.core.NexoCore.class), player).openMenu();
+                }, 3L);
+            }
+        }
+    }
+
+    // ===============================================
+    // 🛡️ LÓGICA DE PROTECCIÓN AL CERRAR Y MOVER ÍTEMS
+    // ===============================================
     @EventHandler
     public void alCerrarMochila(InventoryCloseEvent event) {
-        // 🌟 CORRECCIÓN 1.21: Usamos PlainTextComponentSerializer en vez de getTitle()
         String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
 
         if (tituloLimpio.startsWith(TITLE_PREFIX_PLAIN)) {
@@ -60,7 +107,6 @@ public class MochilaListener implements Listener {
             }
         }
         else if (clickedInv.equals(topInv)) {
-            // 🌟 CORRECCIÓN 1.21: Usamos event.getCursor() de manera segura o event.getWhoClicked().getItemOnCursor()
             if (esMochilaProhibida(event.getCursor())) {
                 event.setCancelled(true);
                 event.getWhoClicked().sendMessage(NexoColor.parse("&#FF5555[!] Infracción detectada: Prohibido almacenar contenedores anidados en la mochila virtual."));

@@ -27,6 +27,13 @@ public class ComandoPV implements CommandExecutor {
             return true;
         }
 
+        // 🌟 NUEVO: Si escribe solo "/pv" (0 argumentos), abrimos el Selector Visual
+        if (args.length == 0) {
+            new PVMenu(plugin, player).openMenu();
+            return true;
+        }
+
+        // Si escribe más de 1 argumento (Ej: "/pv 1 2"), le da error de sintaxis
         if (args.length != 1) {
             player.sendMessage(NexoColor.parse(ERR_USAGE));
             return true;
@@ -35,12 +42,14 @@ public class ComandoPV implements CommandExecutor {
         try {
             int vaultNumber = Integer.parseInt(args[0]);
 
+            // Validación de Permisos (Por defecto la 1 siempre debería estar permitida si así lo quieres,
+            // pero aquí respeta tus permisos de LuckPerms nexo.pv.X)
             if (!player.hasPermission("nexo.pv." + vaultNumber) && !player.hasPermission("nexo.pv.*")) {
                 player.sendMessage(NexoColor.parse(ERR_NO_PERM.replace("%num%", String.valueOf(vaultNumber))));
                 return true;
             }
 
-            // 🌟 CORRECCIÓN AQUÍ: Llamamos al método asíncrono que abre el inventario directamente
+            // 🌟 Llama al método asíncrono que abre el inventario directamente
             plugin.getMochilaManager().abrirMochila(player, vaultNumber);
 
         } catch (NumberFormatException e) {

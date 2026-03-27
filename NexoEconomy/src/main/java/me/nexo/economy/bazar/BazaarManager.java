@@ -333,4 +333,47 @@ public class BazaarManager {
             }
         });
     }
+    // ==========================================
+    // 📊 ESTADÍSTICAS EN VIVO (ORDER BOOK Y FLIPPING)
+    // ==========================================
+
+    public java.math.BigDecimal getMejorPrecioCompra(String itemId) {
+        // Es el precio más alto que alguien está dispuesto a pagar (BIDS).
+        // Si un jugador quiere VENDER AL INSTANTE, se le pagará este precio.
+        try (java.sql.Connection conn = me.nexo.core.NexoCore.getPlugin(me.nexo.core.NexoCore.class).getDatabaseManager().getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement("SELECT MAX(price_per_unit) FROM nexo_bazaar_orders WHERE item_id = ? AND order_type = 'BUY'")) {
+            ps.setString(1, itemId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getBigDecimal(1) != null) return rs.getBigDecimal(1);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return java.math.BigDecimal.ZERO;
+    }
+
+    public java.math.BigDecimal getMejorPrecioVenta(String itemId) {
+        // Es el precio más bajo al que alguien está vendiendo (ASKS).
+        // Si un jugador quiere COMPRAR AL INSTANTE, le costará este precio.
+        try (java.sql.Connection conn = me.nexo.core.NexoCore.getPlugin(me.nexo.core.NexoCore.class).getDatabaseManager().getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement("SELECT MIN(price_per_unit) FROM nexo_bazaar_orders WHERE item_id = ? AND order_type = 'SELL'")) {
+            ps.setString(1, itemId);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next() && rs.getBigDecimal(1) != null) return rs.getBigDecimal(1);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return java.math.BigDecimal.ZERO;
+    }
+
+    public int getVolumenOrdenes(String itemId, String type) {
+        // Calcula cuántos miles de ítems están flotando en la red actualmente
+        try (java.sql.Connection conn = me.nexo.core.NexoCore.getPlugin(me.nexo.core.NexoCore.class).getDatabaseManager().getConnection();
+             java.sql.PreparedStatement ps = conn.prepareStatement("SELECT SUM(amount) FROM nexo_bazaar_orders WHERE item_id = ? AND order_type = ?")) {
+            ps.setString(1, itemId);
+            ps.setString(2, type);
+            try (java.sql.ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (Exception e) { e.printStackTrace(); }
+        return 0;
+    }
+
 }
