@@ -181,6 +181,63 @@ public class CollectionManager {
     }
 
     // ==========================================================
+    // 🏆 SISTEMA DE TOP GLOBAL (SUPABASE)
+    // ==========================================================
+
+    public void calcularTopAsync(Player player, String itemId) {
+        CollectionItem cItem = getItemGlobal(itemId);
+
+        if (cItem == null) {
+            player.sendMessage(NexoColor.parse("&#ff4b2b[!] Error: Esa colección no existe en la base de datos."));
+            return;
+        }
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            // Consulta SQL adaptada para leer de tu JSONB
+            String sql = "SELECT j.name, CAST(c.collections_data->>? AS INTEGER) as amount " +
+                    "FROM nexo_collections c " +
+                    "JOIN jugadores j ON c.uuid = j.uuid " +
+                    "WHERE c.collections_data ? ? " +
+                    "ORDER BY amount DESC LIMIT 5";
+
+            try (Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+
+                // Usamos el ID exacto que se guarda en el JSON
+                ps.setString(1, cItem.getId());
+                ps.setString(2, cItem.getId());
+                ResultSet rs = ps.executeQuery();
+
+                List<net.kyori.adventure.text.Component> lineasTop = new ArrayList<>();
+                int rank = 1;
+                while (rs.next()) {
+                    String pName = rs.getString("name");
+                    int amt = rs.getInt("amount");
+                    lineasTop.add(NexoColor.parse("&#fbd72b" + rank + ". &#a8ff78" + pName + " &#434343- &#00fbff" + amt + " &#e0e0e0farmeados"));
+                    rank++;
+                }
+
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    player.sendMessage(NexoColor.parse(BC_DIVIDER));
+                    player.sendMessage(NexoColor.parse("&#fbd72b<bold>🏆 TOP 5 GLOBAL: </bold>" + cItem.getNombre()));
+
+                    if (lineasTop.isEmpty()) {
+                        player.sendMessage(NexoColor.parse("&#434343Nadie ha farmeado este recurso todavía..."));
+                    } else {
+                        for (net.kyori.adventure.text.Component l : lineasTop) {
+                            player.sendMessage(l);
+                        }
+                    }
+                    player.sendMessage(NexoColor.parse(BC_DIVIDER));
+                });
+
+            } catch (Exception e) {
+                Bukkit.getScheduler().runTask(plugin, () -> player.sendMessage(NexoColor.parse("&#ff4b2b[!] Error crítico de red al contactar con la base de datos.")));
+            }
+        });
+    }
+
+    // ==========================================================
     // 🔍 UTILIDADES Y GETTERS
     // ==========================================================
 

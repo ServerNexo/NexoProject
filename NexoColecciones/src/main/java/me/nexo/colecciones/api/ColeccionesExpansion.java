@@ -4,6 +4,7 @@ import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.colecciones.CollectionProfile;
+import me.nexo.colecciones.data.CollectionItem;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 
@@ -46,15 +47,22 @@ public class ColeccionesExpansion extends PlaceholderExpansion {
 
         // 🌟 VARIABLE 1: %nexocolecciones_progress_ITEM%
         if (params.startsWith("progress_")) {
-            String itemId = params.replace("progress_", "").toUpperCase();
+            String itemId = params.replace("progress_", "").toLowerCase(); // Usamos minúsculas para coincidir con el motor
             return String.valueOf(profile.getProgress(itemId));
         }
 
         // 🌟 VARIABLE 2: %nexocolecciones_level_ITEM%
         if (params.startsWith("level_")) {
-            String itemId = params.replace("level_", "").toUpperCase();
+            String itemId = params.replace("level_", "").toLowerCase();
+
+            // Buscamos el ítem en la memoria del Cerebro
+            CollectionItem item = manager.getItemGlobal(itemId);
+            if (item == null) return "0"; // Si no existe, es nivel 0
+
             int progreso = profile.getProgress(itemId);
-            return String.valueOf(manager.calcularNivel(progreso));
+
+            // 🌟 CORRECCIÓN: Le pasamos el 'item' al calculador para que lea sus Tiers
+            return String.valueOf(manager.calcularNivel(item, progreso));
         }
 
         return null; // Si escriben mal la variable

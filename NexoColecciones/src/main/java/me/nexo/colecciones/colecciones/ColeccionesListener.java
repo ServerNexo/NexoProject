@@ -49,14 +49,12 @@ public class ColeccionesListener implements Listener {
     // ==========================================
     // ⛏️ TALA, MINERÍA Y FARMING
     // ==========================================
-    // 🌟 CORRECCIÓN: Quitamos ignoreCancelled=true para que NexoItems pueda sumar progreso
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreak(BlockBreakEvent event) {
         // Si el evento fue cancelado, revisamos si estamos en "Mina"
-        // (ya que NexoItems cancela ahí los bloques intencionalmente para dar drops custom)
         if (event.isCancelled()) {
             if (!event.getPlayer().getWorld().getName().equalsIgnoreCase("Mina")) {
-                return; // Si lo canceló otra cosa (ej. WorldGuard) en otro mundo, lo ignoramos.
+                return;
             }
         }
 
@@ -161,14 +159,20 @@ public class ColeccionesListener implements Listener {
             var dataSource = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getDataSource();
 
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                String sql = "INSERT INTO nexo_collections (uuid, collections_data) VALUES (?, ?::jsonb) " +
-                        "ON CONFLICT (uuid) DO UPDATE SET collections_data = EXCLUDED.collections_data";
+                // 🌟 NUEVA SQL: Guarda el progreso y la memoria de Tiers reclamados
+                String sql = "INSERT INTO nexo_collections (uuid, collections_data, claimed_tiers) VALUES (?, ?::jsonb, ?::jsonb) " +
+                        "ON CONFLICT (uuid) DO UPDATE SET collections_data = EXCLUDED.collections_data, claimed_tiers = EXCLUDED.claimed_tiers";
 
                 try (java.sql.Connection conn = dataSource.getConnection();
                      java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
 
+                    com.google.gson.Gson gson = new com.google.gson.Gson();
+
                     ps.setString(1, uuid.toString());
-                    ps.setString(2, new com.google.gson.Gson().toJson(profile.getProgress()));
+                    // 🌟 CORRECCIÓN: Usamos getProgressMap() y getClaimedTiersMap()
+                    ps.setString(2, gson.toJson(profile.getProgressMap()));
+                    ps.setString(3, gson.toJson(profile.getClaimedTiersMap()));
+
                     ps.executeUpdate();
 
                 } catch (Exception e) {

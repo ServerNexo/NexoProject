@@ -47,8 +47,8 @@ public class NexoColecciones extends JavaPlugin {
         // 🌟 Registro de Slayers
         getServer().getPluginManager().registerEvents(new SlayerListener(this), this);
 
-        // Protección de menús
-        getServer().getPluginManager().registerEvents(new MenuListener(), this);
+        // 🌟 CORRECCIÓN: Protección de menús (Añadido el 'this' dentro del MenuListener)
+        getServer().getPluginManager().registerEvents(new MenuListener(this), this);
 
         // Registro del comando central /colecciones
         if (getCommand("colecciones") != null) {
