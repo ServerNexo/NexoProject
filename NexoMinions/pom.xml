@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>NexoMinions</name>
-    <description>Motor Nativo de Minions Evolutivos para Paper 1.21.11</description>
+    <description>Motor Nativo de Esclavos Evolutivos para Paper 1.21.11</description>
 
     <properties>
         <java.version>21</java.version>
@@ -41,10 +41,6 @@
             <url>https://repo.nexomc.com/releases</url>
         </repository>
         <repository>
-            <id>aurelium-repo</id>
-            <url>https://repo.aurelium.dev/releases/</url>
-        </repository>
-        <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
         </repository>
@@ -64,6 +60,7 @@
             <version>1.20.1</version>
             <scope>provided</scope>
         </dependency>
+
         <dependency>
             <groupId>me.nexo</groupId>
             <artifactId>NexoProtections</artifactId>
@@ -91,6 +88,7 @@
             <version>1.18.34</version>
             <scope>provided</scope>
         </dependency>
+
         <dependency>
             <groupId>me.nexo</groupId>
             <artifactId>NexoColecciones</artifactId>

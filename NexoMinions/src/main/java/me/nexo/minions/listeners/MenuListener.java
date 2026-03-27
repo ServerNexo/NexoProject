@@ -99,7 +99,8 @@ public class MenuListener implements Listener {
             }
 
             if (!skillAura.isEmpty()) {
-                String comando = "skills addxp " + player.getName() + " " + skillAura + " " + xpGanada + " -s";
+                // 🌟 BYPASS DE SKRIPT: Usamos 'auraskills' directamente y la nueva sintaxis 'xp add'
+                String comando = "auraskills xp add " + player.getName() + " " + skillAura + " " + xpGanada + " silent";
                 org.bukkit.Bukkit.getServer().dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), comando);
                 player.sendMessage(NexoColor.parse("&#9933FF✨ Conocimiento Arcano: +" + xpGanada + " XP en " + nombreSkill));
             }

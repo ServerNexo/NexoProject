@@ -1,8 +1,7 @@
 package me.nexo.minions.listeners;
 
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT PARA LA PALETA GÓTICA DEL VACÍO
+import me.nexo.core.utils.NexoColor;
 import me.nexo.minions.NexoMinions;
-import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.minions.menu.MinionMenu;
 import org.bukkit.NamespacedKey;
@@ -27,18 +26,24 @@ public class MinionInteractListener implements Listener {
     @EventHandler
     public void onRightClick(PlayerInteractEntityEvent event) {
         if (!(event.getRightClicked() instanceof Interaction hitbox)) return;
-        if (!esDueñoValido(event.getPlayer(), hitbox)) return;
+
+        String displayIdStr = hitbox.getPersistentDataContainer().get(new NamespacedKey(plugin, "minion_display_id"), PersistentDataType.STRING);
+        if (displayIdStr == null) return;
+
+        ActiveMinion minion = plugin.getMinionManager().getMinion(UUID.fromString(displayIdStr));
+        if (minion == null) return;
+
+        Player player = event.getPlayer();
+
+        // 🌟 PARCHE DE SEGURIDAD ABSOLUTA: Consultar a la memoria RAM, no a la Hitbox
+        if (!minion.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
+            player.sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFEste esclavo obedece únicamente la voluntad de su Maestro."));
+            event.setCancelled(true);
+            return;
+        }
 
         event.setCancelled(true);
-        String displayIdStr = hitbox.getPersistentDataContainer().get(new NamespacedKey(plugin, "minion_display_id"), PersistentDataType.STRING);
-
-        if (displayIdStr != null) {
-            ActiveMinion minion = plugin.getMinionManager().getMinion(UUID.fromString(displayIdStr));
-            if (minion != null) {
-                // 🌟 EL CAMBIO MAESTRO: Le pasamos el 'plugin' y ahora también al 'Jugador' para la compatibilidad Bedrock
-                event.getPlayer().openInventory(new MinionMenu(plugin, minion, event.getPlayer()).getInventory());
-            }
-        }
+        player.openInventory(new MinionMenu(plugin, minion, player).getInventory());
     }
 
     // 🗡️ CLIC IZQUIERDO: Golpear para Recoger al Minion
@@ -47,25 +52,20 @@ public class MinionInteractListener implements Listener {
         if (!(event.getEntity() instanceof Interaction hitbox)) return;
         if (!(event.getDamager() instanceof Player player)) return;
 
-        event.setCancelled(true);
-        if (!esDueñoValido(player, hitbox)) return;
-
         String displayIdStr = hitbox.getPersistentDataContainer().get(new NamespacedKey(plugin, "minion_display_id"), PersistentDataType.STRING);
-        if (displayIdStr != null) {
-            plugin.getMinionManager().recogerMinion(player, UUID.fromString(displayIdStr));
-        }
-    }
+        if (displayIdStr == null) return;
 
-    private boolean esDueñoValido(Player player, Interaction hitbox) {
-        NamespacedKey displayKey = new NamespacedKey(plugin, "minion_display_id");
-        if (!hitbox.getPersistentDataContainer().has(displayKey, PersistentDataType.STRING)) return false;
+        ActiveMinion minion = plugin.getMinionManager().getMinion(UUID.fromString(displayIdStr));
+        if (minion == null) return;
 
-        String ownerStr = hitbox.getPersistentDataContainer().get(MinionKeys.OWNER, PersistentDataType.STRING);
-        if (ownerStr != null && !player.getUniqueId().toString().equals(ownerStr) && !player.hasPermission("nexominions.admin")) {
-            // 🌟 Alerta Gótica de Infracción
-            player.sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFEste esclavo obedece únicamente la voluntad de su Maestro."));
-            return false;
+        // 🌟 PARCHE DE SEGURIDAD ABSOLUTA
+        if (!minion.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
+            player.sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFNo puedes desterrar al esclavo de otro Maestro."));
+            event.setCancelled(true);
+            return;
         }
-        return true;
+
+        event.setCancelled(true);
+        plugin.getMinionManager().recogerMinion(player, UUID.fromString(displayIdStr));
     }
 }

@@ -1,9 +1,10 @@
 package me.nexo.minions.listeners;
 
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
+import me.nexo.core.utils.NexoColor; // 🌟 IMPORT PARA LA PALETA GÓTICA DEL VACÍO
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
+import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.core.ProtectionStone;
 import me.nexo.protections.core.ClaimAction;
@@ -41,10 +42,9 @@ public class MinionListener implements Listener {
         if (item == null || !item.hasItemMeta()) return;
 
         ItemMeta meta = item.getItemMeta();
-        NamespacedKey keyType = new NamespacedKey(plugin, "minion_type");
-        NamespacedKey keyTier = new NamespacedKey(plugin, "minion_tier");
 
-        if (meta.getPersistentDataContainer().has(keyType, PersistentDataType.STRING)) {
+        // 🌟 USAR LAS LLAVES OFICIALES
+        if (meta.getPersistentDataContainer().has(MinionKeys.TYPE, PersistentDataType.STRING)) {
             event.setCancelled(true);
             Player player = event.getPlayer();
 
@@ -52,14 +52,14 @@ public class MinionListener implements Listener {
             if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
                 ProtectionStone stone = NexoProtections.getClaimManager().getStoneAt(event.getClickedBlock().getLocation());
                 if (stone != null && !stone.hasPermission(player.getUniqueId(), ClaimAction.BUILD)) {
-                    player.sendMessage(NexoColor.parse("&#FF5555[!] Acceso Denegado: Territorio corporativo ajeno."));
+                    player.sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFEste dominio pertenece a otra entidad."));
                     player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                     return; // 🛑 Cortamos el flujo
                 }
             }
 
-            String typeStr = meta.getPersistentDataContainer().get(keyType, PersistentDataType.STRING);
-            Integer tier = meta.getPersistentDataContainer().get(keyTier, PersistentDataType.INTEGER);
+            String typeStr = meta.getPersistentDataContainer().get(MinionKeys.TYPE, PersistentDataType.STRING);
+            Integer tier = meta.getPersistentDataContainer().get(MinionKeys.TIER, PersistentDataType.INTEGER);
 
             if (typeStr != null && tier != null) {
                 try {
@@ -68,7 +68,7 @@ public class MinionListener implements Listener {
                     int placedMinions = plugin.getMinionManager().getPlacedMinions(player);
 
                     if (placedMinions >= maxMinions) {
-                        player.sendMessage(NexoColor.parse("&#FF5555[!] Límite Operativo Alcanzado: &#AAAAAAMáximo de " + maxMinions + " operarios permitidos."));
+                        player.sendMessage(NexoColor.parse("&#FF3366[!] Límite de Almas Alcanzado: &#E6CCFFMáximo de " + maxMinions + " esclavos permitidos."));
                         player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                         return; // 🛑 Detenemos el código aquí
                     }
@@ -83,9 +83,9 @@ public class MinionListener implements Listener {
                     plugin.getMinionManager().addPlacedMinion(player, 1);
 
                     item.setAmount(item.getAmount() - 1);
-                    player.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>OPERARIO DESPLEGADO:</bold> &#AAAAAAUnidad " + type.getDisplayName() + " en línea. &#00E5FF(" + (placedMinions + 1) + "/" + maxMinions + ")"));
+                    player.sendMessage(NexoColor.parse("&#9933FF[✓] <bold>ESCLAVO CONJURADO:</bold> &#E6CCFFUnidad " + type.getDisplayName() + " atada al mundo terrenal. &#CC66FF(" + (placedMinions + 1) + "/" + maxMinions + ")"));
                 } catch (IllegalArgumentException e) {
-                    event.getPlayer().sendMessage(NexoColor.parse("&#FF5555[!] Error de Firmware: El disco de datos de este operario está corrupto."));
+                    event.getPlayer().sendMessage(NexoColor.parse("&#FF3366[!] Fallo de Invocación: &#E6CCFFEl sello de este esclavo está corrupto."));
                 }
             }
         }
@@ -106,21 +106,23 @@ public class MinionListener implements Listener {
 
                 // ... y está vinculada a un Minion
                 if (displayIdStr != null) {
-                    String ownerStr = hitbox.getPersistentDataContainer().get(MinionKeys.OWNER, PersistentDataType.STRING);
+                    ActiveMinion minion = plugin.getMinionManager().getMinion(UUID.fromString(displayIdStr));
 
-                    // 1. Verificamos si el que rompe el bloque NO es el dueño
-                    if (ownerStr != null && !event.getPlayer().getUniqueId().toString().equals(ownerStr) && !event.getPlayer().hasPermission("nexominions.admin")) {
-                        event.getPlayer().sendMessage(NexoColor.parse("&#FF5555[!] Infracción de Seguridad: No puedes desestabilizar la plataforma de un operario ajeno."));
-                        event.setCancelled(true);
-                        return;
+                    if (minion != null) {
+                        // 🌟 SEGURIDAD ABSOLUTA (Leyendo desde la memoria RAM)
+                        if (!minion.getOwnerId().equals(event.getPlayer().getUniqueId()) && !event.getPlayer().hasPermission("nexominions.admin")) {
+                            event.getPlayer().sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFNo puedes desestabilizar el ritual de un esclavo ajeno."));
+                            event.setCancelled(true);
+                            return;
+                        }
+
+                        // Si es el dueño (o un admin), forzamos la recolección del minion
+                        plugin.getMinionManager().recogerMinion(event.getPlayer(), UUID.fromString(displayIdStr));
+
+                        // Nota: No cancelamos el evento de romper el bloque,
+                        // permitimos que el bloque se rompa, pero el minion se va al inventario en lugar de flotar.
+                        break;
                     }
-
-                    // 2. Si es el dueño (o un admin), forzamos la recolección del minion
-                    plugin.getMinionManager().recogerMinion(event.getPlayer(), UUID.fromString(displayIdStr));
-
-                    // Nota: No cancelamos el evento de romper el bloque,
-                    // permitimos que el bloque se rompa, pero el minion se va al inventario en lugar de flotar.
-                    break;
                 }
             }
         }
