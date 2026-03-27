@@ -6,6 +6,7 @@ import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.minions.menu.MinionMenu;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
@@ -73,8 +74,29 @@ public class MenuListener implements Listener {
                 return;
             }
 
-            // Entregar Materiales
-            HashMap<Integer, ItemStack> sobrante = player.getInventory().addItem(new ItemStack(minion.getType().getTargetMaterial(), cantidad));
+            // 🗜️ MOTOR HYPIXEL: LÓGICA DEL COMPACTADOR MATEMÁTICO
+            boolean tieneCompactador = minion.tieneMejoraActiva("ITEM_UPGRADES");
+            HashMap<Integer, ItemStack> sobrante = new HashMap<>();
+
+            if (tieneCompactador) {
+                int bloques = cantidad / 9;
+                int sueltos = cantidad % 9;
+
+                // Determinamos el material base y su forma compactada
+                Material matBase = minion.getType().getTargetMaterial();
+                Material matCompactado = obtenerBloqueCompactado(matBase);
+
+                if (bloques > 0) {
+                    sobrante.putAll(player.getInventory().addItem(new ItemStack(matCompactado, bloques)));
+                }
+                if (sueltos > 0) {
+                    sobrante.putAll(player.getInventory().addItem(new ItemStack(matBase, sueltos)));
+                }
+            } else {
+                sobrante.putAll(player.getInventory().addItem(new ItemStack(minion.getType().getTargetMaterial(), cantidad)));
+            }
+
+            // Tirar al suelo lo que no quepa en el inventario
             for (ItemStack drop : sobrante.values()) {
                 player.getWorld().dropItemNaturally(player.getLocation(), drop);
             }
@@ -99,7 +121,7 @@ public class MenuListener implements Listener {
             }
 
             if (!skillAura.isEmpty()) {
-                // 🌟 BYPASS DE SKRIPT: Usamos 'auraskills' directamente y la nueva sintaxis 'xp add'
+                // 🌟 BYPASS DE SKRIPT: Usamos 'auraskills' directamente
                 String comando = "auraskills xp add " + player.getName() + " " + skillAura + " " + xpGanada + " silent";
                 org.bukkit.Bukkit.getServer().dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), comando);
                 player.sendMessage(NexoColor.parse("&#9933FF✨ Conocimiento Arcano: +" + xpGanada + " XP en " + nombreSkill));
@@ -109,7 +131,8 @@ public class MenuListener implements Listener {
             minion.setStoredItems(0);
             minion.getEntity().getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);
 
-            player.sendMessage(NexoColor.parse("&#CC66FF[✓] <bold>TRIBUTO COSECHADO:</bold> &#E6CCFFHas reclamado " + cantidad + " ofrendas materiales."));
+            // Mensaje adaptado si se usó el compactador
+            player.sendMessage(NexoColor.parse("&#CC66FF[✓] <bold>TRIBUTO COSECHADO:</bold> &#E6CCFFHas reclamado las ofrendas" + (tieneCompactador ? " &#9933FF(Compactadas)" : "") + "."));
             player.playSound(player.getLocation(), Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f, 2f);
 
             // 🌟 BEDROCK FIX: Cerrar menú y esperar antes de reabrir
@@ -189,6 +212,24 @@ public class MenuListener implements Listener {
             int invSlot = MinionMenu.UPGRADE_SLOTS[i];
             ItemStack itemEnSlot = inv.getItem(invSlot);
             minion.setUpgrade(i, itemEnSlot);
+        }
+    }
+
+    // 🗜️ MAPEO DE COMPACTADOR: Convierte material base a bloque
+    private Material obtenerBloqueCompactado(Material matBase) {
+        switch (matBase) {
+            case COAL: return Material.COAL_BLOCK;
+            case IRON_INGOT: return Material.IRON_BLOCK;
+            case GOLD_INGOT: return Material.GOLD_BLOCK;
+            case DIAMOND: return Material.DIAMOND_BLOCK;
+            case EMERALD: return Material.EMERALD_BLOCK;
+            case REDSTONE: return Material.REDSTONE_BLOCK;
+            case LAPIS_LAZULI: return Material.LAPIS_BLOCK;
+            case WHEAT: return Material.HAY_BLOCK;
+            case SLIME_BALL: return Material.SLIME_BLOCK;
+            case BONE: return Material.BONE_BLOCK;
+            // Añade más aquí si tu servidor lo requiere
+            default: return matBase; // Si no tiene versión compacta, da el material normal
         }
     }
 

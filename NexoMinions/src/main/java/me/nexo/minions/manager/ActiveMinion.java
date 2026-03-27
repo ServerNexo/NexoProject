@@ -64,7 +64,7 @@ public class ActiveMinion {
 
         for (ItemStack item : upgrades) {
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
-            if (datos != null && datos.getString("tipo", "").equals("STORAGE")) {
+            if (datos != null && "UPGRADE".equals(datos.getString("category")) && "STORAGE".equals(datos.getString("type"))) {
                 bonus += datos.getInt("bonus_capacidad", 0);
             }
         }
@@ -79,7 +79,7 @@ public class ActiveMinion {
 
             int maxStorage = getRealMaxStorage();
 
-            if (!tieneMejora("STORAGE_LINK")) {
+            if (!tieneMejoraPorTipo("STORAGE_LINK")) {
                 this.storedItems = Math.min(maxStorage, this.storedItems + trabajosPerdidos);
 
                 if (this.storedItems >= maxStorage) {
@@ -104,7 +104,7 @@ public class ActiveMinion {
 
         actualizarHolograma(maxStorage);
 
-        if (storedItems >= maxStorage && !tieneMejora("STORAGE_LINK")) {
+        if (storedItems >= maxStorage && !tieneMejoraPorTipo("STORAGE_LINK")) {
             animar(); return;
         }
 
@@ -120,26 +120,47 @@ public class ActiveMinion {
     private void actualizarHolograma(int maxStorage) {
         if (holograma == null || holograma.isDead()) return;
 
-        // 🌟 Reemplazo a Component Nativo de Paper 1.21 y Paleta HEX
-        if (storedItems >= maxStorage && !tieneMejora("STORAGE_LINK")) {
-            holograma.text(NexoColor.parse("&#FF5555<bold>¡CAPACIDAD MÁXIMA ALCANZADA!</bold>\n&#AAAAAAReservas: &#00E5FF" + storedItems + " / " + maxStorage));
+        // 🌟 GÓTICO DEL VACÍO: Textos oscuros
+        if (storedItems >= maxStorage && !tieneMejoraPorTipo("STORAGE_LINK")) {
+            holograma.text(NexoColor.parse("&#FF3366<bold>¡ENTIDAD SACIADA!</bold>\n&#E6CCFFMateria: &#CC66FF" + storedItems + " / " + maxStorage));
         } else {
             String nombreBonito = type.name().replace("MINION_", "").replace("_", " ");
-            holograma.text(NexoColor.parse("&#FFAA00<bold>Operario " + nombreBonito + "</bold> &#AAAAAA(Nv. " + tier + ")\n&#AAAAAAAlmacenado: &#55FF55" + storedItems + " / " + maxStorage));
+            holograma.text(NexoColor.parse("&#9933FF<bold>Esclavo " + nombreBonito + "</bold> &#E6CCFF(Nv. " + tier + ")\n&#E6CCFFMateria: &#CC66FF" + storedItems + " / " + maxStorage));
         }
     }
 
     private void realizarTrabajo() {
         Location loc = entity.getLocation();
-        loc.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, loc.clone().add(0, 0.5, 0), 3);
-        loc.getWorld().playSound(loc, Sound.ENTITY_BEE_POLLINATE, 0.2f, 1.5f);
+        loc.getWorld().spawnParticle(Particle.SCULK_SOUL, loc.clone().add(0, 0.5, 0), 3, 0.2, 0.2, 0.2, 0.05);
+        loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_AMBIENT, 0.1f, 1.5f);
 
         boolean guardadoEnCofre = false;
-        if (tieneMejora("STORAGE_LINK")) {
+        if (tieneMejoraPorTipo("STORAGE_LINK")) {
             guardadoEnCofre = guardarEnCofreAdyacente(new ItemStack(type.getTargetMaterial(), 1));
         }
 
         if (!guardadoEnCofre) {
+            // 🌟 NUEVO MOTOR HYPIXEL: LÓGICA DE AUTO-SELL
+            ConfigurationSection autoSellData = getMejoraActiva("AUTO_SELL");
+            if (autoSellData != null) {
+                double precio = autoSellData.getDouble("precio_por_unidad", 1.0);
+
+                Player owner = Bukkit.getPlayer(ownerId);
+                if (owner != null && owner.isOnline()) {
+                    // 🌟 SOLUCIÓN SEGURA: Ejecutar el comando por consola
+                    org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), "eco give " + owner.getName() + " " + precio);
+
+                    // Sumamos progreso a colecciones (si tienes NexoColecciones)
+                    if (Bukkit.getPluginManager().isPluginEnabled("NexoColecciones")) {
+                        NexoColecciones.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, type.getTargetMaterial().name(), 1);
+                    }
+                }
+
+                this.trabajosRealizados++;
+                consumirCombustibles();
+                return; // 🛑 Terminamos aquí, no se guarda el ítem físicamente
+            }
+
             if (this.storedItems < getRealMaxStorage()) {
                 this.storedItems += 1;
                 entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
@@ -149,10 +170,13 @@ public class ActiveMinion {
         this.trabajosRealizados++;
         consumirCombustibles();
 
+        // Progresión de colecciones normal (si no tiene auto-sell)
         Player owner = Bukkit.getPlayer(ownerId);
-        if (owner != null && owner.isOnline()) {
-            String blockId = type.getTargetMaterial().name();
-            NexoColecciones.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, blockId, 1);
+        if (owner != null && owner.isOnline() && !tieneMejoraActiva("AUTO_SELL")) {
+            if (Bukkit.getPluginManager().isPluginEnabled("NexoColecciones")) {
+                String blockId = type.getTargetMaterial().name();
+                NexoColecciones.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, blockId, 1);
+            }
         }
     }
 
@@ -161,36 +185,60 @@ public class ActiveMinion {
         for (ItemStack item : upgrades) {
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
             if (datos == null) continue;
-            String tipo = datos.getString("tipo", "");
-            if (tipo.equals("SPEED_TEMP") || tipo.equals("SPEED_PERM")) {
-                multiplicador -= datos.getDouble("bonus_velocidad", 0.0);
+
+            String category = datos.getString("category", "");
+            String tipo = datos.getString("type", "");
+
+            if ("FUEL".equals(category) && "SPEED".equals(tipo)) {
+                multiplicador -= datos.getDouble("multiplier", 0.0);
             }
         }
-        return Math.max(multiplicador, 0.2);
+        return Math.max(multiplicador, 0.1); // Máximo 90% de reducción de tiempo
     }
 
     private void consumirCombustibles() {
         for (int i = 0; i < 4; i++) {
             ItemStack item = upgrades[i];
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
-            if (datos != null && datos.getString("tipo", "").equals("SPEED_TEMP")) {
-                int usosReq = datos.getInt("usos", 20);
-                if (trabajosRealizados >= usosReq) {
+
+            if (datos != null && "FUEL".equals(datos.getString("category", ""))) {
+                if (datos.getBoolean("unbreakable", false)) continue; // Si es infinito, no se gasta
+
+                int duracionSegundos = datos.getInt("duration", 600);
+                if (duracionSegundos <= 0) continue;
+
+                long tiempoPorTrabajo = (long) (MinionTier.getDelayMillis(this.tier) * getSpeedMultiplier());
+                if (tiempoPorTrabajo <= 0) tiempoPorTrabajo = 1000;
+
+                double trabajosTotalesEnDuracion = (duracionSegundos * 1000.0) / tiempoPorTrabajo;
+                double probabilidadDeGasto = 1.0 / trabajosTotalesEnDuracion;
+
+                if (Math.random() <= probabilidadDeGasto) {
                     item.setAmount(item.getAmount() - 1);
                     setUpgrade(i, item);
-                    trabajosRealizados = 0;
-                    break;
                 }
             }
         }
     }
 
-    public boolean tieneMejora(String tipoBuscado) {
+    public boolean tieneMejoraPorTipo(String tipoBuscado) {
+        return getMejoraActiva(tipoBuscado) != null;
+    }
+
+    public boolean tieneMejoraActiva(String tipoBuscado) {
+        return getMejoraActiva(tipoBuscado) != null;
+    }
+
+    public ConfigurationSection getMejoraActiva(String tipoBuscado) {
         for (ItemStack item : upgrades) {
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
-            if (datos != null && datos.getString("tipo", "").equals(tipoBuscado)) return true;
+            if (datos != null && datos.getString("type", "").equals(tipoBuscado)) return datos;
         }
-        return false;
+        return null;
+    }
+
+    public boolean tieneMejora(String tipoBuscado) {
+        return tieneMejoraPorTipo(tipoBuscado);
     }
 
     private boolean guardarEnCofreAdyacente(ItemStack item) {

@@ -94,36 +94,74 @@ public class MinionListener implements Listener {
     // 🟥 EVENTO 2: Romper el bloque debajo del Minion (La Gravedad)
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
-        // Calculamos la posición exacta justo arriba del bloque que se está rompiendo
         Location topLoc = event.getBlock().getLocation().add(0.5, 1.0, 0.5);
 
-        // Escaneamos un radio muy pequeño (0.5 bloques) buscando entidades
         for (Entity entity : topLoc.getWorld().getNearbyEntities(topLoc, 0.5, 0.5, 0.5)) {
-
-            // Si encontramos una Hitbox (Interaction)...
             if (entity instanceof Interaction hitbox) {
                 String displayIdStr = hitbox.getPersistentDataContainer().get(new NamespacedKey(plugin, "minion_display_id"), PersistentDataType.STRING);
 
-                // ... y está vinculada a un Minion
                 if (displayIdStr != null) {
                     ActiveMinion minion = plugin.getMinionManager().getMinion(UUID.fromString(displayIdStr));
 
                     if (minion != null) {
-                        // 🌟 SEGURIDAD ABSOLUTA (Leyendo desde la memoria RAM)
+                        // 🌟 SEGURIDAD ABSOLUTA
                         if (!minion.getOwnerId().equals(event.getPlayer().getUniqueId()) && !event.getPlayer().hasPermission("nexominions.admin")) {
                             event.getPlayer().sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFNo puedes desestabilizar el ritual de un esclavo ajeno."));
                             event.setCancelled(true);
                             return;
                         }
 
-                        // Si es el dueño (o un admin), forzamos la recolección del minion
                         plugin.getMinionManager().recogerMinion(event.getPlayer(), UUID.fromString(displayIdStr));
-
-                        // Nota: No cancelamos el evento de romper el bloque,
-                        // permitimos que el bloque se rompa, pero el minion se va al inventario en lugar de flotar.
                         break;
                     }
                 }
+            }
+        }
+    }
+
+    // =========================================
+    // 🛡️ PROTECCIÓN DE ÍTEMS ARCANOS (MEJORAS)
+    // =========================================
+
+    // 🚫 1. Evitar que coloquen las mejoras como bloques (Ej: Pistones, Cofres)
+    @EventHandler
+    public void onColocarMejora(org.bukkit.event.block.BlockPlaceEvent event) {
+        ItemStack item = event.getItemInHand();
+        if (item.getType().isAir()) return;
+
+        // Si el ítem está registrado en upgrades.yml, bloqueamos su colocación
+        if (plugin.getUpgradesConfig().getUpgradeData(item) != null) {
+            event.setCancelled(true);
+            event.getPlayer().sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFEste sello arcano solo puede ser depositado dentro de un Esclavo."));
+            event.getPlayer().playSound(event.getPlayer().getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+        }
+    }
+
+    // 🚫 2. Evitar que derramen líquidos (Ej: Cubos de Lava custom)
+    @EventHandler
+    public void onDerramarLava(org.bukkit.event.player.PlayerBucketEmptyEvent event) {
+        ItemStack item = event.getPlayer().getInventory().getItemInMainHand();
+        if (item.getType() != event.getBucket()) {
+            item = event.getPlayer().getInventory().getItemInOffHand();
+        }
+
+        if (item.getType() != org.bukkit.Material.AIR) {
+            if (plugin.getUpgradesConfig().getUpgradeData(item) != null) {
+                event.setCancelled(true);
+                event.getPlayer().sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFEsta materia inestable pertenece a las entidades del vacío."));
+                event.getPlayer().playSound(event.getPlayer().getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+            }
+        }
+    }
+
+    // 🚫 3. Evitar interacciones accidentales (Consumir, usar en bloques, etc)
+    @EventHandler
+    public void onInteractuarConMejora(PlayerInteractEvent event) {
+        if (event.getItem() == null || event.getItem().getType().isAir()) return;
+
+        if (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR) {
+            if (plugin.getUpgradesConfig().getUpgradeData(event.getItem()) != null) {
+                event.setUseItemInHand(org.bukkit.event.Event.Result.DENY);
             }
         }
     }
