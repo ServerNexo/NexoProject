@@ -64,6 +64,9 @@ public class SlayerListener implements Listener {
                         bossOwner.sendMessage(NexoColor.parse(MSG_REWARD.replace("%gems%", String.valueOf(recompensaGemas))));
                     }
 
+                    // 🌟 PARCHE C: SINERGIA CON COLECCIONES (El Boss suma a tu Grimorio)
+                    plugin.getCollectionManager().addProgress(bossOwner, slayer.getTemplate().id(), 1);
+
                     // Terminamos el slayer
                     plugin.getSlayerManager().removeActiveSlayer(bossOwner.getUniqueId());
                 }

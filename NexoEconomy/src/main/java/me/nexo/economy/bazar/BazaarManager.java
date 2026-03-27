@@ -6,6 +6,7 @@ import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -33,6 +34,9 @@ public class BazaarManager {
 
     private static final String MSG_CLAIM_SUCCESS = "&#a8ff78[✓] Extracción corporativa exitosa: &#fbd72b%amount%x %item%";
     private static final String ERR_CLAIM_EMPTY = "&#ff4b2b[!] Tu buzón corporativo se encuentra actualmente vacío.";
+
+    // 🌟 NUEVO: Mensaje de Censura del Vacío
+    private static final String ERR_NO_COLLECTION_LEVEL = "&#ff4b2b[!] Transacción Denegada: &#e0e0e0Debes alcanzar el &#fbd72bNivel 1 &#e0e0e0en la colección de este material antes de poder comerciarlo.";
 
     public BazaarManager(NexoEconomy plugin) {
         this.plugin = plugin;
@@ -75,9 +79,44 @@ public class BazaarManager {
     }
 
     // ==========================================
+    // 🦇 INTEGRACIÓN CON NEXOCOLECCIONES
+    // ==========================================
+    private boolean tieneNivelComercial(Player player, String itemId) {
+        if (Bukkit.getPluginManager().getPlugin("NexoColecciones") == null) {
+            return true; // Si el plugin no está instalado, permitimos el comercio
+        }
+
+        try {
+            me.nexo.colecciones.NexoColecciones colPlugin = me.nexo.colecciones.NexoColecciones.getPlugin(me.nexo.colecciones.NexoColecciones.class);
+            me.nexo.colecciones.colecciones.CollectionManager colManager = colPlugin.getCollectionManager();
+
+            // Verificamos si el ítem tiene una colección existente
+            me.nexo.colecciones.data.CollectionItem itemData = colManager.getItemGlobal(itemId);
+            if (itemData == null) return true; // Si no es un ítem coleccionable, puede comprarlo libremente
+
+            // Obtenemos su perfil y calculamos el nivel
+            me.nexo.colecciones.colecciones.CollectionProfile profile = colManager.getProfile(player.getUniqueId());
+            if (profile == null) return false;
+
+            int nivel = colManager.calcularNivel(itemData, profile.getProgress(itemId));
+            return nivel >= 1; // Solo puede comerciar si es Nivel 1 o superior
+
+        } catch (Exception e) {
+            return true; // En caso de error, no bloqueamos la economía
+        }
+    }
+
+    // ==========================================
     // 📉 CREAR ORDEN DE VENTA (SELL ORDER)
     // ==========================================
     public void crearOrdenVenta(Player player, String itemId, int amount, BigDecimal pricePerUnit) {
+        // 🌟 VERIFICACIÓN DE CENSURA COMERCIAL
+        if (!tieneNivelComercial(player, itemId)) {
+            player.sendMessage(NexoColor.parse(ERR_NO_COLLECTION_LEVEL));
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+            return;
+        }
+
         Material mat = Material.matchMaterial(itemId);
         if (mat == null || !player.getInventory().contains(mat, amount)) {
             player.sendMessage(NexoColor.parse(ERR_NO_ITEMS));
@@ -93,6 +132,13 @@ public class BazaarManager {
     // 📈 CREAR ORDEN DE COMPRA (BUY ORDER)
     // ==========================================
     public void crearOrdenCompra(Player player, String itemId, int amount, BigDecimal pricePerUnit) {
+        // 🌟 VERIFICACIÓN DE CENSURA COMERCIAL
+        if (!tieneNivelComercial(player, itemId)) {
+            player.sendMessage(NexoColor.parse(ERR_NO_COLLECTION_LEVEL));
+            player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+            return;
+        }
+
         BigDecimal totalCost = pricePerUnit.multiply(new BigDecimal(amount));
 
         plugin.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, totalCost, false).thenAccept(success -> {

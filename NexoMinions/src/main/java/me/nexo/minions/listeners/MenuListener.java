@@ -127,6 +127,12 @@ public class MenuListener implements Listener {
                 player.sendMessage(NexoColor.parse("&#9933FF✨ Conocimiento Arcano: +" + (int)xpGanada + " XP en " + nombreSkill));
             }
 
+            // 🌟 PARCHE B: SINERGIA CON COLECCIONES (El trabajo del esclavo suma a tu progreso)
+            if (org.bukkit.Bukkit.getPluginManager().getPlugin("NexoColecciones") != null) {
+                me.nexo.colecciones.NexoColecciones.getPlugin(me.nexo.colecciones.NexoColecciones.class)
+                        .getCollectionManager().addProgress(player, minion.getType().getTargetMaterial().name(), cantidad);
+            }
+
             // Resetear Minion
             minion.setStoredItems(0);
             minion.getEntity().getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);

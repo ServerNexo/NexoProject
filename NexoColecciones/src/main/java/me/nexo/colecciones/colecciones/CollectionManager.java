@@ -83,7 +83,7 @@ public class CollectionManager {
     }
 
     // ==========================================================
-    // 🧮 MOTOR DE PROGRESO SILENCIOSO
+    // 🧮 MOTOR DE PROGRESO SILENCIOSO Y TÍTULOS
     // ==========================================================
 
     public void addProgress(Player player, String itemId, int amount) {
@@ -98,12 +98,22 @@ public class CollectionManager {
         profile.addProgress(itemId, amount);
         int nivelNuevo = calcularNivel(item, profile.getProgress(itemId));
 
-        // Si subió de nivel, le avisamos para que vaya al menú a reclamarlo manualmente
+        // Si subió de nivel, le avisamos con un TÍTULO EN PANTALLA y Mensajes (Bedrock Compatible)
         if (nivelNuevo > nivelViejo) {
+
+            // 🌟 PARCHE A: Título masivo en pantalla (Usando LegacySection para colores seguros en Bedrock/Java)
+            String titleStr = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#fbd72b⭐ NIVEL " + nivelNuevo + " ⭐"));
+            String subStr = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#00fbff¡" + item.getNombre() + " subió de nivel!"));
+
+            player.sendTitle(titleStr, subStr, 10, 70, 20);
+
+            // Mensajes en el Chat
             player.sendMessage(NexoColor.parse(BC_DIVIDER));
             player.sendMessage(NexoColor.parse(MSG_LEVEL_UP_TITLE));
             player.sendMessage(NexoColor.parse(MSG_LEVEL_UP_DESC.replace("%level%", String.valueOf(nivelNuevo)).replace("%item%", item.getNombre())));
             player.sendMessage(NexoColor.parse(BC_DIVIDER));
+
+            // Sonido Épico
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
 
             // Anuncio global si alcanzó el nivel máximo
