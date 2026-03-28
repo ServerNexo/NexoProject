@@ -15,7 +15,8 @@ import java.util.List;
 public class ProtectionMenu {
 
     public static void openMenu(Player player, ProtectionStone stone) {
-        net.kyori.adventure.text.Component tituloCrossplay = CrossplayUtils.parseCrossplay(player, "&#434343<bold>»</bold> &#9933FFMonolito del Vacío");
+        // Título con protocolo Vivid Void
+        net.kyori.adventure.text.Component tituloCrossplay = CrossplayUtils.parseCrossplay(player, "&#1c0f2a<bold>»</bold> &#00f5ffMonolito del Vacío");
         int tamanoOptimo = CrossplayUtils.getOptimizedMenuSize(player, 27);
         Inventory inv = Bukkit.createInventory(null, tamanoOptimo, tituloCrossplay);
 
@@ -23,12 +24,12 @@ public class ProtectionMenu {
         ItemStack members = new ItemStack(Material.WITHER_SKELETON_SKULL);
         ItemMeta memMeta = members.getItemMeta();
         if (memMeta != null) {
-            memMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#9933FF<bold>ACÓLITOS DEL PACTO</bold>"));
+            memMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>ACÓLITOS DEL PACTO</bold>"));
             memMeta.lore(List.of(
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFExplora y destierra a las almas"),
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFvinculadas a este Monolito."),
+                    CrossplayUtils.parseCrossplay(player, "&#1c0f2aExplora y destierra a las almas"),
+                    CrossplayUtils.parseCrossplay(player, "&#1c0f2avinculadas a este Monolito."),
                     CrossplayUtils.parseCrossplay(player, " "),
-                    CrossplayUtils.parseCrossplay(player, "&#CC66FF► Clic para abrir el registro")
+                    CrossplayUtils.parseCrossplay(player, "&#00f5ff► Clic para abrir el registro")
             ));
             members.setItemMeta(memMeta);
         }
@@ -38,14 +39,15 @@ public class ProtectionMenu {
         ItemStack info = new ItemStack(Material.LODESTONE);
         ItemMeta infoMeta = info.getItemMeta();
         if (infoMeta != null) {
-            infoMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#9933FF<bold>NÚCLEO DEL MONOLITO</bold>"));
+            infoMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>NÚCLEO DEL MONOLITO</bold>"));
             List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-            lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFSeñor Oscuro: &#FFFFFF" + Bukkit.getOfflinePlayer(stone.getOwnerId()).getName()));
-            lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFTipo de Culto: &#CC66FF" + (stone.getClanId() == null ? "Solitario" : "Sindicato")));
+            lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aSeñor Oscuro: &#ff00ff" + Bukkit.getOfflinePlayer(stone.getOwnerId()).getName()));
+            lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aTipo de Culto: &#ff00ff" + (stone.getClanId() == null ? "Solitario" : "Sindicato")));
             lore.add(CrossplayUtils.parseCrossplay(player, " "));
             double porcentaje = (stone.getCurrentEnergy() / stone.getMaxEnergy()) * 100;
-            String colorEnergia = porcentaje > 50 ? "&#CC66FF" : (porcentaje > 20 ? "&#9933FF" : "&#FF3366");
-            lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFEsencia Consumida: " + colorEnergia + String.format("%.1f", stone.getCurrentEnergy()) + " &#FFFFFF/ &#CC66FF" + stone.getMaxEnergy()));
+            // Paleta Vivid Void para energía
+            String colorEnergia = porcentaje > 50 ? "&#00f5ff" : (porcentaje > 20 ? "&#ff00ff" : "&#8b0000");
+            lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aEsencia Consumida: " + colorEnergia + String.format("%.1f", stone.getCurrentEnergy()) + " &#1c0f2a/ &#00f5ff" + stone.getMaxEnergy()));
             infoMeta.lore(lore);
             info.setItemMeta(infoMeta);
         }
@@ -55,12 +57,12 @@ public class ProtectionMenu {
         ItemStack flags = new ItemStack(Material.SOUL_TORCH);
         ItemMeta flagMeta = flags.getItemMeta();
         if (flagMeta != null) {
-            flagMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF3366<bold>LEYES DEL DOMINIO</bold>"));
+            flagMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>LEYES DEL DOMINIO</bold>"));
             flagMeta.lore(List.of(
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFAltera las leyes naturales y"),
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFfísicas de los forasteros."),
+                    CrossplayUtils.parseCrossplay(player, "&#1c0f2aAltera las leyes naturales y"),
+                    CrossplayUtils.parseCrossplay(player, "&#1c0f2afísicas de los forasteros."),
                     CrossplayUtils.parseCrossplay(player, " "),
-                    CrossplayUtils.parseCrossplay(player, "&#CC66FF► Clic para dictar las leyes")
+                    CrossplayUtils.parseCrossplay(player, "&#00f5ff► Clic para dictar las leyes")
             ));
             flags.setItemMeta(flagMeta);
         }
@@ -70,17 +72,17 @@ public class ProtectionMenu {
         ItemStack recharge = new ItemStack(Material.ECHO_SHARD);
         ItemMeta rechargeMeta = recharge.getItemMeta();
         if (rechargeMeta != null) {
-            rechargeMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#CC66FF<bold>[ INFUNDIR ESENCIA ]</bold>"));
+            rechargeMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>[ INFUNDIR ESENCIA ]</bold>"));
             rechargeMeta.lore(List.of(
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFOfrece sacrificios (Diamantes o Ecos)"),
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFpara alimentar el vacío del Monolito.")
+                    CrossplayUtils.parseCrossplay(player, "&#1c0f2aOfrece sacrificios (Diamantes o Ecos)"),
+                    CrossplayUtils.parseCrossplay(player, "&#1c0f2apara alimentar el vacío del Monolito.")
             ));
             recharge.setItemMeta(rechargeMeta);
         }
         inv.setItem(22, recharge);
 
-        // DECORACIÓN
-        ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        // DECORACIÓN con material Vivid Void
+        ItemStack glass = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta glassMeta = glass.getItemMeta();
         if (glassMeta != null) {
             glassMeta.displayName(CrossplayUtils.parseCrossplay(player, " "));

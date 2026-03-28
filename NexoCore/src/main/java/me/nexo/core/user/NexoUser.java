@@ -171,4 +171,41 @@ public class NexoUser {
             }
         }
     }
+    // =====================================
+    // 🌌 MÓDULO 6: VOID BLESSING (Booster Cookie)
+    // =====================================
+    private long voidBlessingUntil = 0;
+    private boolean isBlessingActiveCache = false;
+
+    public long getVoidBlessingUntil() {
+        return voidBlessingUntil;
+    }
+
+    public void setVoidBlessingUntil(long timestamp) {
+        this.voidBlessingUntil = timestamp;
+        updateBlessingCache();
+    }
+
+    public void addVoidBlessingTime(long millisMillis) {
+        long now = System.currentTimeMillis();
+        if (this.voidBlessingUntil < now) {
+            this.voidBlessingUntil = now + millisMillis;
+        } else {
+            this.voidBlessingUntil += millisMillis;
+        }
+        updateBlessingCache();
+    }
+
+    public void updateBlessingCache() {
+        this.isBlessingActiveCache = this.voidBlessingUntil > System.currentTimeMillis();
+    }
+
+    // ⚡ ZERO-LAG CHECK: Ideal para eventos ultra rápidos (Muertes, Daño, Economía)
+    public boolean isVoidBlessingActive() {
+        // Validación perezosa: Si estaba activo pero acaba de expirar, lo apagamos en silencio
+        if (isBlessingActiveCache && voidBlessingUntil <= System.currentTimeMillis()) {
+            isBlessingActiveCache = false;
+        }
+        return isBlessingActiveCache;
+    }
 }

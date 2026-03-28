@@ -4,6 +4,7 @@ import me.nexo.core.api.NexoWebServer; // 🌟 IMPORT NUEVO
 import me.nexo.core.hub.NexoMenuListener; // 🌟 IMPORT NUEVO
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.UserManager;
+import me.nexo.core.listeners.VoidEssenceListener;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -33,12 +34,20 @@ public class NexoCore extends JavaPlugin {
 
         // 🟢 Solo conservamos el comando del Core
         if (getCommand("nexocore") != null) getCommand("nexocore").setExecutor(new ComandoNexo(this));
+        // Registrar el comando
+        if (getCommand("void") != null) {
+            getCommand("void").setExecutor(new me.nexo.core.commands.ComandoVoid(this));
+        }
 
         // 🟢 Listeners generales
-        getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new PlayerListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new VoidEssenceListener(this), this);
 
         // 🌟 NUEVO: Registramos la protección del Ítem del Hub (Slot 9)
         getServer().getPluginManager().registerEvents(new NexoMenuListener(this), this);
+        // Registrar el Listener de protección del menú
+        getServer().getPluginManager().registerEvents(new me.nexo.core.menus.VoidBlessingMenuListener(), this);
+
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new NexoExpansion(this).register();

@@ -1,5 +1,7 @@
 package me.nexo.economy.commands;
 
+import me.nexo.core.NexoCore;
+import me.nexo.core.user.NexoUser;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.blackmarket.BlackMarketMenu;
@@ -33,6 +35,14 @@ public class ComandoMercadoNegro implements CommandExecutor {
         }
 
         if (sender instanceof Player player) {
+            // 🌟 VALIDACIÓN VOID REACH (Acceso Remoto Protegido)
+            NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
+            if (user == null || !user.isVoidBlessingActive()) {
+                player.sendMessage(NexoColor.parse("&#8b0000[!] Acceso denegado. El Mercado Negro remoto requiere la Bendición del Vacío activa (Void Reach)."));
+                player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                return true;
+            }
+
             BlackMarketMenu.open(player, plugin);
         } else {
             sender.sendMessage(NexoColor.parse("&#ff4b2b[!] El terminal requiere un operario humano."));

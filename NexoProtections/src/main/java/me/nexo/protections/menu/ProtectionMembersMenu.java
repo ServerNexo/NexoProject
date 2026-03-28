@@ -20,7 +20,8 @@ import java.util.UUID;
 public class ProtectionMembersMenu {
 
     public static void openMenu(Player player, ProtectionStone stone) {
-        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, "&#434343<bold>»</bold> &#9933FFAcólitos del Pacto");
+        // Título con protocolo Vivid Void
+        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, "&#1c0f2a<bold>»</bold> &#00f5ffAcólitos del Pacto");
         int tamano = CrossplayUtils.getOptimizedMenuSize(player, 54);
         Inventory inv = Bukkit.createInventory(null, tamano, titulo);
 
@@ -36,12 +37,15 @@ public class ProtectionMembersMenu {
             SkullMeta meta = (SkullMeta) head.getItemMeta();
             if (meta != null) {
                 meta.setOwningPlayer(target);
-                meta.displayName(CrossplayUtils.parseCrossplay(player, "&#CC66FF<bold>" + (target.getName() != null ? target.getName() : "Alma Desconocida") + "</bold>"));
+                // Título de ítem en Magenta Eléctrico
+                meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>" + (target.getName() != null ? target.getName() : "Alma Desconocida") + "</bold>"));
                 meta.lore(List.of(
-                        CrossplayUtils.parseCrossplay(player, "&#E6CCFFEsta alma tiene libre albedrío"),
-                        CrossplayUtils.parseCrossplay(player, "&#E6CCFFdentro de tu Monolito."),
+                        // Lore base en Púrpura Profundo
+                        CrossplayUtils.parseCrossplay(player, "&#1c0f2aEsta alma tiene libre albedrío"),
+                        CrossplayUtils.parseCrossplay(player, "&#1c0f2adentro de tu Monolito."),
                         CrossplayUtils.parseCrossplay(player, " "),
-                        CrossplayUtils.parseCrossplay(player, "&#FF3366► Clic para DESTERRAR esta alma")
+                        // Acción de error/destrucción en Carmesí
+                        CrossplayUtils.parseCrossplay(player, "&#8b0000► Clic para DESTERRAR esta alma")
                 ));
                 meta.getPersistentDataContainer().set(uuidKey, PersistentDataType.STRING, uuid.toString());
                 head.setItemMeta(meta);
@@ -49,8 +53,8 @@ public class ProtectionMembersMenu {
             inv.setItem(slot++, head);
         }
 
-        // 🌟 CORRECCIÓN BEDROCK: Decoración calculada hacia atrás (Última fila)
-        ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        // Decoración con material Vivid Void
+        ItemStack glass = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta gMeta = glass.getItemMeta();
         gMeta.displayName(CrossplayUtils.parseCrossplay(player, " "));
         glass.setItemMeta(gMeta);
@@ -60,17 +64,21 @@ public class ProtectionMembersMenu {
 
         ItemStack back = new ItemStack(Material.ENDER_PEARL);
         ItemMeta backMeta = back.getItemMeta();
-        backMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#9933FF<bold>VOLVER AL MONOLITO</bold>"));
+        // Botón de acción en Cian del Vacío
+        backMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff<bold>VOLVER AL MONOLITO</bold>"));
         back.setItemMeta(backMeta);
         inv.setItem(tamano - 6, back);
 
         ItemStack add = new ItemStack(Material.WRITABLE_BOOK);
         ItemMeta addMeta = add.getItemMeta();
-        addMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#CC66FF<bold>INVOCAR NUEVA ALMA</bold>"));
+        // Título de ítem en Magenta Eléctrico
+        addMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>INVOCAR NUEVA ALMA</bold>"));
         addMeta.lore(List.of(
-                CrossplayUtils.parseCrossplay(player, "&#E6CCFFPara añadir a un amigo,"),
-                CrossplayUtils.parseCrossplay(player, "&#E6CCFFcierra este menú y escribe en el chat:"),
-                CrossplayUtils.parseCrossplay(player, "&#9933FF/nexo trust <NombreJugador>")
+                // Lore base en Púrpura Profundo
+                CrossplayUtils.parseCrossplay(player, "&#1c0f2aPara añadir a un amigo,"),
+                CrossplayUtils.parseCrossplay(player, "&#1c0f2acierra este menú y escribe en el chat:"),
+                // Variable/comando importante en Magenta Eléctrico
+                CrossplayUtils.parseCrossplay(player, "&#ff00ff/nexo trust <NombreJugador>")
         ));
         add.setItemMeta(addMeta);
         inv.setItem(tamano - 4, add);

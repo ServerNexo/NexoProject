@@ -11,6 +11,10 @@ commands:
   nexocore:
     description: Comando de administracion del Nexo
     permission: nexo.admin
+  void:
+    description: Consulta el estado de tu Bendición del Vacío.
+    aliases: [ bendicion, voidblessing ]
+    permission: nexo.void
 
 libraries:
   - com.zaxxer:HikariCP:5.1.0

@@ -28,6 +28,9 @@ public class HudTask extends BukkitRunnable {
 
             int maxEnergia = 100;
             int energiaActual = 100;
+            
+            // 🌟 VALIDACIÓN DE LA BENDICIÓN (Booster Cookie)
+            String voidIcon = "";
 
             if (user != null) {
                 int nivelNexo = user.getNexoNivel();
@@ -38,6 +41,11 @@ public class HudTask extends BukkitRunnable {
                     int nuevaEnergia = Math.min(energiaActual + 5, maxEnergia);
                     user.setEnergiaMineria(nuevaEnergia);
                     energiaActual = nuevaEnergia;
+                }
+                
+                // 🌟 Icono Magenta Eléctrico si está activo
+                if (user.isVoidBlessingActive()) {
+                    voidIcon = " &#ff00ff✧ ";
                 }
             }
 
@@ -57,8 +65,8 @@ public class HudTask extends BukkitRunnable {
                 hpMax = (int) p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
             }
 
-            // 🌟 NATIVO DE PAPER: Enviamos el HUD directamente como Componente HEX anti-lag
-            String hudFormat = "&#ff4b2b❤ " + hpActual + "/" + hpMax + "   &#00fbff💧 " + manaActual + "/" + maxMana + "   &#fbd72b⚡ " + energiaActual + "/" + maxEnergia;
+            // 🌟 NATIVO DE PAPER: Enviamos el HUD añadiendo el icono del vacío al final
+            String hudFormat = "&#ff4b2b❤ " + hpActual + "/" + hpMax + "   &#00fbff💧 " + manaActual + "/" + maxMana + "   &#fbd72b⚡ " + energiaActual + "/" + maxEnergia + voidIcon;
             p.sendActionBar(NexoColor.parse(hudFormat));
         }
     }

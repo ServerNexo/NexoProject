@@ -17,7 +17,8 @@ import java.util.List;
 public class ProtectionFlagsMenu {
 
     public static void openMenu(Player player, ProtectionStone stone) {
-        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, "&#434343<bold>»</bold> &#FF3366Leyes del Dominio");
+        // Título con protocolo Vivid Void
+        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, "&#1c0f2a<bold>»</bold> &#00f5ffLeyes del Dominio");
         int tamano = CrossplayUtils.getOptimizedMenuSize(player, 45);
         Inventory inv = Bukkit.createInventory(null, tamano, titulo);
 
@@ -33,14 +34,11 @@ public class ProtectionFlagsMenu {
         inv.setItem(20, createFlagItem(player, Material.CHEST, "Abrir Cofres/Hornos", "containers", stone));
         inv.setItem(21, createFlagItem(player, Material.HOPPER, "Robar Ítems del Suelo", "item-pickup", stone));
         inv.setItem(22, createFlagItem(player, Material.ROTTEN_FLESH, "Tirar Basura (Drop)", "item-drop", stone));
-
-        // 🌟 PARCHE B: FLAG DE CONTROL DE ACCESO (Fronteras)
         inv.setItem(23, createFlagItem(player, Material.IRON_DOOR, "Entrada de Forasteros", "ENTRY", stone));
 
-        // 🌟 CORRECCIÓN BEDROCK: Decoración calculada hacia atrás (Última fila)
+        // Decoración con material Vivid Void
         int inicioUltimaFila = tamano - 9;
-
-        ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemStack glass = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta gMeta = glass.getItemMeta();
         gMeta.displayName(CrossplayUtils.parseCrossplay(player, " "));
         glass.setItemMeta(gMeta);
@@ -50,7 +48,8 @@ public class ProtectionFlagsMenu {
 
         ItemStack back = new ItemStack(Material.ENDER_PEARL);
         ItemMeta backMeta = back.getItemMeta();
-        backMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#9933FF<bold>VOLVER AL MONOLITO</bold>"));
+        // Botón de acción en Cian del Vacío
+        backMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff<bold>VOLVER AL MONOLITO</bold>"));
         back.setItemMeta(backMeta);
 
         // Slot central de la última fila
@@ -64,18 +63,19 @@ public class ProtectionFlagsMenu {
         ItemMeta meta = item.getItemMeta();
         boolean activo = stone.getFlag(flagId);
 
-        // Si está en false (bloqueado para forasteros), lo pintamos ROJO porque está "Protegido/Bloqueado"
-        // Si está en true, lo pintamos MORADO porque está "Permitido/Peligroso"
-        String estadoColor = activo ? "&#CC66FF[ PERMITIDO ]" : "&#FF3366[ BLOQUEADO ]";
+        // Estado positivo (Permitido) en Cian, estado restrictivo (Bloqueado) en Carmesí
+        String estadoColor = activo ? "&#00f5ff[ PERMITIDO ]" : "&#8b0000[ BLOQUEADO ]";
 
-        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#9933FF<bold>" + nombre.toUpperCase() + "</bold>"));
+        // Título de ítem en Magenta Eléctrico
+        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>" + nombre.toUpperCase() + "</bold>"));
         meta.lore(List.of(
-                CrossplayUtils.parseCrossplay(player, "&#E6CCFFPara forasteros: " + estadoColor),
+                // Lore base en Púrpura Profundo
+                CrossplayUtils.parseCrossplay(player, "&#1c0f2aPara forasteros: " + estadoColor),
                 CrossplayUtils.parseCrossplay(player, " "),
-                CrossplayUtils.parseCrossplay(player, "&#CC66FF► Clic para alternar esta ley")
+                // Botón de acción en Cian del Vacío
+                CrossplayUtils.parseCrossplay(player, "&#00f5ff► Clic para alternar esta ley")
         ));
 
-        // Guardamos el ID de la flag oculta en el ítem para que el Listener sepa qué cambiar
         NamespacedKey key = new NamespacedKey(NexoProtections.getInstance(), "flag_id");
         meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, flagId);
 

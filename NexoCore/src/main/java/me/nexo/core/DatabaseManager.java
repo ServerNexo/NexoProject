@@ -123,6 +123,7 @@ public class DatabaseManager {
 
                 // 🌟 MÓDULO 5: Inyección Silenciosa de la columna Blessings por si la tabla ya existía previamente
                 try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS blessings TEXT DEFAULT '';"); } catch (Exception ignored) {}
+                try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS void_blessing_until BIGINT DEFAULT 0;"); } catch (Exception ignored) {}
 
                 stmt.execute(sqlMochilas);
                 stmt.execute(sqlGuardarropa);
@@ -159,6 +160,7 @@ public class DatabaseManager {
 
                         // 🌟 LECTURA DE BENDICIONES
                         String blessingsRaw = rs.getString("blessings");
+                        long voidBlessing = rs.getLong("void_blessing_until");
 
                         // 🟢 ARQUITECTURA: Creamos el objeto NexoUser con los datos de la DB
                         NexoUser user = new NexoUser(
@@ -175,6 +177,7 @@ public class DatabaseManager {
                             Set<String> blessSet = new HashSet<>(Arrays.asList(blessingsRaw.split(",")));
                             user.setBlessings(blessSet);
                         }
+                        user.setVoidBlessingUntil(voidBlessing);
 
                         // 🔴 VOLVEMOS AL MAIN THREAD para meterlo en la caché de forma segura
                         Bukkit.getScheduler().runTask(plugin, () -> {
@@ -219,7 +222,7 @@ public class DatabaseManager {
                 UPDATE jugadores SET nexo_nivel = ?, nexo_xp = ?, nombre = ?, 
                 combate_nivel = ?, combate_xp = ?, mineria_nivel = ?, mineria_xp = ?, 
                 agricultura_nivel = ?, agricultura_xp = ?, clan_id = CAST(? AS UUID), clan_role = ?,
-                blessings = ?
+                blessings = ?, void_blessing_until = ?
                 WHERE uuid = ?
                 """;
 
@@ -240,7 +243,8 @@ public class DatabaseManager {
 
                 ps.setString(11, user.getClanRole());
                 ps.setString(12, String.join(",", user.getActiveBlessings())); // 🌟 Serializar Bendiciones
-                ps.setString(13, uuid.toString());
+                ps.setLong(13, user.getVoidBlessingUntil());
+                ps.setString(14, uuid.toString());
 
                 ps.executeUpdate();
 
@@ -270,7 +274,7 @@ public class DatabaseManager {
                 UPDATE jugadores SET nexo_nivel = ?, nexo_xp = ?, nombre = ?, 
                 combate_nivel = ?, combate_xp = ?, mineria_nivel = ?, mineria_xp = ?, 
                 agricultura_nivel = ?, agricultura_xp = ?, clan_id = CAST(? AS UUID), clan_role = ?,
-                blessings = ?
+                blessings = ?, void_blessing_until = ?
                 WHERE uuid = ?
                 """;
 
@@ -289,7 +293,8 @@ public class DatabaseManager {
 
             ps.setString(11, user.getClanRole());
             ps.setString(12, String.join(",", user.getActiveBlessings())); // 🌟 Serializar Bendiciones
-            ps.setString(13, uuid.toString());
+            ps.setLong(13, user.getVoidBlessingUntil());
+            ps.setString(14, uuid.toString());
 
             ps.executeUpdate();
         } catch (SQLException e) {
