@@ -12,44 +12,32 @@ import java.util.UUID;
 
 public class SkillTreeMenu {
 
-    // Almacenamiento temporal en caché de los permisos inyectados en la sesión actual
     private static final Map<UUID, PermissionAttachment> perms = new HashMap<>();
 
-    /**
-     * Intenta desbloquear un nodo tecnológico (permiso) cobrando Knowledge Points.
-     */
     public static void desbloquearNodo(Player p, String permiso, int costo) {
         NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
 
         if (user == null) {
-            p.sendMessage(NexoColor.parse("&#FF5555[!] Sincronización neuronal incompleta. Aguarda un momento."));
+            p.sendMessage(NexoColor.parse("&#8b0000[!] Sincronización neuronal incompleta. Aguarda un momento."));
             return;
         }
 
-        // Validación de moneda (Puntos de conocimiento)
-        // (Asegúrate de que tu clase NexoUser tenga getKnowledgePoints() y removeKnowledgePoints())
         if (user.getKnowledgePoints() >= costo) {
             user.removeKnowledgePoints(costo);
 
-            // Inyectamos el permiso usando Bukkit API nativa
             PermissionAttachment attachment = perms.computeIfAbsent(p.getUniqueId(),
                     k -> p.addAttachment(me.nexo.core.NexoCore.getPlugin(me.nexo.core.NexoCore.class)));
 
             attachment.setPermission(permiso, true);
 
-            p.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>NODO DESBLOQUEADO:</bold> &#AAAAAANueva tecnología industrial integrada a tu sistema."));
-            p.sendMessage(NexoColor.parse("&#555555Puntos de Conocimiento restantes: &#00E5FF" + user.getKnowledgePoints()));
-
-            // 💾 Aquí delegas a un CompletableFuture para guardar el nuevo permiso en tu BD Supabase
+            p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>NODO DESBLOQUEADO:</bold> &#1c0f2aNueva tecnología industrial integrada a tu sistema."));
+            p.sendMessage(NexoColor.parse("&#1c0f2aPuntos de Conocimiento restantes: &#00f5ff" + user.getKnowledgePoints()));
 
         } else {
-            p.sendMessage(NexoColor.parse("&#FF5555[!] Conocimiento Insuficiente. &#AAAAAARequieres más experiencia práctica para procesar este nodo."));
+            p.sendMessage(NexoColor.parse("&#8b0000[!] Conocimiento Insuficiente. &#1c0f2aRequieres más experiencia práctica para procesar este nodo."));
         }
     }
 
-    /**
-     * Debe llamarse en el PlayerQuitEvent para evitar fugas de memoria
-     */
     public static void limpiarCachePermisos(UUID uuid) {
         perms.remove(uuid);
     }

@@ -5,7 +5,7 @@ api-version: '1.21'
 author: 'Z0101'
 description: 'Cerebro principal y conexion a base de datos de la red Nexo.'
 softdepend: [PlaceholderAPI, MythicMobs, eco , floodgate]
-depend: [AuraSkills, Nexo]
+depend: [AuraSkills, Nexo, NexoEconomy]
 
 commands:
   nexocore:
@@ -19,3 +19,4 @@ commands:
 libraries:
   - com.zaxxer:HikariCP:5.1.0
   - org.postgresql:postgresql:42.7.2
+  - com.github.ben-manes.caffeine:caffeine:3.1.8

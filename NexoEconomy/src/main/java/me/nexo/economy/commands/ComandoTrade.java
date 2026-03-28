@@ -12,13 +12,13 @@ public class ComandoTrade implements CommandExecutor {
 
     private final NexoEconomy plugin;
 
-    // 🎨 PALETA HEX
-    private static final String ERR_NOT_PLAYER = "&#ff4b2b[!] Acceso denegado: El terminal requiere un operario humano.";
-    private static final String ERR_USAGE_MAIN = "&#ff4b2b[!] Uso: &#fbd72b/trade <operario> &#434343o &#fbd72b/trade accept <operario>";
-    private static final String ERR_USAGE_ACCEPT = "&#ff4b2b[!] Uso: &#fbd72b/trade accept <operario>";
-    private static final String ERR_OFFLINE = "&#ff4b2b[!] Operario no localizado en la red.";
-    private static final String ERR_NO_REQUEST = "&#ff4b2b[!] No hay peticiones activas de este operario (o ya han expirado).";
-    private static final String ERR_SELF = "&#ff4b2b[!] Negado. No puedes abrir una sesión de intercambio contigo mismo.";
+    // 🎨 PALETA VIVID VOID
+    private static final String ERR_NOT_PLAYER = "&#8b0000[!] Acceso denegado: El terminal requiere un operario humano.";
+    private static final String ERR_USAGE_MAIN = "&#8b0000[!] Uso: &#ff00ff/trade <operario> &#1c0f2ao &#ff00ff/trade accept <operario>";
+    private static final String ERR_USAGE_ACCEPT = "&#8b0000[!] Uso: &#ff00ff/trade accept <operario>";
+    private static final String ERR_OFFLINE = "&#8b0000[!] Operario no localizado en la red.";
+    private static final String ERR_NO_REQUEST = "&#8b0000[!] No hay peticiones activas de este operario (o ya han expirado).";
+    private static final String ERR_SELF = "&#8b0000[!] Negado. No puedes abrir una sesión de intercambio contigo mismo.";
 
     public ComandoTrade(NexoEconomy plugin) {
         this.plugin = plugin;
@@ -36,7 +36,6 @@ public class ComandoTrade implements CommandExecutor {
             return true;
         }
 
-        // 🌟 ACEPTAR PETICIÓN
         if (args[0].equalsIgnoreCase("accept")) {
             if (args.length < 2) {
                 player.sendMessage(NexoColor.parse(ERR_USAGE_ACCEPT));
@@ -57,7 +56,6 @@ public class ComandoTrade implements CommandExecutor {
             return true;
         }
 
-        // 🌟 ENVIAR PETICIÓN
         Player target = Bukkit.getPlayerExact(args[0]);
         if (target == null) {
             player.sendMessage(NexoColor.parse(ERR_OFFLINE));

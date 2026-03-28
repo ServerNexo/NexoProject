@@ -4,8 +4,8 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import me.nexo.clans.NexoClans;
 import me.nexo.core.NexoCore;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
@@ -25,18 +25,17 @@ public class ClanManager {
     private final NexoClans plugin;
     private final NexoCore core;
 
-    // 🎨 PALETA HEX - CONSTANTES DE MENSAJES (Clean Code)
-    private static final String MSG_HOME_SET = "&#a8ff78[✓] Coordenadas del Monolito Base establecidas en la red.";
-    private static final String MSG_FF_TOGGLED = "&#fbd72bConfiguración actualizada: Fuego Amigo %status%&#fbd72b.";
-    private static final String ERR_NAME_TAKEN = "&#ff4b2bError: Ese Tag o Nombre ya está registrado en otro Monolito.";
-    private static final String MSG_CLAN_CREATED = "&#00fbff¡Has fundado la corporación &#fbd72b%name% &#434343[&#00fbff%tag%&#434343]&#00fbff!";
-    private static final String MSG_INVITED = "&#00fbffHas sido invitado a operar en &#fbd72b%clan%&#00fbff. Usa: &#a8ff78/clan join";
-    private static final String MSG_INVITE_SENT = "&#a8ff78Invitación de acceso enviada a &#fbd72b%player%&#a8ff78.";
-    private static final String MSG_JOINED = "&#a8ff78[✓] Te has unido exitosamente a la corporación &#fbd72b%clan%&#a8ff78.";
-    private static final String MSG_LEFT = "&#fbd72bHas revocado tu propio acceso al clan actual.";
-    private static final String MSG_KICKED = "&#ff4b2bTu acceso corporativo ha sido revocado por &#fbd72b%ejector%&#ff4b2b.";
-    private static final String MSG_KICKER = "&#a8ff78Has revocado el acceso operativo de &#fbd72b%target%&#a8ff78.";
-    private static final String MSG_DISBANDED = "&#ff4b2b[!] Alerta Crítica: Tu corporación ha sido disuelta por el Líder.";
+    private static final String MSG_HOME_SET = "&#00f5ff[✓] Coordenadas del Monolito Base establecidas en la red.";
+    private static final String MSG_FF_TOGGLED = "&#ff00ffConfiguración actualizada: Fuego Amigo %status%&#ff00ff.";
+    private static final String ERR_NAME_TAKEN = "&#8b0000Error: Ese Tag o Nombre ya está registrado en otro Monolito.";
+    private static final String MSG_CLAN_CREATED = "&#00f5ff¡Has fundado la corporación &#ff00ff%name% &#1c0f2a[&#00f5ff%tag%&#1c0f2a]&#00f5ff!";
+    private static final String MSG_INVITED = "&#00f5ffHas sido invitado a operar en &#ff00ff%clan%&#00f5ff. Usa: &#00f5ff/clan join";
+    private static final String MSG_INVITE_SENT = "&#00f5ffInvitación de acceso enviada a &#ff00ff%player%&#00f5ff.";
+    private static final String MSG_JOINED = "&#00f5ff[✓] Te has unido exitosamente a la corporación &#ff00ff%clan%&#00f5ff.";
+    private static final String MSG_LEFT = "&#ff00ffHas revocado tu propio acceso al clan actual.";
+    private static final String MSG_KICKED = "&#8b0000Tu acceso corporativo ha sido revocado por &#ff00ff%ejector%&#8b0000.";
+    private static final String MSG_KICKER = "&#00f5ffHas revocado el acceso operativo de &#ff00ff%target%&#00f5ff.";
+    private static final String MSG_DISBANDED = "&#8b0000[!] Alerta Crítica: Tu corporación ha sido disuelta por el Líder.";
 
     private final Cache<UUID, NexoClan> clanCache = Caffeine.newBuilder()
             .expireAfterAccess(30, TimeUnit.MINUTES)
@@ -74,9 +73,6 @@ public class ClanManager {
         });
     }
 
-    // ==========================================
-    // 🏛️ MONOLITO (BASE) Y FUEGO AMIGO
-    // ==========================================
     public void setClanHomeAsync(NexoClan clan, Player player, Location loc) {
         String locStr = loc.getWorld().getName() + ";" + loc.getX() + ";" + loc.getY() + ";" + loc.getZ() + ";" + loc.getYaw() + ";" + loc.getPitch();
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -88,7 +84,7 @@ public class ClanManager {
                 ps.executeUpdate();
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     clan.setPublicHome(locStr);
-                    player.sendMessage(NexoColor.parse(MSG_HOME_SET));
+                    CrossplayUtils.sendMessage(player, MSG_HOME_SET);
                 });
             } catch (Exception e) {
                 plugin.getLogger().severe("Error guardando Base: " + e.getMessage());
@@ -106,16 +102,13 @@ public class ClanManager {
                 ps.executeUpdate();
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     clan.setFriendlyFire(newValue);
-                    String colorStatus = newValue ? "&#ff4b2b<bold>RIESGO ACTIVO</bold>" : "&#a8ff78<bold>APAGADO</bold>";
-                    player.sendMessage(NexoColor.parse(MSG_FF_TOGGLED.replace("%status%", colorStatus)));
+                    String colorStatus = newValue ? "&#8b0000<bold>RIESGO ACTIVO</bold>" : "&#00f5ff<bold>APAGADO</bold>";
+                    CrossplayUtils.sendMessage(player, MSG_FF_TOGGLED.replace("%status%", colorStatus));
                 });
             } catch (Exception e) {}
         });
     }
 
-    // ==========================================
-    // 👥 GESTIÓN DE MIEMBROS Y CREACIÓN
-    // ==========================================
     public void getMiembrosAsync(UUID clanId, java.util.function.Consumer<List<ClanMember>> callback) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             List<ClanMember> miembros = new ArrayList<>();
@@ -144,7 +137,7 @@ public class ClanManager {
                 psCheck.setString(1, tag);
                 psCheck.setString(2, nombre);
                 if (psCheck.executeQuery().next()) {
-                    Bukkit.getScheduler().runTask(plugin, () -> player.sendMessage(NexoColor.parse(ERR_NAME_TAKEN)));
+                    Bukkit.getScheduler().runTask(plugin, () -> CrossplayUtils.sendMessage(player, ERR_NAME_TAKEN));
                     return;
                 }
                 UUID nuevoClanId = UUID.randomUUID();
@@ -166,7 +159,7 @@ public class ClanManager {
                     clanCache.put(nuevoClanId, nuevoClan);
                     user.setClanId(nuevoClanId);
                     user.setClanRole("LIDER");
-                    player.sendMessage(NexoColor.parse(MSG_CLAN_CREATED.replace("%name%", nombre).replace("%tag%", tag)));
+                    CrossplayUtils.sendMessage(player, MSG_CLAN_CREATED.replace("%name%", nombre).replace("%tag%", tag));
                 });
             } catch (Exception e) { plugin.getLogger().severe("Error creando clan: " + e.getMessage()); }
         });
@@ -175,7 +168,6 @@ public class ClanManager {
     public void loadClanAsync(UUID clanId, java.util.function.Consumer<NexoClan> callback) {
         NexoClan cached = clanCache.getIfPresent(clanId);
         if (cached != null) { callback.accept(cached); return; }
-
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             String sql = "SELECT * FROM nexo_clans WHERE id = CAST(? AS UUID)";
             try (Connection conn = core.getDatabaseManager().getConnection();
@@ -198,13 +190,10 @@ public class ClanManager {
         });
     }
 
-    // ==========================================
-    // ⚔️ INVITACIONES Y SALIDAS
-    // ==========================================
     public void invitarJugador(Player lider, Player invitado, NexoClan clan) {
         invitaciones.put(invitado.getUniqueId(), clan.getId());
-        invitado.sendMessage(NexoColor.parse(MSG_INVITED.replace("%clan%", clan.getName())));
-        lider.sendMessage(NexoColor.parse(MSG_INVITE_SENT.replace("%player%", invitado.getName())));
+        CrossplayUtils.sendMessage(invitado, MSG_INVITED.replace("%clan%", clan.getName()));
+        CrossplayUtils.sendMessage(lider, MSG_INVITE_SENT.replace("%player%", invitado.getName()));
     }
 
     public UUID getInvitacionPendiente(Player player) { return invitaciones.getIfPresent(player.getUniqueId()); }
@@ -221,7 +210,7 @@ public class ClanManager {
                     user.setClanId(clan.getId());
                     user.setClanRole("MIEMBRO");
                     invitaciones.invalidate(player.getUniqueId());
-                    player.sendMessage(NexoColor.parse(MSG_JOINED.replace("%clan%", clan.getName())));
+                    CrossplayUtils.sendMessage(player, MSG_JOINED.replace("%clan%", clan.getName()));
                 });
             } catch (Exception e) {}
         });
@@ -237,7 +226,7 @@ public class ClanManager {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     user.setClanId(null);
                     user.setClanRole("NONE");
-                    player.sendMessage(NexoColor.parse(MSG_LEFT));
+                    CrossplayUtils.sendMessage(player, MSG_LEFT);
                 });
             } catch (Exception e) {}
         });
@@ -253,8 +242,8 @@ public class ClanManager {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     targetUser.setClanId(null);
                     targetUser.setClanRole("NONE");
-                    target.sendMessage(NexoColor.parse(MSG_KICKED.replace("%ejector%", ejector.getName())));
-                    ejector.sendMessage(NexoColor.parse(MSG_KICKER.replace("%target%", target.getName())));
+                    CrossplayUtils.sendMessage(target, MSG_KICKED.replace("%ejector%", ejector.getName()));
+                    CrossplayUtils.sendMessage(ejector, MSG_KICKER.replace("%target%", target.getName()));
                 });
             } catch (Exception e) {}
         });
@@ -267,14 +256,13 @@ public class ClanManager {
                 try (PreparedStatement ps = conn.prepareStatement(updateUsers)) { ps.setString(1, clanId.toString()); ps.executeUpdate(); }
                 String deleteClan = "DELETE FROM nexo_clans WHERE id = CAST(? AS UUID)";
                 try (PreparedStatement ps = conn.prepareStatement(deleteClan)) { ps.setString(1, clanId.toString()); ps.executeUpdate(); }
-
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     clanCache.invalidate(clanId);
                     for (Player p : Bukkit.getOnlinePlayers()) {
                         NexoUser u = core.getUserManager().getUserOrNull(p.getUniqueId());
                         if (u != null && u.hasClan() && u.getClanId().equals(clanId)) {
                             u.setClanId(null); u.setClanRole("NONE");
-                            p.sendMessage(NexoColor.parse(MSG_DISBANDED));
+                            CrossplayUtils.sendMessage(p, MSG_DISBANDED);
                         }
                     }
                 });
@@ -284,9 +272,6 @@ public class ClanManager {
 
     public Optional<NexoClan> getClanFromCache(UUID clanId) { return Optional.ofNullable(clanCache.getIfPresent(clanId)); }
 
-    // ==========================================
-    // 🌟 Guardar el Banco del Clan Asíncronamente
-    // ==========================================
     public void saveBankAsync(NexoClan clan) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             String sql = "UPDATE nexo_clans SET bank_balance = ? WHERE id = CAST(? AS UUID)";

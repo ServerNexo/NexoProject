@@ -52,15 +52,10 @@ public class ProtectionListener implements Listener {
         Block block = event.getBlock();
         ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
 
-        // 🌑 ROMPER EL MONOLITO (MAGNETITA)
         if (stone != null && block.getType() == Material.LODESTONE) {
             if (stone.getOwnerId().equals(player.getUniqueId())) {
-
-                // 🌟 HOLOGRAMA: Destruimos el texto flotante antes de borrar la piedra
                 stone.removeHologram();
-
                 claimManager.removeStoneFromCache(stone);
-
                 CompletableFuture.runAsync(() -> {
                     try (Connection conn = core.getDatabaseManager().getConnection();
                          PreparedStatement ps = conn.prepareStatement("DELETE FROM nexo_protections WHERE stone_id = CAST(? AS UUID)")) {
@@ -68,21 +63,19 @@ public class ProtectionListener implements Listener {
                         ps.executeUpdate();
                     } catch (Exception e) { e.printStackTrace(); }
                 });
-
-                CrossplayUtils.sendMessage(player, "&#CC66FF[✓] <bold>RITUAL DESHECHO:</bold> &#E6CCFFEl Monolito del Vacío ha sido desmantelado con éxito.");
+                CrossplayUtils.sendMessage(player, "&#ff00ff[✓] <bold>RITUAL DESHECHO:</bold> &#1c0f2aEl Monolito del Vacío ha sido desmantelado con éxito.");
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1f, 0.5f);
                 return;
             } else {
                 event.setCancelled(true);
-                CrossplayUtils.sendMessage(player, "&#FF3366[!] Herejía: &#E6CCFFSolo el Señor de este Dominio puede destruir el Monolito.");
+                CrossplayUtils.sendMessage(player, "&#8b0000[!] Herejía: &#1c0f2aSolo el Señor de este Dominio puede destruir el Monolito.");
                 return;
             }
         }
 
-        // 🌑 ROMPER BLOQUES NORMALES EN TERRITORIO AJENO
         if (stone != null && !stone.hasPermission(player.getUniqueId(), ClaimAction.BREAK)) {
             event.setCancelled(true);
-            CrossplayUtils.sendMessage(player, "&#FF3366[!] Dominio Sellado: &#E6CCFFEl vacío protege estas tierras. No puedes alterar su forma.");
+            CrossplayUtils.sendMessage(player, "&#8b0000[!] Dominio Sellado: &#1c0f2aEl vacío protege estas tierras. No puedes alterar su forma.");
         }
     }
 
@@ -94,15 +87,13 @@ public class ProtectionListener implements Listener {
         ProtectionStone existingStone = claimManager.getStoneAt(block.getLocation());
         if (existingStone != null && !existingStone.hasPermission(player.getUniqueId(), ClaimAction.BUILD)) {
             event.setCancelled(true);
-            CrossplayUtils.sendMessage(player, "&#FF3366[!] Dominio Sellado: &#E6CCFFNo puedes invocar estructuras en tierras ajenas.");
+            CrossplayUtils.sendMessage(player, "&#8b0000[!] Dominio Sellado: &#1c0f2aNo puedes invocar estructuras en tierras ajenas.");
             return;
         }
 
         ItemStack itemInHand = event.getItemInHand();
 
-        // 🌑 INVOCAR UN NUEVO MONOLITO
         if (block.getType() == Material.LODESTONE && itemInHand.hasItemMeta()) {
-
             if (!itemInHand.getItemMeta().getPersistentDataContainer().has(isProtectionStoneKey, PersistentDataType.BYTE)) {
                 return;
             }
@@ -117,38 +108,31 @@ public class ProtectionListener implements Listener {
 
             if (claimManager.hasOverlappingClaim(newBox)) {
                 event.setCancelled(true);
-                CrossplayUtils.sendMessage(player, "&#FF3366[!] Energía Corrupta: &#E6CCFFEl aura de este Monolito colisiona con otro sello cercano. Aléjate más.");
+                CrossplayUtils.sendMessage(player, "&#8b0000[!] Energía Corrupta: &#1c0f2aEl aura de este Monolito colisiona con otro sello cercano. Aléjate más.");
                 return;
             }
 
             ProtectionStone newStone = new ProtectionStone(newStoneId, player.getUniqueId(), clanId, newBox);
             claimManager.addStoneToCache(newStone);
-
-            // 🌟 HOLOGRAMA: Invocamos el texto flotante
             newStone.updateHologram();
 
-            CrossplayUtils.sendActionBar(player, "&#9933FF[⟳] Conectando con el Abismo...");
+            CrossplayUtils.sendActionBar(player, "&#ff00ff[⟳] Conectando con el Abismo...");
 
             limitManager.canPlaceNewStone(player).thenAccept(canPlace -> {
                 if (!canPlace) {
                     Bukkit.getScheduler().runTask(NexoProtections.getPlugin(NexoProtections.class), () -> {
                         block.setType(Material.AIR);
-
-                        // Si falla el límite, borramos el holograma que acabamos de crear
                         newStone.removeHologram();
-
                         claimManager.removeStoneFromCache(newStone);
-
                         ItemStack refundItem = itemInHand.clone();
                         refundItem.setAmount(1);
                         player.getInventory().addItem(refundItem);
-
-                        CrossplayUtils.sendMessage(player, "&#FF3366[!] Límite Alcanzado: &#E6CCFFTu alma no soporta mantener más Monolitos.");
+                        CrossplayUtils.sendMessage(player, "&#8b0000[!] Límite Alcanzado: &#1c0f2aTu alma no soporta mantener más Monolitos.");
                     });
                     return;
                 }
 
-                CrossplayUtils.sendMessage(player, "&#CC66FF[✓] <bold>SELLO INVOCADO:</bold> &#E6CCFFEl Vacío ahora reclama un radio de &#9933FF" + radius + " bloques&#E6CCFF.");
+                CrossplayUtils.sendMessage(player, "&#00f5ff[✓] <bold>SELLO INVOCADO:</bold> &#1c0f2aEl Vacío ahora reclama un radio de &#ff00ff" + radius + " bloques&#1c0f2a.");
                 player.playSound(loc, Sound.BLOCK_RESPAWN_ANCHOR_SET_SPAWN, 1f, 0.5f);
 
                 CompletableFuture.runAsync(() -> {
@@ -181,7 +165,6 @@ public class ProtectionListener implements Listener {
         Block block = event.getClickedBlock();
         Player player = event.getPlayer();
 
-        // 🌑 ABRIR EL MENÚ DEL MONOLITO
         if (block.getType() == Material.LODESTONE && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
             ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
             if (stone != null) {
@@ -190,20 +173,16 @@ public class ProtectionListener implements Listener {
                 if (stone.getOwnerId().equals(player.getUniqueId()) || stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) {
                     me.nexo.protections.menu.ProtectionMenu.openMenu(player, stone);
                 } else {
-                    CrossplayUtils.sendMessage(player, "&#FF3366[!] Herejía: &#E6CCFFEl Monolito rechaza tu tacto.");
+                    CrossplayUtils.sendMessage(player, "&#8b0000[!] Herejía: &#1c0f2aEl Monolito rechaza tu tacto.");
                 }
             }
         }
     }
 
-    // ==========================================================
-    // 🚧 SISTEMA DE FRONTERAS Y CONTROL DE ACCESO (ENTRY)
-    // ==========================================================
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerMove(org.bukkit.event.player.PlayerMoveEvent event) {
         if (event.getTo() == null) return;
 
-        // 🌟 OPTIMIZACIÓN: Solo calculamos si el jugador cruzó a un bloque nuevo
         if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
                 event.getFrom().getBlockY() == event.getTo().getBlockY() &&
                 event.getFrom().getBlockZ() == event.getTo().getBlockZ()) {
@@ -212,21 +191,16 @@ public class ProtectionListener implements Listener {
 
         Player player = event.getPlayer();
 
-        // Consultar el Cerebro: ¿De qué bloque a qué bloque se movió?
         ProtectionStone fromClaim = claimManager.getStoneAt(event.getFrom());
         ProtectionStone toClaim = claimManager.getStoneAt(event.getTo());
 
-        // Si cambió de dominio territorial (Ya sea entrando, saliendo, o cruzando entre dos dueños distintos)
         if (fromClaim != toClaim) {
 
-            // 1. LÓGICA DE ENTRADA AL NUEVO TERRITORIO
             if (toClaim != null) {
 
-                // 🌟 CORRECCIÓN: Se cambió hasFlag por getFlag para coincidir con la arquitectura
                 if (!toClaim.getFlag("ENTRY") && !toClaim.getOwnerId().equals(player.getUniqueId()) && !toClaim.hasPermission(player.getUniqueId(), ClaimAction.INTERACT) && !player.hasPermission("nexoprotections.admin")) {
-                    CrossplayUtils.sendMessage(player, "&#ff4b2b[!] Campo de Fuerza: &#e0e0e0Este dominio está cerrado para extraños.");
+                    CrossplayUtils.sendMessage(player, "&#8b0000[!] Campo de Fuerza: &#1c0f2aEste dominio está cerrado para extraños.");
 
-                    // Empujarlo suavemente hacia atrás (Bedrock Friendly)
                     org.bukkit.util.Vector pushback = event.getFrom().toVector().subtract(event.getTo().toVector()).normalize().multiply(0.5);
                     pushback.setY(0.1);
                     player.setVelocity(pushback);
@@ -235,15 +209,13 @@ public class ProtectionListener implements Listener {
                     return;
                 }
 
-                // Título en la ActionBar informando a qué imperio ha entrado
                 String ownerName = org.bukkit.Bukkit.getOfflinePlayer(toClaim.getOwnerId()).getName();
                 if (ownerName == null) ownerName = "Desconocido";
-                CrossplayUtils.sendActionBar(player, "&#a8ff78🌿 Has entrado al dominio de " + ownerName);
+                CrossplayUtils.sendActionBar(player, "&#00f5ff🌿 Has entrado al dominio de " + ownerName);
             }
 
-            // 2. LÓGICA DE SALIDA A ZONA SALVAJE
             if (fromClaim != null && toClaim == null) {
-                CrossplayUtils.sendActionBar(player, "&#ff4b2b🌲 Has entrado a Zona Salvaje");
+                CrossplayUtils.sendActionBar(player, "&#8b0000🌲 Has entrado a Zona Salvaje");
             }
         }
     }

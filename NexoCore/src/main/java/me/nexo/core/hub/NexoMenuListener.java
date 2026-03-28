@@ -12,7 +12,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -34,18 +33,15 @@ public class NexoMenuListener implements Listener {
         this.menuKey = new NamespacedKey(plugin, "is_nexo_menu");
     }
 
-    // =========================================
-    // ⚙️ CREACIÓN DEL ÍTEM MÁGICO (INDESTRUCTIBLE)
-    // =========================================
     public ItemStack getMenuItem() {
         ItemStack item = new ItemStack(Material.CLOCK);
         ItemMeta meta = item.getItemMeta();
 
-        meta.displayName(NexoColor.parse("&#FF33FF<bold>Menú Principal</bold> &#AAAAAA(Clic Derecho)"));
+        meta.displayName(NexoColor.parse("&#ff00ff<bold>Menú Principal</bold> &#1c0f2a(Clic Derecho)"));
         List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-        lore.add(NexoColor.parse("&#e0e0e0Tu conexión directa con el Nexo."));
+        lore.add(NexoColor.parse("&#1c0f2aTu conexión directa con el Nexo."));
         lore.add(net.kyori.adventure.text.Component.empty());
-        lore.add(NexoColor.parse("&#fbd72b¡Clic derecho para abrir!"));
+        lore.add(NexoColor.parse("&#00f5ff¡Clic derecho para abrir!"));
         meta.lore(lore);
 
         meta.getPersistentDataContainer().set(menuKey, PersistentDataType.BYTE, (byte) 1);
@@ -69,9 +65,6 @@ public class NexoMenuListener implements Listener {
         player.getInventory().setItem(8, getMenuItem());
     }
 
-    // =========================================
-    // 🛡️ PROTECCIÓN DEL RELOJ
-    // =========================================
     @EventHandler
     public void onDrop(PlayerDropItemEvent event) {
         if (isMenuItem(event.getItemDrop().getItemStack())) event.setCancelled(true);
@@ -86,9 +79,6 @@ public class NexoMenuListener implements Listener {
         }
     }
 
-    // =========================================
-    // 🖱️ INTERACCIÓN (ABRIR EL MENÚ NATIVO)
-    // =========================================
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInteract(PlayerInteractEvent event) {
         if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK ||
@@ -101,19 +91,14 @@ public class NexoMenuListener implements Listener {
                 Player player = event.getPlayer();
                 player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
 
-                // 🌟 ABRIMOS LA CLASE NATIVA QUE ACABAMOS DE CREAR
                 player.closeInventory();
                 new HubMenu(plugin, player).openMenu();
             }
         }
     }
 
-    // =========================================
-    // 🕹️ LÓGICA DE CLICS DENTRO DEL INVENTARIO Y DEL NUEVO MENÚ
-    // =========================================
     @EventHandler
     public void onClickInventory(InventoryClickEvent event) {
-        // Evitar mover el reloj en cualquier inventario
         if (event.getCurrentItem() != null && isMenuItem(event.getCurrentItem())) event.setCancelled(true);
         if (event.getCursor() != null && isMenuItem(event.getCursor())) event.setCancelled(true);
         if (event.getClick().name().contains("NUMBER_KEY")) {
@@ -121,9 +106,8 @@ public class NexoMenuListener implements Listener {
             if (isMenuItem(hotbarItem)) event.setCancelled(true);
         }
 
-        // 🌟 LEER LOS ATAJOS DEL HUB MENU
         if (event.getInventory().getHolder() instanceof HubMenu) {
-            event.setCancelled(true); // Evitar robar ítems del menú
+            event.setCancelled(true);
 
             if (event.getCurrentItem() == null || !event.getCurrentItem().hasItemMeta()) return;
 
@@ -137,17 +121,16 @@ public class NexoMenuListener implements Listener {
                 player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
                 player.closeInventory();
 
-                // 🌟 BEDROCK FIX: Esperar 3 ticks antes de abrir el siguiente menú
                 Bukkit.getScheduler().runTaskLater(plugin, () -> {
                     switch (action) {
                         case "open_skills":
-                            player.performCommand("skills"); // Comando de AuraSkills
+                            player.performCommand("skills");
                             break;
                         case "open_colecciones":
                             player.performCommand("colecciones");
                             break;
                         case "open_recipes":
-                            player.performCommand("recipes"); // Si tienes un menú de recetas custom
+                            player.performCommand("recipes");
                             break;
                         case "open_bazar":
                             player.performCommand("bazar");
@@ -156,13 +139,13 @@ public class NexoMenuListener implements Listener {
                             player.performCommand("slayer");
                             break;
                         case "open_pv":
-                            player.performCommand("pv"); // 🌟 AHORA ABRE EL SELECTOR DE MOCHILAS DE NEXOITEMS
+                            player.performCommand("pv");
                             break;
                         case "open_wardrobe":
                             player.performCommand("wardrobe");
                             break;
                         case "open_fast_travel":
-                            player.performCommand("warp"); // O el comando de tu menú de viajes
+                            player.performCommand("warp");
                             break;
                         case "open_clans":
                             player.performCommand("clan");

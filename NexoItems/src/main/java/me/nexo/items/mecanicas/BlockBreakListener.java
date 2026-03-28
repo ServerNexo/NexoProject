@@ -109,13 +109,13 @@ public class BlockBreakListener implements Listener {
 
             NexoUser user = NexoAPI.getInstance().getUserLocal(uuid);
             if (user == null) {
-                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Enlace neural cargando. Por favor espera..."));
+                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Enlace neural cargando. Por favor espera..."));
                 return;
             }
 
             int energiaActual = user.getEnergiaMineria();
             if (energiaActual < costeEnergia) {
-                jugador.sendActionBar(NexoColor.parse("&#FF5555<bold>⚠ ¡ENERGÍA AGOTADA!</bold> &#AAAAAADebes descansar..."));
+                jugador.sendActionBar(NexoColor.parse("&#8b0000<bold>⚠ ¡ENERGÍA AGOTADA!</bold> &#1c0f2aDebes descansar..."));
                 return;
             }
 
@@ -155,7 +155,7 @@ public class BlockBreakListener implements Listener {
                                 ItemStack oro = new ItemStack(Material.GOLD_INGOT);
                                 ItemMeta oroMeta = oro.getItemMeta();
                                 if (oroMeta != null) {
-                                    oroMeta.setDisplayName(serialize("&#FFAA00✨ Oro Sintético"));
+                                    oroMeta.setDisplayName(serialize("&#ff00ff✨ Oro Sintético"));
                                     oro.setItemMeta(oroMeta);
                                 }
                                 jugador.getInventory().addItem(oro);
@@ -170,9 +170,8 @@ public class BlockBreakListener implements Listener {
                         List<String> lore = metaTool.getLore();
                         if (lore != null) {
                             for (int i = 0; i < lore.size(); i++) {
-                                // 🌟 Actualización limpia del Lore
                                 if (org.bukkit.ChatColor.stripColor(lore.get(i)).contains("Bloques Rotos:")) {
-                                    lore.set(i, serialize("&#AAAAAABloques Rotos: &#FFAA00" + String.format("%,d", rotos)));
+                                    lore.set(i, serialize("&#1c0f2aBloques Rotos: &#ff00ff" + String.format("%,d", rotos)));
                                     break;
                                 }
                             }
@@ -204,10 +203,9 @@ public class BlockBreakListener implements Listener {
                 }
             }
 
-            // 🎲 CÁLCULO DE DROPS CENTRAL
             int cantidad = (random.nextDouble() * 100 <= suerteTotal) ? 2 : 1;
             if (cantidad > 1) {
-                jugador.sendActionBar(NexoColor.parse("&#00E5FF✨ ¡DOBLE MATERIAL! &#555555(+" + String.format("%.1f", suerteTotal) + "%)"));
+                jugador.sendActionBar(NexoColor.parse("&#00f5ff✨ ¡DOBLE MATERIAL! &#1c0f2a(+" + String.format("%.1f", suerteTotal) + "%)"));
             }
 
             if (recompensa != null) {
@@ -215,7 +213,6 @@ public class BlockBreakListener implements Listener {
                 jugador.getInventory().addItem(recompensa);
             }
 
-            // 🟢 GUARDADO DE ENERGÍA Y XP EN NEXOUSER
             user.setEnergiaMineria(Math.max(0, energiaActual - costeEnergia));
             cooldownRecoleccion.put(uuid, ahora);
 
@@ -225,18 +222,14 @@ public class BlockBreakListener implements Listener {
             while (xpActual >= (nivelActual * 100)) {
                 xpActual -= (nivelActual * 100);
                 nivelActual++;
-                jugador.sendTitle(serialize("&#FFAA00<bold>¡ASCENSO CÉNIT!</bold>"), serialize("&#AAAAAANivel Corporal: &#00E5FF" + nivelActual), 10, 70, 20);
+                jugador.sendTitle(serialize("&#ff00ff<bold>¡ASCENSO CÉNIT!</bold>"), serialize("&#1c0f2aNivel Corporal: &#00f5ff" + nivelActual), 10, 70, 20);
             }
 
             user.setNexoNivel(nivelActual);
             user.setNexoXp(xpActual);
 
-            // ==========================================
-            // ⚡ EJECUCIÓN DE HABILIDADES DE HERRAMIENTA
-            // ==========================================
             ejecutarHabilidadHerramienta(jugador, bloque, tipoOriginal, dataOriginal, habilidadHerramienta, recompensa.clone(), suerteTotal, esTronco);
 
-            // ♻️ REGENERACIÓN DEL BLOQUE CENTRAL
             if (esCultivo) {
                 if (!habilidadHerramienta.equalsIgnoreCase("replante_auto")) {
                     Ageable cultivoNuevo = (Ageable) dataOriginal.clone();
@@ -252,7 +245,7 @@ public class BlockBreakListener implements Listener {
                         bloque.setBlockData(dataOriginal);
                         bloquesRegenerando.remove(bloque.getLocation());
                     }
-                }, 200L); // 10 segundos
+                }, 200L);
             }
 
         } else if (!jugador.hasPermission("nexo.admin")) {
@@ -336,6 +329,6 @@ public class BlockBreakListener implements Listener {
                 b.setBlockData(dataOriginal);
                 bloquesRegenerando.remove(b.getLocation());
             }
-        }, 200L); // 10 segundos
+        }, 200L);
     }
 }

@@ -9,10 +9,8 @@ import java.util.UUID;
 
 public class NexoExpansion extends PlaceholderExpansion {
 
-    private final NexoCore plugin;
-
     public NexoExpansion(NexoCore plugin) {
-        this.plugin = plugin;
+        // El parámetro del plugin es requerido por la API de PlaceholderAPI, pero no lo usamos internamente.
     }
 
     @Override
@@ -40,10 +38,8 @@ public class NexoExpansion extends PlaceholderExpansion {
         if (player == null) return "";
         UUID uuid = player.getUniqueId();
 
-        // 🟢 ARQUITECTURA LIMPIA: Pedimos el usuario a la caché
         NexoUser user = NexoAPI.getInstance().getUserLocal(uuid);
 
-        // Si el jugador está desconectado o sus datos aún no cargan, damos valores por defecto
         if (user == null) {
             if (params.equalsIgnoreCase("nivel") || params.endsWith("_nivel")) return "1";
             if (params.equalsIgnoreCase("xp")) return "0";
@@ -51,9 +47,6 @@ public class NexoExpansion extends PlaceholderExpansion {
             return "";
         }
 
-        // ==========================================
-        // 1. VARIABLES GLOBALES (NEXO)
-        // ==========================================
         if (params.equalsIgnoreCase("nivel")) {
             return String.valueOf(user.getNexoNivel());
         }
@@ -65,9 +58,6 @@ public class NexoExpansion extends PlaceholderExpansion {
             return String.valueOf(nivelActual * 100);
         }
 
-        // ==========================================
-        // 2. VARIABLES DE PROFESIÓN (NUEVO)
-        // ==========================================
         if (params.equalsIgnoreCase("mineria_nivel")) {
             return String.valueOf(user.getMineriaNivel());
         }

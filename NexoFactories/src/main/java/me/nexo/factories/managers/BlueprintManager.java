@@ -28,14 +28,13 @@ public class BlueprintManager implements Listener {
 
     private final NexoFactories plugin;
 
-    // 🎨 PALETA HEX
-    private static final String MSG_BLUEPRINT_ON = "&#00fbff<bold>[⚙]</bold> &#a8ff78Plano proyectado. Coloca los materiales requeridos en el holograma.";
-    private static final String ERR_WRONG_BLOCK = "&#ff4b2b[!] Pieza incorrecta o incompatible. El sistema requiere: &#fbd72b%block%";
-    private static final String ERR_NO_STONE = "&#ff4b2b<bold>¡ERROR CRÍTICO!</bold> &#ff4b2bLas máquinas industriales solo pueden construirse dentro de una Zona Protegida. &#434343Destruye la estructura y reconstrúyela cerca de tu Nexo de Protección.";
+    private static final String MSG_BLUEPRINT_ON = "&#00f5ff<bold>[⚙]</bold> &#00f5ffPlano proyectado. Coloca los materiales requeridos en el holograma.";
+    private static final String ERR_WRONG_BLOCK = "&#8b0000[!] Pieza incorrecta o incompatible. El sistema requiere: &#ff00ff%block%";
+    private static final String ERR_NO_STONE = "&#8b0000<bold>¡ERROR CRÍTICO!</bold> &#8b0000Las máquinas industriales solo pueden construirse dentro de una Zona Protegida. &#1c0f2aDestruye la estructura y reconstrúyela cerca de tu Nexo de Protección.";
 
-    private static final String MSG_BUILT_TITLE = "&#a8ff78<bold>¡MÁQUINA ENSAMBLADA Y VINCULADA!</bold>";
-    private static final String MSG_BUILT_TYPE = "&#434343Estructura Registrada: &#fbd72b%type%";
-    private static final String MSG_BUILT_NET = "&#434343Red Eléctrica: &#00fbffConectada y Estable";
+    private static final String MSG_BUILT_TITLE = "&#00f5ff<bold>¡MÁQUINA ENSAMBLADA Y VINCULADA!</bold>";
+    private static final String MSG_BUILT_TYPE = "&#1c0f2aEstructura Registrada: &#ff00ff%type%";
+    private static final String MSG_BUILT_NET = "&#1c0f2aRed Eléctrica: &#00f5ffConectada y Estable";
 
     private final Map<UUID, List<BlockDisplay>> activeHolograms = new ConcurrentHashMap<>();
     private final Map<UUID, Location> activeCores = new ConcurrentHashMap<>();
@@ -47,19 +46,14 @@ public class BlueprintManager implements Listener {
 
     public void projectBlueprint(Player player, Location coreLocation, StructureTemplate template) {
         clearBlueprint(player);
-
         List<BlockDisplay> displays = new ArrayList<>();
-
         for (Map.Entry<Vector, Material> entry : template.getRequiredBlocks().entrySet()) {
             Vector rel = entry.getKey();
             Material mat = entry.getValue();
-
             Location displayLoc = coreLocation.clone().add(rel.getBlockX(), rel.getBlockY(), rel.getBlockZ());
             if (displayLoc.getBlock().getType() == mat) continue;
-
             BlockDisplay display = (BlockDisplay) coreLocation.getWorld().spawnEntity(displayLoc, EntityType.BLOCK_DISPLAY);
             display.setBlock(Bukkit.createBlockData(mat));
-
             display.setTransformation(new Transformation(
                     new org.joml.Vector3f(0.2f, 0.2f, 0.2f),
                     new org.joml.Quaternionf(),
@@ -69,11 +63,9 @@ public class BlueprintManager implements Listener {
             display.setGlowing(true);
             displays.add(display);
         }
-
         activeHolograms.put(player.getUniqueId(), displays);
         activeCores.put(player.getUniqueId(), coreLocation);
         activeTemplates.put(player.getUniqueId(), template);
-
         player.sendMessage(NexoColor.parse(MSG_BLUEPRINT_ON));
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
     }
@@ -82,7 +74,6 @@ public class BlueprintManager implements Listener {
         List<BlockDisplay> displays = activeHolograms.remove(player.getUniqueId());
         activeCores.remove(player.getUniqueId());
         activeTemplates.remove(player.getUniqueId());
-
         if (displays != null) {
             for (BlockDisplay display : displays) {
                 if (display.isValid()) display.remove();
@@ -94,7 +85,6 @@ public class BlueprintManager implements Listener {
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
         UUID id = player.getUniqueId();
-
         if (!activeTemplates.containsKey(id)) return;
 
         Location coreLoc = activeCores.get(id);
@@ -105,24 +95,18 @@ public class BlueprintManager implements Listener {
         for (Map.Entry<Vector, Material> entry : template.getRequiredBlocks().entrySet()) {
             Vector rel = entry.getKey();
             Location expectedLoc = coreLoc.clone().add(rel.getBlockX(), rel.getBlockY(), rel.getBlockZ());
-
             if (placedBlock.getLocation().equals(expectedLoc)) {
                 if (placedBlock.getType() == entry.getValue()) {
                     isPart = true;
-
-                    List<BlockDisplay> displays = activeHolograms.get(id);
-                    if (displays != null) {
-                        displays.removeIf(display -> {
-                            if (display.getLocation().getBlockX() == placedBlock.getX() &&
-                                    display.getLocation().getBlockY() == placedBlock.getY() &&
-                                    display.getLocation().getBlockZ() == placedBlock.getZ()) {
-                                display.remove();
-                                return true;
-                            }
-                            return false;
-                        });
-                    }
-
+                    activeHolograms.get(id).removeIf(display -> {
+                        if (display.getLocation().getBlockX() == placedBlock.getX() &&
+                                display.getLocation().getBlockY() == placedBlock.getY() &&
+                                display.getLocation().getBlockZ() == placedBlock.getZ()) {
+                            display.remove();
+                            return true;
+                        }
+                        return false;
+                    });
                     player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 2f);
                 } else {
                     player.sendMessage(NexoColor.parse(ERR_WRONG_BLOCK.replace("%block%", entry.getValue().name())));
@@ -135,7 +119,6 @@ public class BlueprintManager implements Listener {
 
         if (isPart && template.isValid(coreLoc.getBlock())) {
             me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(coreLoc);
-
             if (stone == null) {
                 player.sendMessage(NexoColor.parse(ERR_NO_STONE));
                 event.setCancelled(true);
@@ -143,25 +126,19 @@ public class BlueprintManager implements Listener {
             }
 
             ActiveFactory factory = new ActiveFactory(
-                    UUID.randomUUID(),
-                    stone.getStoneId(),
-                    player.getUniqueId(),
-                    template.getFactoryType(),
-                    1,
-                    "OFFLINE",
-                    0,
-                    coreLoc,
-                    "NONE",
-                    "NONE"
+                    UUID.randomUUID(), stone.getStoneId(), player.getUniqueId(),
+                    template.getFactoryType(), 1, "OFFLINE", 0, coreLoc,
+                    "NONE", "NONE", System.currentTimeMillis()
             );
-            plugin.getFactoryManager().createFactoryAsync(factory);
 
-            player.sendMessage(NexoColor.parse(" "));
-            player.sendMessage(NexoColor.parse(MSG_BUILT_TITLE));
-            player.sendMessage(NexoColor.parse(MSG_BUILT_TYPE.replace("%type%", template.getFactoryType())));
-            player.sendMessage(NexoColor.parse(MSG_BUILT_NET));
-            player.sendMessage(NexoColor.parse(" "));
-            player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+            plugin.getFactoryManager().createFactoryAsync(factory).thenRun(() -> {
+                player.sendMessage(NexoColor.parse(" "));
+                player.sendMessage(NexoColor.parse(MSG_BUILT_TITLE));
+                player.sendMessage(NexoColor.parse(MSG_BUILT_TYPE.replace("%type%", template.getFactoryType())));
+                player.sendMessage(NexoColor.parse(MSG_BUILT_NET));
+                player.sendMessage(NexoColor.parse(" "));
+                player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+            });
 
             clearBlueprint(player);
         }

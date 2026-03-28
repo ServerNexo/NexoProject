@@ -33,6 +33,17 @@
         <module>NexoDungeons</module>
     </modules>
 
+    <dependencyManagement>
+        <dependencies>
+            <!-- Mitigación de Vulnerabilidad CVE-2025-48924 en toda la red -->
+            <dependency>
+                <groupId>org.apache.commons</groupId>
+                <artifactId>commons-lang3</artifactId>
+                <version>3.14.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <build>
         <resources>
             <resource>

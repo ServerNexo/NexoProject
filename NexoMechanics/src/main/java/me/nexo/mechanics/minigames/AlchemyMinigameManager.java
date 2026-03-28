@@ -28,7 +28,7 @@ public class AlchemyMinigameManager implements Listener {
 
     private static class MezclaVolatil {
         int bombeos = 0;
-        int tiempoRestante = 5; // 5 segundos
+        int tiempoRestante = 5;
         ItemStack[] pocionesOriginales;
 
         public MezclaVolatil(ItemStack[] originales) {
@@ -45,11 +45,9 @@ public class AlchemyMinigameManager implements Listener {
     public void alDestilar(BrewEvent event) {
         Block b = event.getBlock();
 
-        // 10% de probabilidad de volverse inestable
         if (Math.random() <= 0.10) {
             if (!(b.getState() instanceof BrewingStand stand)) return;
 
-            // Guardamos las pociones que se acaban de crear
             ItemStack[] resultados = new ItemStack[3];
             for (int i = 0; i < 3; i++) {
                 ItemStack item = stand.getInventory().getItem(i);
@@ -58,15 +56,13 @@ public class AlchemyMinigameManager implements Listener {
 
             mezclas.put(b.getLocation(), new MezclaVolatil(resultados));
 
-            // Efectos de peligro (Alarma Ciberpunk)
             b.getWorld().playSound(b.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 1f, 0.5f);
 
-            // Avisamos a los jugadores cercanos
             for (Player p : b.getWorld().getPlayers()) {
                 if (p.getLocation().distance(b.getLocation()) <= 5) {
                     p.sendTitle(
-                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FF5555<bold>! PELIGRO !</bold>")),
-                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FFAA00Mezcla Inestable. Agáchate (Shift) x3 para estabilizar.")),
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#8b0000<bold>! PELIGRO !</bold>")),
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#ff00ffMezcla Inestable. Agáchate (Shift) x3 para estabilizar.")),
                             5, 40, 5
                     );
                 }
@@ -81,7 +77,6 @@ public class AlchemyMinigameManager implements Listener {
         Player p = event.getPlayer();
         Location pLoc = p.getLocation();
 
-        // Buscar si hay un soporte inestable a menos de 3 bloques
         for (Map.Entry<Location, MezclaVolatil> entry : mezclas.entrySet()) {
             Location locSoporte = entry.getKey();
             if (locSoporte.getWorld().equals(pLoc.getWorld()) && locSoporte.distance(pLoc) <= 3) {
@@ -89,14 +84,12 @@ public class AlchemyMinigameManager implements Listener {
                 MezclaVolatil mezcla = entry.getValue();
                 mezcla.bombeos++;
 
-                // Efecto de "bombeo" corporativo
                 p.playSound(locSoporte, Sound.ITEM_BUCKET_FILL, 0.5f, 1f + (mezcla.bombeos * 0.2f));
                 locSoporte.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, locSoporte.clone().add(0.5, 1, 0.5), 5);
 
                 if (mezcla.bombeos >= 3) {
-                    // ¡Éxito!
                     p.playSound(locSoporte, Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
-                    p.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>MEZCLA ESTABILIZADA:</bold> &#AAAAAALa pureza de los químicos ha sido potenciada."));
+                    p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>MEZCLA ESTABILIZADA:</bold> &#1c0f2aLa pureza de los químicos ha sido potenciada."));
 
                     aplicarPremio(locSoporte, mezcla.pocionesOriginales);
                     mezclas.remove(locSoporte);
@@ -113,7 +106,6 @@ public class AlchemyMinigameManager implements Listener {
                 if (item != null && item.getType() == Material.POTION && item.hasItemMeta()) {
                     PotionMeta meta = (PotionMeta) item.getItemMeta();
                     if (meta.hasCustomEffects()) {
-                        // Duplicar duración de los efectos custom
                         for (PotionEffect effect : meta.getCustomEffects()) {
                             meta.removeCustomEffect(effect.getType());
                             meta.addCustomEffect(new PotionEffect(effect.getType(), effect.getDuration() * 2, effect.getAmplifier()), true);
@@ -131,7 +123,6 @@ public class AlchemyMinigameManager implements Listener {
             for (int i = 0; i < 3; i++) {
                 ItemStack item = stand.getInventory().getItem(i);
                 if (item != null && item.getType() != Material.AIR) {
-                    // Convierte en botella de agua básica
                     stand.getInventory().setItem(i, new ItemStack(Material.GLASS_BOTTLE));
                 }
             }
@@ -146,7 +137,6 @@ public class AlchemyMinigameManager implements Listener {
                 MezclaVolatil mezcla = entry.getValue();
                 Location loc = entry.getKey();
 
-                // Efecto visual constante mientras está inestable
                 loc.getWorld().spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, loc.clone().add(0.5, 1, 0.5), 2, 0.1, 0.1, 0.1, 0.01);
 
                 mezcla.tiempoRestante--;
@@ -155,6 +145,6 @@ public class AlchemyMinigameManager implements Listener {
                     mezclas.remove(loc);
                 }
             }
-        }, 20L, 20L); // 1 vez por segundo
+        }, 20L, 20L);
     }
 }

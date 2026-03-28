@@ -22,13 +22,9 @@ public class GuardarropaManager {
         this.plugin = plugin;
     }
 
-    // ==========================================
-    // 💾 GUARDAR ARMADURA ACTUAL EN UN PRESET
-    // ==========================================
     public void guardarPreset(Player p, int presetId) {
         ItemStack[] armadura = p.getInventory().getArmorContents();
 
-        // Verificamos que al menos lleve una pieza puesta
         boolean estaDesnudo = true;
         for (ItemStack item : armadura) {
             if (item != null && item.getType() != Material.AIR) {
@@ -38,7 +34,7 @@ public class GuardarropaManager {
         }
 
         if (estaDesnudo) {
-            p.sendMessage(NexoColor.parse("&#FF5555[!] No tienes ninguna armadura equipada para guardar."));
+            p.sendMessage(NexoColor.parse("&#8b0000[!] No tienes ninguna armadura equipada para guardar."));
             p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             return;
         }
@@ -60,7 +56,7 @@ public class GuardarropaManager {
                 ps.executeUpdate();
 
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    p.sendMessage(NexoColor.parse("&#55FF55[✓] 👕 ¡Armadura guardada exitosamente en el Preset #" + presetId + "!"));
+                    p.sendMessage(NexoColor.parse("&#00f5ff[✓] 👕 ¡Armadura guardada exitosamente en el Preset #" + presetId + "!"));
                     p.playSound(p.getLocation(), Sound.BLOCK_SMITHING_TABLE_USE, 1f, 1f);
                     p.closeInventory();
                 });
@@ -70,9 +66,6 @@ public class GuardarropaManager {
         });
     }
 
-    // ==========================================
-    // 🛡️ EQUIPAR PRESET DESDE LA NUBE
-    // ==========================================
     public void equiparPreset(Player p, int presetId) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
@@ -96,7 +89,7 @@ public class GuardarropaManager {
             String finalData = base64Data;
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (finalData == null || finalData.isEmpty()) {
-                    p.sendMessage(NexoColor.parse("&#FF5555[!] No hay ninguna armadura guardada en el Preset #" + presetId + "."));
+                    p.sendMessage(NexoColor.parse("&#8b0000[!] No hay ninguna armadura guardada en el Preset #" + presetId + "."));
                     p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     return;
                 }
@@ -104,7 +97,6 @@ public class GuardarropaManager {
                 ItemStack[] nuevaArmadura = Base64Util.itemStackArrayFromBase64(finalData);
                 ItemStack[] armaduraActual = p.getInventory().getArmorContents();
 
-                // Calculamos cuántos espacios libres necesita
                 int espaciosNecesarios = 0;
                 for (ItemStack item : armaduraActual) {
                     if (item != null && item.getType() != Material.AIR) espaciosNecesarios++;
@@ -116,23 +108,21 @@ public class GuardarropaManager {
                 }
 
                 if (espaciosLibres < espaciosNecesarios) {
-                    p.sendMessage(NexoColor.parse("&#FF5555<bold>[!] ¡INVENTARIO LLENO!</bold> &#AAAAAANecesitas " + espaciosNecesarios + " espacios libres para guardar tu armadura actual."));
+                    p.sendMessage(NexoColor.parse("&#8b0000<bold>[!] ¡INVENTARIO LLENO!</bold> &#1c0f2aNecesitas " + espaciosNecesarios + " espacios libres para guardar tu armadura actual."));
                     p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                     return;
                 }
 
-                // Movemos la armadura actual al inventario
                 for (ItemStack item : armaduraActual) {
                     if (item != null && item.getType() != Material.AIR) {
                         p.getInventory().addItem(item);
                     }
                 }
 
-                // Equipamos la nueva y vaciamos el preset de la BD
                 p.getInventory().setArmorContents(nuevaArmadura);
                 borrarPreset(p, presetId);
 
-                p.sendMessage(NexoColor.parse("&#00E5FF✨ ¡Te has equipado el Preset #" + presetId + " rápidamente!"));
+                p.sendMessage(NexoColor.parse("&#00f5ff✨ ¡Te has equipado el Preset #" + presetId + " rápidamente!"));
                 p.playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_DIAMOND, 1f, 1f);
                 p.closeInventory();
             });

@@ -1,5 +1,6 @@
 package me.nexo.pvp;
 
+import me.nexo.pvp.classes.ArmorClassListener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import me.nexo.pvp.pvp.PvPManager;
@@ -37,6 +38,7 @@ public class NexoPvP extends JavaPlugin {
 
         // 🟢 Registramos el Listener de las pasivas
         getServer().getPluginManager().registerEvents(new PasivasListener(this, this.pasivasManager), this);
+        getServer().getPluginManager().registerEvents(new ArmorClassListener(this), this);
 
         // 🩸 Registramos la Penalización de Muerte Hardcore (Filosofía Tibia)
         getServer().getPluginManager().registerEvents(new DeathPenaltyListener(), this);

@@ -1,15 +1,10 @@
 package me.nexo.pvp.pasivas;
 
 import dev.aurelium.auraskills.api.skill.Skills;
-
-// 🟢 ARQUITECTURA: Importamos tu nuevo plugin principal
 import me.nexo.pvp.NexoPvP;
-
-// 🟢 MANTENEMOS ESTO: El Addon se comunica con la API del Core
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
-
+import me.nexo.core.utils.NexoColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -50,17 +45,12 @@ public class PasivasListener implements Listener {
         this.manager = manager;
     }
 
-    // ==========================================
-    // ⚔️ FIGHTING (Combate)
-    // ==========================================
     @EventHandler(priority = EventPriority.HIGH)
     public void onCombate(EntityDamageByEntityEvent event) {
-        // ATACANTE
         if (event.getDamager() instanceof Player atacante) {
             NexoUser user = NexoAPI.getInstance().getUserLocal(atacante.getUniqueId());
             int nivel = user != null ? user.getCombateNivel() : 1;
 
-            // Lvl 25: Ejecutor
             if (nivel >= 25 && event.getEntity() instanceof org.bukkit.entity.LivingEntity victima) {
                 double hpPercent = victima.getHealth() / victima.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
                 if (hpPercent <= 0.20) {
@@ -68,7 +58,6 @@ public class PasivasListener implements Listener {
                 }
             }
 
-            // Lvl 10: Sed de Sangre (Robo de Vida)
             if (nivel >= 10) {
                 double cura = event.getFinalDamage() * 0.05;
                 double maxHp = atacante.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
@@ -76,7 +65,6 @@ public class PasivasListener implements Listener {
             }
         }
 
-        // VÍCTIMA (Última Batalla y Protección de Invulnerabilidad)
         if (event.getEntity() instanceof Player victima) {
             UUID id = victima.getUniqueId();
             if (manager.invulnerablesUltimaBatalla.containsKey(id)) {
@@ -89,21 +77,20 @@ public class PasivasListener implements Listener {
 
             if (nivel >= 50 && event.getFinalDamage() >= victima.getHealth()) {
                 long ahora = System.currentTimeMillis();
-                long cooldownMilis = 10 * 60 * 1000L; // 10 minutos
+                long cooldownMilis = 10 * 60 * 1000L;
 
                 if (!manager.cdUltimaBatalla.containsKey(id) || (ahora - manager.cdUltimaBatalla.get(id)) > cooldownMilis) {
                     event.setCancelled(true);
                     victima.setHealth(1.0);
-                    manager.invulnerablesUltimaBatalla.put(id, ahora + 3000L); // 3 segundos
+                    manager.invulnerablesUltimaBatalla.put(id, ahora + 3000L);
                     manager.cdUltimaBatalla.put(id, ahora);
 
                     victima.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, victima.getLocation(), 100);
                     victima.playSound(victima.getLocation(), Sound.ITEM_TOTEM_USE, 1f, 1f);
 
-                    // 🌟 Título de Emergencia Serializado
                     victima.sendTitle(
-                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FF5555<bold>¡ESCUDO DE EMERGENCIA!</bold>")),
-                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#AAAAAADaño letal anulado. Sistemas en enfriamiento.")),
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#8b0000<bold>¡ESCUDO DE EMERGENCIA!</bold>")),
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#1c0f2aDaño letal anulado. Sistemas en enfriamiento.")),
                             5, 40, 5
                     );
                 }
@@ -119,7 +106,6 @@ public class PasivasListener implements Listener {
                 return;
             }
 
-            // ⛏️ MINING (Piel de Magma Lvl 25)
             if (event.getCause() == EntityDamageEvent.DamageCause.LAVA || event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK) {
                 NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
                 if (user != null && user.getMineriaNivel() >= 25 && p.getInventory().getItemInMainHand().getType().toString().contains("PICKAXE")) {
@@ -129,9 +115,6 @@ public class PasivasListener implements Listener {
         }
     }
 
-    // ==========================================
-    // ⛏️ MINING & 🪓 WOODCUTTING (Eventos de Bloque)
-    // ==========================================
     @EventHandler
     public void onBlockBreak(BlockBreakEvent event) {
         Player p = event.getPlayer();
@@ -141,7 +124,6 @@ public class PasivasListener implements Listener {
         NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
         if (user == null) return;
 
-        // 🪓 WOODCUTTING (Aún lee de AuraSkills)
         int nivelTala = manager.getNivel(p, Skills.FORAGING);
         if (nivelTala >= 10 && tipo.contains("LEAVES")) {
             if (Math.random() <= 0.05) {
@@ -156,7 +138,6 @@ public class PasivasListener implements Listener {
             }
         }
 
-        // ⛏️ MINING
         int nivelMina = user.getMineriaNivel();
         if (nivelMina >= 50 && tipo.contains("STONE")) {
             if (Math.random() <= 0.01) {
@@ -171,17 +152,15 @@ public class PasivasListener implements Listener {
             }
         }
 
-        // 🌾 FARMING
         int nivelGranja = user.getAgriculturaNivel();
         if (nivelGranja >= 25 && b.getBlockData() instanceof org.bukkit.block.data.Ageable cultivo) {
             if (cultivo.getAge() == cultivo.getMaximumAge() && Math.random() <= 0.10) {
-                b.getWorld().dropItemNaturally(b.getLocation(), new ItemStack(Material.GOLDEN_CARROT)); // Placeholder ítem custom
+                b.getWorld().dropItemNaturally(b.getLocation(), new ItemStack(Material.GOLDEN_CARROT));
                 p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 2f);
             }
         }
     }
 
-    // Raíces Firmes (Woodcutting 25 - Anti Knockback)
     @EventHandler
     public void onKnockback(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof Player p && event.getDamager() instanceof Monster) {
@@ -194,9 +173,6 @@ public class PasivasListener implements Listener {
         }
     }
 
-    // ==========================================
-    // 🌾 FARMING (Manos de Seda)
-    // ==========================================
     @EventHandler
     public void onPisadas(PlayerInteractEvent event) {
         if (event.getAction() == Action.PHYSICAL && event.getClickedBlock() != null) {
@@ -207,9 +183,6 @@ public class PasivasListener implements Listener {
         }
     }
 
-    // ==========================================
-    // 🎣 FISHING (Pesca)
-    // ==========================================
     @EventHandler
     public void onPescado(PlayerFishEvent event) {
         if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH) {
@@ -229,8 +202,7 @@ public class PasivasListener implements Listener {
                 ItemStack caught = itemEntity.getItemStack();
                 caught.setAmount(caught.getAmount() * 2);
                 itemEntity.setItemStack(caught);
-                // 🌟 Alerta Corporativa
-                p.sendActionBar(NexoColor.parse("&#00E5FF[✓] <bold>EXTRACCIÓN DUPLICADA:</bold> &#AAAAAARedimensionamiento cuántico aplicado."));
+                p.sendActionBar(NexoColor.parse("&#00f5ff[✓] <bold>EXTRACCIÓN DUPLICADA:</bold> &#1c0f2aRedimensionamiento cuántico aplicado."));
             }
         }
     }
@@ -245,9 +217,6 @@ public class PasivasListener implements Listener {
         }
     }
 
-    // ==========================================
-    // 🧪 ALQUIMIA
-    // ==========================================
     @EventHandler
     public void onBeber(PlayerItemConsumeEvent event) {
         if (event.getItem().getType() == Material.POTION) {
@@ -255,7 +224,6 @@ public class PasivasListener implements Listener {
             int nivel = manager.getNivel(p, Skills.ALCHEMY);
 
             if (nivel >= 10) {
-                // Multiplicador gestionado modificando la duración de los efectos actuales un tick después
                 Bukkit.getScheduler().runTaskLater(plugin, () -> {
                     for (PotionEffect effect : p.getActivePotionEffects()) {
                         p.addPotionEffect(new PotionEffect(effect.getType(), (int) (effect.getDuration() * 1.2), effect.getAmplifier(), effect.isAmbient(), effect.hasParticles(), effect.hasIcon()));
@@ -263,14 +231,13 @@ public class PasivasListener implements Listener {
                 }, 1L);
             }
             if (nivel >= 25) {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 60, 1)); // Speed II
+                p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 60, 1));
             }
         }
     }
 
     @EventHandler
     public void onBrew(BrewEvent event) {
-        // Asumiendo que podemos verificar si un jugador online inició el stand
         if (Math.random() <= 0.10) {
             for (ItemStack item : event.getContents().getContents()) {
                 if (item != null && item.getType() == Material.POTION) {
@@ -280,9 +247,6 @@ public class PasivasListener implements Listener {
         }
     }
 
-    // ==========================================
-    // 🔮 ENCANTAMIENTOS
-    // ==========================================
     @EventHandler
     public void onXpGain(PlayerExpChangeEvent event) {
         if (manager.getNivel(event.getPlayer(), Skills.ENCHANTING) >= 10) {
@@ -297,7 +261,7 @@ public class PasivasListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 p.setLevel(p.getLevel() + event.getExpLevelCost());
                 p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1f, 1f);
-                p.sendMessage(NexoColor.parse("&#AA00AA✨ <bold>RETENCIÓN DE ENERGÍA:</bold> &#AAAAAACosto de ensamblaje reintegrado."));
+                p.sendMessage(NexoColor.parse("&#ff00ff✨ <bold>RETENCIÓN DE ENERGÍA:</bold> &#1c0f2aCosto de ensamblaje reintegrado."));
             }, 1L);
         }
     }

@@ -30,9 +30,8 @@ public class FishingListener implements Listener {
     public void alPescar(PlayerFishEvent event) {
         Player p = event.getPlayer();
 
-        // 1. Escaneamos la armadura (Desde la RAM de NexoItems)
         double probCriaturaTotal = 0.0;
-        double velocidadPescaTotal = 0.0; // Aunque no se usa en este snippet, la dejamos lista
+        double velocidadPescaTotal = 0.0;
 
         for (ItemStack item : p.getInventory().getArmorContents()) {
             if (item == null || !item.hasItemMeta()) continue;
@@ -47,40 +46,35 @@ public class FishingListener implements Listener {
             }
         }
 
-        // 2. Lógica cuando atrapas algo (CAUGHT_FISH)
         if (event.getState() == PlayerFishEvent.State.CAUGHT_FISH) {
 
-            // 🎲 TIRADA PARA CRIATURA MARINA
             if (random.nextDouble() * 100 <= probCriaturaTotal) {
                 if (event.getCaught() != null) {
-                    event.getCaught().remove(); // Quitamos el pez normal
+                    event.getCaught().remove();
                 }
                 spawnearMonstruoMarino(p);
 
-                p.sendActionBar(NexoColor.parse("&#FF5555<bold>¡ALERTA DE SEGURIDAD! ENTIDAD ABISAL DETECTADA</bold> 🦑"));
+                p.sendActionBar(NexoColor.parse("&#8b0000<bold>¡ALERTA DE SEGURIDAD! ENTIDAD ABISAL DETECTADA</bold> 🦑"));
                 p.playSound(p.getLocation(), Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.5f, 1.5f);
             } else {
-                // Si no sale bicho, damos recompensa normal pero con sonido satisfactorio
-                p.sendActionBar(NexoColor.parse("&#00E5FF✨ ¡EXTRACCIÓN ACUÁTICA EXITOSA! ✨"));
+                p.sendActionBar(NexoColor.parse("&#00f5ff✨ ¡EXTRACCIÓN ACUÁTICA EXITOSA! ✨"));
                 p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.5f, 2.0f);
             }
         }
     }
 
     private void spawnearMonstruoMarino(Player p) {
-        // Obtenemos nivel de pesca de AuraSkills para saber qué tan fuerte es el bicho
         int nivelPesca = 1;
         try {
             nivelPesca = (int) AuraSkillsApi.get().getUser(p.getUniqueId()).getSkillLevel(Skills.FISHING);
         } catch (Exception ignored) {}
 
-        // Lógica simple de escalado con nombres en paleta Hexagonal
         if (nivelPesca < 10) {
-            p.getWorld().spawnEntity(p.getLocation(), EntityType.ZOMBIE).customName(NexoColor.parse("&#AAAAAAAhogado de las Mareas"));
+            p.getWorld().spawnEntity(p.getLocation(), EntityType.ZOMBIE).customName(NexoColor.parse("&#1c0f2aAhogado de las Mareas"));
         } else if (nivelPesca < 25) {
-            p.getWorld().spawnEntity(p.getLocation(), EntityType.GUARDIAN).customName(NexoColor.parse("&#00E5FFGuardián de la Fosa"));
+            p.getWorld().spawnEntity(p.getLocation(), EntityType.GUARDIAN).customName(NexoColor.parse("&#00f5ffGuardián de la Fosa"));
         } else {
-            p.getWorld().spawnEntity(p.getLocation(), EntityType.ELDER_GUARDIAN).customName(NexoColor.parse("&#FF5555<bold>LEVIATÁN DEL NEXO</bold>"));
+            p.getWorld().spawnEntity(p.getLocation(), EntityType.ELDER_GUARDIAN).customName(NexoColor.parse("&#8b0000<bold>LEVIATÁN DEL NEXO</bold>"));
         }
     }
 }

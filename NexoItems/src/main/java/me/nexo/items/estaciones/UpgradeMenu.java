@@ -14,29 +14,27 @@ import java.util.Arrays;
 public class UpgradeMenu {
 
     public static final String TITLE_PLAIN = "» Mesa de Evolución Cénit";
-    public static final String MENU_TITLE = "&#555555<bold>»</bold> &#FFAA00Mesa de Evolución Cénit";
+    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#ff00ffMesa de Evolución Cénit";
 
     public static void open(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
 
-        ItemStack filler = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemStack filler = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta metaF = filler.getItemMeta();
         metaF.setDisplayName(" ");
         filler.setItemMeta(metaF);
 
         for (int i = 0; i < 27; i++) inv.setItem(i, filler);
 
-        // Slot 13: El espacio vacío para que el jugador ponga su ítem
         inv.setItem(13, new ItemStack(Material.AIR));
 
-        // Slot 22: Botón de Evolucionar
         ItemStack btn = new ItemStack(Material.NETHER_STAR);
         ItemMeta btnMeta = btn.getItemMeta();
-        btnMeta.setDisplayName(serialize("&#00E5FF<bold>↑ INICIAR EVOLUCIÓN ↑</bold>"));
+        btnMeta.setDisplayName(serialize("&#00f5ff<bold>↑ INICIAR EVOLUCIÓN ↑</bold>"));
         btnMeta.setLore(Arrays.asList(
-                serialize("&#AAAAAAColoca tu Arma o Herramienta arriba."),
-                serialize("&#AAAAAAEl sistema calculará automáticamente"),
-                serialize("&#AAAAAAel costo en &#FFAA00Fragmentos &#AAAAAAo &#55FF55Esencias&#AAAAAA.")
+                serialize("&#1c0f2aColoca tu Arma o Herramienta arriba."),
+                serialize("&#1c0f2aEl sistema calculará automáticamente"),
+                serialize("&#1c0f2ael costo en &#ff00ffFragmentos &#1c0f2ao &#00f5ffEsencias&#1c0f2a.")
         ));
         btn.setItemMeta(btnMeta);
         inv.setItem(22, btn);

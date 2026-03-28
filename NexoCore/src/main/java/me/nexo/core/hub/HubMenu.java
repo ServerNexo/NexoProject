@@ -29,29 +29,25 @@ public class HubMenu implements InventoryHolder {
     }
 
     public void openMenu() {
-        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, "&#9933FF🌌 Red del Nexo");
-        int tamano = CrossplayUtils.getOptimizedMenuSize(player, 54); // 🌟 Expandido a 54 slots para simetría
+        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, "&#ff00ff🌌 Red del Nexo");
+        int tamano = CrossplayUtils.getOptimizedMenuSize(player, 54);
         this.inventory = Bukkit.createInventory(this, tamano, titulo);
 
-        // 👤 CENTRO ABSOLUTO: Perfil del Jugador
         inventory.setItem(13, createPlayerProfile());
 
-        // 🌟 FILA 1: Mecánicas Principales
-        inventory.setItem(20, createButton(Material.DIAMOND_SWORD, "&#a8ff78⚔️ Habilidades", "Sube de nivel tus profesiones.", "open_skills"));
-        inventory.setItem(21, createButton(Material.WRITABLE_BOOK, "&#00fbff📚 Colecciones", "Abre tu grimorio de progresión.", "open_colecciones"));
-        inventory.setItem(22, createButton(Material.CRAFTING_TABLE, "&#fbd72b📖 Libro de Recetas", "Descubre crafteos de artefactos.", "open_recipes"));
-        inventory.setItem(23, createButton(Material.GOLD_INGOT, "&#fbd72b📈 Bazar Global", "Comercia materiales con operarios.", "open_bazar"));
-        inventory.setItem(24, createButton(Material.ZOMBIE_HEAD, "&#ff4b2b💀 Cacerías (Slayers)", "Invoca jefes y reclama sus almas.", "open_slayer"));
+        inventory.setItem(20, createButton(Material.DIAMOND_SWORD, "&#00f5ff⚔️ Habilidades", "Sube de nivel tus profesiones.", "open_skills"));
+        inventory.setItem(21, createButton(Material.WRITABLE_BOOK, "&#00f5ff📚 Colecciones", "Abre tu grimorio de progresión.", "open_colecciones"));
+        inventory.setItem(22, createButton(Material.CRAFTING_TABLE, "&#ff00ff📖 Libro de Recetas", "Descubre crafteos de artefactos.", "open_recipes"));
+        inventory.setItem(23, createButton(Material.GOLD_INGOT, "&#ff00ff📈 Bazar Global", "Comercia materiales con operarios.", "open_bazar"));
+        inventory.setItem(24, createButton(Material.ZOMBIE_HEAD, "&#8b0000💀 Cacerías (Slayers)", "Invoca jefes y reclama sus almas.", "open_slayer"));
 
-        // 🌟 FILA 2: Utilidades y Extras
-        inventory.setItem(29, createButton(Material.ENDER_CHEST, "&#CC66FF🎒 Almacenamiento", "Abre tus mochilas remotas.", "open_pv"));
-        inventory.setItem(30, createButton(Material.LEATHER_CHESTPLATE, "&#CC66FF👕 Guardarropa", "Accede a tus armaduras.", "open_wardrobe"));
-        inventory.setItem(31, createButton(Material.COMPASS, "&#00fbff🌍 Viaje Rápido", "Teletransporte a zonas seguras.", "open_fast_travel"));
-        inventory.setItem(32, createButton(Material.SHIELD, "&#a8ff78🛡️ Gestión de Clan", "Administra tu imperio.", "open_clans"));
-        inventory.setItem(33, createButton(Material.WITHER_SKELETON_SKULL, "&#434343🌑 Mercado Negro", "Artefactos prohibidos.", "open_blackmarket"));
+        inventory.setItem(29, createButton(Material.ENDER_CHEST, "&#ff00ff🎒 Almacenamiento", "Abre tus mochilas remotas.", "open_pv"));
+        inventory.setItem(30, createButton(Material.LEATHER_CHESTPLATE, "&#ff00ff👕 Guardarropa", "Accede a tus armaduras.", "open_wardrobe"));
+        inventory.setItem(31, createButton(Material.COMPASS, "&#00f5ff🌍 Viaje Rápido", "Teletransporte a zonas seguras.", "open_fast_travel"));
+        inventory.setItem(32, createButton(Material.SHIELD, "&#00f5ff🛡️ Gestión de Clan", "Administra tu imperio.", "open_clans"));
+        inventory.setItem(33, createButton(Material.WITHER_SKELETON_SKULL, "&#1c0f2a🌑 Mercado Negro", "Artefactos prohibidos.", "open_blackmarket"));
 
-        // ⬛ CRISTALES DE DECORACIÓN
-        ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemStack glass = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta metaGlass = glass.getItemMeta();
         metaGlass.displayName(CrossplayUtils.parseCrossplay(player, " "));
         glass.setItemMeta(metaGlass);
@@ -69,20 +65,19 @@ public class HubMenu implements InventoryHolder {
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) head.getItemMeta();
 
-        meta.setOwningPlayer(player); // Pone la textura de la cabeza del jugador
-        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#fbd72b<bold>TUS ESTADÍSTICAS</bold>"));
+        meta.setOwningPlayer(player);
+        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>TUS ESTADÍSTICAS</bold>"));
 
-        // 🌟 Aquí leerás las variables reales con PAPI o desde tu NexoUser
         List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#e0e0e0Operario: &#a8ff78" + player.getName()));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aOperario: &#00f5ff" + player.getName()));
         lore.add(CrossplayUtils.parseCrossplay(player, " "));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#ff4b2b❤ Vida: &#e0e0e0100/100"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#a8ff78🛡️ Defensa: &#e0e0e025"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#FF3366⚔️ Fuerza: &#e0e0e010"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#00fbff⚡ Velocidad: &#e0e0e0100%"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000❤ Vida: &#1c0f2a100/100"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff🛡️ Defensa: &#1c0f2a25"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000⚔️ Fuerza: &#1c0f2a10"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff⚡ Velocidad: &#1c0f2a100%"));
         lore.add(CrossplayUtils.parseCrossplay(player, " "));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#fbd72b🪙 Monedas: &#e0e0e00.0"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#a8ff78💎 Gemas: &#e0e0e00"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#ff00ff🪙 Monedas: &#1c0f2a0.0"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff💎 Gemas: &#1c0f2a0"));
 
         meta.lore(lore);
         head.setItemMeta(meta);
@@ -94,9 +89,9 @@ public class HubMenu implements InventoryHolder {
         ItemMeta meta = item.getItemMeta();
         meta.displayName(CrossplayUtils.parseCrossplay(player, "<bold>" + name + "</bold>"));
         List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#AAAAAA" + desc));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2a" + desc));
         lore.add(CrossplayUtils.parseCrossplay(player, " "));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#a8ff78► Clic para acceder"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff► Clic para acceder"));
         meta.lore(lore);
 
         meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "hub_action"), PersistentDataType.STRING, action);

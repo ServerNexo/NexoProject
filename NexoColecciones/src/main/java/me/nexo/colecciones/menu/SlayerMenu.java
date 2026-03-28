@@ -1,7 +1,7 @@
 package me.nexo.colecciones.menu;
 
 import me.nexo.colecciones.slayers.SlayerManager;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -14,11 +14,10 @@ import java.util.List;
 
 public class SlayerMenu {
 
-    // 🎨 CONSTANTE PARA EL LISTENER
-    public static final String TITLE_MENU = "&#434343<bold>»</bold> &#ff4b2bContratos de Eliminación (Slayer)";
+    public static final String TITLE_MENU = "&#1c0f2a<bold>»</bold> &#00f5ffContratos de Eliminación (Slayer)";
 
     public static void abrirMenu(Player player, SlayerManager manager) {
-        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(TITLE_MENU));
+        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, TITLE_MENU));
 
         for (SlayerManager.SlayerTemplate template : manager.getTemplates().values()) {
 
@@ -28,15 +27,15 @@ public class SlayerMenu {
             ItemStack item = new ItemStack(mat);
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
-                meta.displayName(NexoColor.parse("&#ff4b2b<bold>" + template.name() + "</bold>"));
+                meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>" + template.name() + "</bold>"));
 
                 List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                lore.add(NexoColor.parse("&#434343Código de Contrato: " + template.id()));
-                lore.add(NexoColor.parse(" "));
-                lore.add(NexoColor.parse("&#434343Objetivo: &#ff4b2bEliminar " + template.requiredKills() + "x " + template.targetMob() + "s"));
-                lore.add(NexoColor.parse("&#434343Amenaza Final: &#8b0000" + template.bossName()));
-                lore.add(NexoColor.parse(" "));
-                lore.add(NexoColor.parse("&#a8ff78¡Haz clic para iniciar la Cacería!"));
+                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aCódigo de Contrato: " + template.id()));
+                lore.add(CrossplayUtils.parseCrossplay(player, " "));
+                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aObjetivo: &#00f5ffEliminar " + template.requiredKills() + "x " + template.targetMob() + "s"));
+                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aAmenaza Final: &#8b0000" + template.bossName()));
+                lore.add(CrossplayUtils.parseCrossplay(player, " "));
+                lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff¡Haz clic para iniciar la Cacería!"));
 
                 meta.lore(lore);
                 item.setItemMeta(meta);

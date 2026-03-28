@@ -17,12 +17,12 @@ public class ComandoNexo implements CommandExecutor {
 
     private final NexoCore plugin;
 
-    // 🎨 PALETA HEX - CONSTANTES
-    private static final String ERR_NO_PERM = "&#ff4b2b[!] Acceso denegado: Autorización de Administrador requerida.";
-    private static final String ERR_OFFLINE = "&#ff4b2b[!] Error: El operario objetivo no está en línea.";
-    private static final String ERR_LOADING = "&#fbd72b[!] Sincronizando datos con la red. Intente de nuevo en unos segundos...";
-    private static final String ERR_FORMAT = "&#ff4b2b[!] Error de formato: La cantidad debe ser numérica.";
-    private static final String MSG_USAGE = "&#434343Uso del sistema: &#fbd72b/nexocore <darxp|darcombatexp> <operario> <cantidad>";
+    // 🎨 PALETA VIVID VOID
+    private static final String ERR_NO_PERM = "&#8b0000[!] Acceso denegado: Autorización de Administrador requerida.";
+    private static final String ERR_OFFLINE = "&#8b0000[!] Error: El operario objetivo no está en línea.";
+    private static final String ERR_LOADING = "&#8b0000[!] Sincronizando datos con la red. Intente de nuevo en unos segundos...";
+    private static final String ERR_FORMAT = "&#8b0000[!] Error de formato: La cantidad debe ser numérica.";
+    private static final String MSG_USAGE = "&#1c0f2aUso del sistema: &#ff00ff/nexocore <darxp|darcombatexp> <operario> <cantidad>";
 
     public ComandoNexo(NexoCore plugin) {
         this.plugin = plugin;
@@ -54,7 +54,6 @@ public class ComandoNexo implements CommandExecutor {
 
                 Title.Times times = Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(3500), Duration.ofMillis(1000));
 
-                // 1. Comando de Nexo XP Global
                 if (args[0].equalsIgnoreCase("darxp")) {
                     int nivelActual = user.getNexoNivel();
                     int xpActual = user.getNexoXp() + cantidad;
@@ -63,10 +62,9 @@ public class ComandoNexo implements CommandExecutor {
                         xpActual -= (nivelActual * 100);
                         nivelActual++;
 
-                        // 🌟 TÍTULO NATIVO MODERNIZADO
                         Title title = Title.title(
-                                NexoColor.parse("&#fbd72b<bold>¡NEXO NIVEL " + nivelActual + "!</bold>"),
-                                NexoColor.parse("&#a8ff78Has ascendido en la jerarquía del servidor"),
+                                NexoColor.parse("&#ff00ff<bold>¡NEXO NIVEL " + nivelActual + "!</bold>"),
+                                NexoColor.parse("&#00f5ffHas ascendido en la jerarquía del servidor"),
                                 times
                         );
                         objetivo.showTitle(title);
@@ -75,10 +73,9 @@ public class ComandoNexo implements CommandExecutor {
                     user.setNexoNivel(nivelActual);
                     user.setNexoXp(xpActual);
 
-                    if (sender instanceof Player) sender.sendMessage(NexoColor.parse("&#a8ff78[✓] Transferencia de " + cantidad + " Nexo XP a " + objetivo.getName() + " completada."));
+                    if (sender instanceof Player) sender.sendMessage(NexoColor.parse("&#00f5ff[✓] Transferencia de " + cantidad + " Nexo XP a " + objetivo.getName() + " completada."));
                 }
 
-                // 2. Comando de Combate XP
                 else if (args[0].equalsIgnoreCase("darcombatexp")) {
                     int nivelActual = user.getCombateNivel();
                     int xpActual = user.getCombateXp() + cantidad;
@@ -87,10 +84,9 @@ public class ComandoNexo implements CommandExecutor {
                         xpActual -= (nivelActual * 100);
                         nivelActual++;
 
-                        // 🌟 TÍTULO NATIVO MODERNIZADO
                         Title title = Title.title(
-                                NexoColor.parse("&#ff4b2b<bold>¡COMBATE NIVEL " + nivelActual + "!</bold>"),
-                                NexoColor.parse("&#434343Tus instintos bélicos se agudizan..."),
+                                NexoColor.parse("&#8b0000<bold>¡COMBATE NIVEL " + nivelActual + "!</bold>"),
+                                NexoColor.parse("&#1c0f2aTus instintos bélicos se agudizan..."),
                                 times
                         );
                         objetivo.showTitle(title);
@@ -99,8 +95,8 @@ public class ComandoNexo implements CommandExecutor {
                     user.setCombateNivel(nivelActual);
                     user.setCombateXp(xpActual);
 
-                    objetivo.sendMessage(NexoColor.parse("&#ff4b2b⚔ +" + cantidad + " XP de Combate &#434343(" + xpActual + "/" + (nivelActual * 100) + ")"));
-                    if (sender instanceof Player) sender.sendMessage(NexoColor.parse("&#ff4b2b[✓] Transferencia de " + cantidad + " Combate XP a " + objetivo.getName() + " completada."));
+                    objetivo.sendMessage(NexoColor.parse("&#8b0000⚔ +" + cantidad + " XP de Combate &#1c0f2a(" + xpActual + "/" + (nivelActual * 100) + ")"));
+                    if (sender instanceof Player) sender.sendMessage(NexoColor.parse("&#00f5ff[✓] Transferencia de " + cantidad + " Combate XP a " + objetivo.getName() + " completada."));
                 }
 
             } catch (NumberFormatException e) {

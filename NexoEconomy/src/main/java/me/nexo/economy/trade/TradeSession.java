@@ -18,7 +18,7 @@ import java.util.List;
 public class TradeSession {
 
     public static final String TITLE_PLAIN = "» Canal de Intercambio";
-    public static final String TITLE_MENU = "&#434343<bold>»</bold> &#00fbffCanal de Intercambio";
+    public static final String TITLE_MENU = "&#1c0f2a<bold>»</bold> &#00f5ffCanal de Intercambio";
 
     private final Player player1;
     private final Player player2;
@@ -44,11 +44,11 @@ public class TradeSession {
     }
 
     private void setupGUI() {
-        setItem(13, Material.GOLD_INGOT, "&#fbd72b🪙 Transferir 1,000 Monedas", "&#434343Clic para depositar en el fondo.");
-        setItem(22, Material.EMERALD, "&#a8ff78💎 Transferir 100 Gemas", "&#434343Clic para depositar en el fondo.");
-        setItem(31, Material.AMETHYST_SHARD, "&#00fbff💧 Transferir 10 Maná", "&#434343Clic para depositar en el fondo.");
+        setItem(13, Material.GOLD_INGOT, "&#ff00ff🪙 Transferir 1,000 Monedas", "&#1c0f2aClic para depositar en el fondo.");
+        setItem(22, Material.EMERALD, "&#00f5ff💎 Transferir 100 Gemas", "&#1c0f2aClic para depositar en el fondo.");
+        setItem(31, Material.AMETHYST_SHARD, "&#00f5ff💧 Transferir 10 Maná", "&#1c0f2aClic para depositar en el fondo.");
 
-        ItemStack separator = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        ItemStack separator = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta sepMeta = separator.getItemMeta();
         if (sepMeta != null) {
             sepMeta.setDisplayName(serialize(" "));
@@ -80,19 +80,19 @@ public class TradeSession {
     }
 
     public void updateReadyButtons() {
-        String p1Color = p1Ready ? "&#a8ff78<bold>AUTORIZADO</bold>" : "&#ff4b2b<bold>ESPERANDO...</bold>";
+        String p1Color = p1Ready ? "&#00f5ff<bold>AUTORIZADO</bold>" : "&#8b0000<bold>ESPERANDO...</bold>";
         setItem(45, p1Ready ? Material.LIME_DYE : Material.RED_DYE, p1Color,
-                "&#434343Fondo total de " + player1.getName() + ":",
-                "&#fbd72b🪙 " + p1Coins + " Monedas",
-                "&#a8ff78💎 " + p1Gems + " Gemas",
-                "&#00fbff💧 " + p1Mana + " Maná");
+                "&#1c0f2aFondo total de " + player1.getName() + ":",
+                "&#ff00ff🪙 " + p1Coins + " Monedas",
+                "&#00f5ff💎 " + p1Gems + " Gemas",
+                "&#00f5ff💧 " + p1Mana + " Maná");
 
-        String p2Color = p2Ready ? "&#a8ff78<bold>AUTORIZADO</bold>" : "&#ff4b2b<bold>ESPERANDO...</bold>";
+        String p2Color = p2Ready ? "&#00f5ff<bold>AUTORIZADO</bold>" : "&#8b0000<bold>ESPERANDO...</bold>";
         setItem(53, p2Ready ? Material.LIME_DYE : Material.RED_DYE, p2Color,
-                "&#434343Fondo total de " + player2.getName() + ":",
-                "&#fbd72b🪙 " + p2Coins + " Monedas",
-                "&#a8ff78💎 " + p2Gems + " Gemas",
-                "&#00fbff💧 " + p2Mana + " Maná");
+                "&#1c0f2aFondo total de " + player2.getName() + ":",
+                "&#ff00ff🪙 " + p2Coins + " Monedas",
+                "&#00f5ff💎 " + p2Gems + " Gemas",
+                "&#00f5ff💧 " + p2Mana + " Maná");
     }
 
     public void addCurrency(Player p, NexoAccount.Currency currency, BigDecimal amount) {
@@ -121,8 +121,8 @@ public class TradeSession {
 
     private void iniciarCuentaRegresiva() {
         taskID = Bukkit.getScheduler().scheduleSyncDelayedTask(NexoEconomy.getPlugin(NexoEconomy.class), this::ejecutarIntercambio, 60L);
-        player1.sendMessage(NexoColor.parse("&#fbd72b[INFO] La transacción comercial se ejecutará en 3 segundos..."));
-        player2.sendMessage(NexoColor.parse("&#fbd72b[INFO] La transacción comercial se ejecutará en 3 segundos..."));
+        player1.sendMessage(NexoColor.parse("&#ff00ff[INFO] La transacción comercial se ejecutará en 3 segundos..."));
+        player2.sendMessage(NexoColor.parse("&#ff00ff[INFO] La transacción comercial se ejecutará en 3 segundos..."));
     }
 
     public void cancelarCuenta() {
@@ -143,8 +143,8 @@ public class TradeSession {
 
         player1.closeInventory();
         player2.closeInventory();
-        player1.sendMessage(NexoColor.parse("&#a8ff78[✓] Intercambio corporativo realizado con éxito."));
-        player2.sendMessage(NexoColor.parse("&#a8ff78[✓] Intercambio corporativo realizado con éxito."));
+        player1.sendMessage(NexoColor.parse("&#00f5ff[✓] Intercambio corporativo realizado con éxito."));
+        player2.sendMessage(NexoColor.parse("&#00f5ff[✓] Intercambio corporativo realizado con éxito."));
     }
 
     private void transferCurrency(NexoEconomy eco, NexoAccount.Currency currency, BigDecimal amountP1, BigDecimal amountP2) {

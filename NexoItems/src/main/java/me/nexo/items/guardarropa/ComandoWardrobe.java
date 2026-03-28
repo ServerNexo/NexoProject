@@ -8,13 +8,12 @@ import org.bukkit.entity.Player;
 
 public class ComandoWardrobe implements CommandExecutor {
 
-    // 🌟 Restauramos la conexión con el Listener
     private final GuardarropaListener listener;
 
-    private static final String ERR_NOT_PLAYER = "&#FF5555[!] El terminal requiere un operario humano.";
-    private static final String BC_DIVIDER = "&#555555========================================";
-    private static final String MSG_TITLE = "&#FFAA00<bold>👕 MÓDULO DE GUARDARROPA</bold>";
-    private static final String MSG_HELP_OPEN = "&#FFAA00/wardrobe &#AAAAAA- Abre el panel de tu Guardarropa.";
+    private static final String ERR_NOT_PLAYER = "&#8b0000[!] El terminal requiere un operario humano.";
+    private static final String BC_DIVIDER = "&#1c0f2a========================================";
+    private static final String MSG_TITLE = "&#ff00ff<bold>👕 MÓDULO DE GUARDARROPA</bold>";
+    private static final String MSG_HELP_OPEN = "&#ff00ff/wardrobe &#1c0f2a- Abre el panel de tu Guardarropa.";
 
     public ComandoWardrobe(GuardarropaListener listener) {
         this.listener = listener;
@@ -28,7 +27,6 @@ public class ComandoWardrobe implements CommandExecutor {
         }
 
         if (args.length == 0) {
-            // 🌟 Llamamos al método directamente, sin instanciar Inventory
             listener.abrirMenu(player);
             return true;
         }

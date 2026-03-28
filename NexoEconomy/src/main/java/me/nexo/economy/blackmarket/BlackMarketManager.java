@@ -50,7 +50,7 @@ public class BlackMarketManager {
 
         possibleLootPool.add(new BlackMarketItem(
                 "forbidden_apple",
-                crearItemMagico(Material.ENCHANTED_GOLDEN_APPLE, "&#ff4b2b<bold>🍎 Manzana Prohibida</bold>", "&#434343Fruta del inframundo."),
+                crearItemMagico(Material.ENCHANTED_GOLDEN_APPLE, "&#8b0000<bold>🍎 Manzana Prohibida</bold>", "&#1c0f2aFruta del inframundo."),
                 new BigDecimal("150"), NexoAccount.Currency.GEMS
         ));
     }
@@ -67,10 +67,10 @@ public class BlackMarketManager {
             currentStock.add(shuffled.get(i));
         }
 
-        Bukkit.broadcast(NexoColor.parse("&#434343========================================"));
-        Bukkit.broadcast(NexoColor.parse("&#8b008b<bold>🌑 EL MERCADER OSCURO HA LLEGADO</bold>"));
-        Bukkit.broadcast(NexoColor.parse("&#434343Se rumorea que trae mercancía prohibida y altamente valiosa..."));
-        Bukkit.broadcast(NexoColor.parse("&#434343========================================"));
+        Bukkit.broadcast(NexoColor.parse("&#1c0f2a========================================"));
+        Bukkit.broadcast(NexoColor.parse("&#ff00ff<bold>🌑 EL MERCADER OSCURO HA LLEGADO</bold>"));
+        Bukkit.broadcast(NexoColor.parse("&#1c0f2aSe rumorea que trae mercancía prohibida y altamente valiosa..."));
+        Bukkit.broadcast(NexoColor.parse("&#1c0f2a========================================"));
     }
 
     public void closeMarket() {
@@ -78,10 +78,10 @@ public class BlackMarketManager {
         this.isMarketOpen = false;
         this.currentStock.clear();
 
-        Bukkit.broadcast(NexoColor.parse("&#434343========================================"));
-        Bukkit.broadcast(NexoColor.parse("&#8b008b<bold>🌑 EL MERCADER OSCURO SE HA IDO</bold>"));
-        Bukkit.broadcast(NexoColor.parse("&#434343Sus huellas se han desvanecido entre las sombras."));
-        Bukkit.broadcast(NexoColor.parse("&#434343========================================"));
+        Bukkit.broadcast(NexoColor.parse("&#1c0f2a========================================"));
+        Bukkit.broadcast(NexoColor.parse("&#ff00ff<bold>🌑 EL MERCADER OSCURO SE HA IDO</bold>"));
+        Bukkit.broadcast(NexoColor.parse("&#1c0f2aSus huellas se han desvanecido entre las sombras."));
+        Bukkit.broadcast(NexoColor.parse("&#1c0f2a========================================"));
     }
 
     public boolean isMarketOpen() { return isMarketOpen; }

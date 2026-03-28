@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 public class DungeonMenu {
 
     public static final String TITLE_PLAIN = "» Terminal de Incursiones";
-    public static final String MENU_TITLE = "&#434343<bold>»</bold> &#00fbffTerminal de Incursiones";
+    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#00f5ffTerminal de Incursiones";
 
     public static void openMainMenu(Player player) {
         Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
@@ -25,15 +25,15 @@ public class DungeonMenu {
         ItemStack instanced = new ItemStack(Material.IRON_DOOR);
         ItemMeta instancedMeta = instanced.getItemMeta();
         if (instancedMeta != null) {
-            instancedMeta.setDisplayName(serialize("&#00fbff<bold>Fortalezas Instanciadas</bold>"));
+            instancedMeta.setDisplayName(serialize("&#00f5ff<bold>Fortalezas Instanciadas</bold>"));
             instancedMeta.setLore(serializeList(Arrays.asList(
-                    "&#434343Aventúrate en sectores generados",
-                    "&#434343exclusivamente para tu escuadrón.",
+                    "&#1c0f2aAventúrate en sectores generados",
+                    "&#1c0f2aexclusivamente para tu escuadrón.",
                     " ",
-                    "&#a8ff78✦ Rompecabezas lógicos",
-                    "&#a8ff78✦ Aislamiento total garantizado",
+                    "&#00f5ff✦ Rompecabezas lógicos",
+                    "&#00f5ff✦ Aislamiento total garantizado",
                     " ",
-                    "&#fbd72b▶ Clic para ver expediciones"
+                    "&#00f5ff▶ Clic para ver expediciones"
             )));
             instanced.setItemMeta(instancedMeta);
         }
@@ -43,15 +43,15 @@ public class DungeonMenu {
         ItemStack waves = new ItemStack(Material.IRON_SWORD);
         ItemMeta wavesMeta = waves.getItemMeta();
         if (wavesMeta != null) {
-            wavesMeta.setDisplayName(serialize("&#ff4b2b<bold>Simulador de Supervivencia</bold>"));
+            wavesMeta.setDisplayName(serialize("&#8b0000<bold>Simulador de Supervivencia</bold>"));
             wavesMeta.setLore(serializeList(Arrays.asList(
-                    "&#434343Resiste interminables oleadas de",
-                    "&#434343anomalías cada vez más letales.",
+                    "&#1c0f2aResiste interminables oleadas de",
+                    "&#1c0f2aanomalías cada vez más letales.",
                     " ",
-                    "&#ff4b2b✦ Dificultad Exponencial",
-                    "&#ff4b2b✦ Puntos de control cada 5 rondas",
+                    "&#8b0000✦ Dificultad Exponencial",
+                    "&#8b0000✦ Puntos de control cada 5 rondas",
                     " ",
-                    "&#fbd72b▶ Clic para ingresar a la cola"
+                    "&#00f5ff▶ Clic para ingresar a la cola"
             )));
             waves.setItemMeta(wavesMeta);
         }
@@ -61,22 +61,21 @@ public class DungeonMenu {
         ItemStack worldBoss = new ItemStack(Material.DRAGON_HEAD);
         ItemMeta bossMeta = worldBoss.getItemMeta();
         if (bossMeta != null) {
-            bossMeta.setDisplayName(serialize("&#8b008b<bold>Amenazas Globales</bold>"));
+            bossMeta.setDisplayName(serialize("&#ff00ff<bold>Amenazas Globales</bold>"));
             bossMeta.setLore(serializeList(Arrays.asList(
-                    "&#434343Información sobre los altares",
-                    "&#434343de invocación pública.",
+                    "&#1c0f2aInformación sobre los altares",
+                    "&#1c0f2ade invocación pública.",
                     " ",
-                    "&#e0e0e0✦ Recompensas por rendimiento (Top 3)",
-                    "&#e0e0e0✦ Botín encriptado (Anti-Robo)",
+                    "&#1c0f2a✦ Recompensas por rendimiento (Top 3)",
+                    "&#1c0f2a✦ Botín encriptado (Anti-Robo)",
                     " ",
-                    "&#fbd72b▶ Clic para triangular ubicaciones"
+                    "&#00f5ff▶ Clic para triangular ubicaciones"
             )));
             worldBoss.setItemMeta(bossMeta);
         }
         inv.setItem(15, worldBoss);
 
-        // Cristal negro de fondo
-        ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        ItemStack filler = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta fillerMeta = filler.getItemMeta();
         if (fillerMeta != null) {
             fillerMeta.setDisplayName(" ");
@@ -89,7 +88,6 @@ public class DungeonMenu {
         player.openInventory(inv);
     }
 
-    // Funciones utilitarias para evitar el error de "null components" en ItemMeta
     private static String serialize(String hex) {
         return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
     }

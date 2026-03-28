@@ -1,7 +1,7 @@
 package me.nexo.colecciones.slayers;
 
 import me.nexo.colecciones.NexoColecciones;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -16,13 +16,12 @@ public class SlayerManager {
 
     private final NexoColecciones plugin;
 
-    // 🎨 PALETA HEX - CONSTANTES (Clean Code)
-    private static final String BC_DIVIDER = "&#434343=======================================";
-    private static final String ERR_NOT_FOUND = "&#ff4b2b[!] Protocolo no encontrado. Código de cacería inválido.";
-    private static final String ERR_ALREADY_ACTIVE = "&#ff4b2b[!] Ya tienes un protocolo activo. Complétalo o cancélalo primero.";
-    private static final String MSG_SLAYER_START = "&#ff4b2b<bold>⚔️ ¡CACERÍA INICIADA! ⚔️</bold>";
-    private static final String MSG_SLAYER_OBJ = "&#434343Contrato aceptado: &#fbd72b%name%";
-    private static final String MSG_SLAYER_DESC = "&#434343Mata &#ff4b2b%kills%x %mob%s &#434343para forzar la aparición del Jefe.";
+    private static final String BC_DIVIDER = "&#1c0f2a=======================================";
+    private static final String ERR_NOT_FOUND = "&#8b0000[!] Protocolo no encontrado. Código de cacería inválido.";
+    private static final String ERR_ALREADY_ACTIVE = "&#8b0000[!] Ya tienes un protocolo activo. Complétalo o cancélalo primero.";
+    private static final String MSG_SLAYER_START = "&#8b0000<bold>⚔️ ¡CACERÍA INICIADA! ⚔️</bold>";
+    private static final String MSG_SLAYER_OBJ = "&#1c0f2aContrato aceptado: &#ff00ff%name%";
+    private static final String MSG_SLAYER_DESC = "&#1c0f2aMata &#8b0000%kills%x %mob%s &#1c0f2apara forzar la aparición del Jefe.";
 
     public record SlayerTemplate(String id, String name, String targetMob, int requiredKills, String bossName, String bossType) {}
 
@@ -58,12 +57,12 @@ public class SlayerManager {
         slayerId = slayerId.toUpperCase();
 
         if (!templates.containsKey(slayerId)) {
-            player.sendMessage(NexoColor.parse(ERR_NOT_FOUND));
+            CrossplayUtils.sendMessage(player, ERR_NOT_FOUND);
             return;
         }
 
         if (activeSlayers.containsKey(player.getUniqueId())) {
-            player.sendMessage(NexoColor.parse(ERR_ALREADY_ACTIVE));
+            CrossplayUtils.sendMessage(player, ERR_ALREADY_ACTIVE);
             return;
         }
 
@@ -71,10 +70,10 @@ public class SlayerManager {
         ActiveSlayer activo = new ActiveSlayer(player, template);
         activeSlayers.put(player.getUniqueId(), activo);
 
-        player.sendMessage(NexoColor.parse(BC_DIVIDER));
-        player.sendMessage(NexoColor.parse(MSG_SLAYER_START));
-        player.sendMessage(NexoColor.parse(MSG_SLAYER_OBJ.replace("%name%", template.name())));
-        player.sendMessage(NexoColor.parse(MSG_SLAYER_DESC.replace("%kills%", String.valueOf(template.requiredKills())).replace("%mob%", template.targetMob())));
-        player.sendMessage(NexoColor.parse(BC_DIVIDER));
+        CrossplayUtils.sendMessage(player, BC_DIVIDER);
+        CrossplayUtils.sendMessage(player, MSG_SLAYER_START);
+        CrossplayUtils.sendMessage(player, MSG_SLAYER_OBJ.replace("%name%", template.name()));
+        CrossplayUtils.sendMessage(player, MSG_SLAYER_DESC.replace("%kills%", String.valueOf(template.requiredKills())).replace("%mob%", template.targetMob()));
+        CrossplayUtils.sendMessage(player, BC_DIVIDER);
     }
 }

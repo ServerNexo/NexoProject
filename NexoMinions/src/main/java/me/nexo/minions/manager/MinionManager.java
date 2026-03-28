@@ -1,7 +1,7 @@
 package me.nexo.minions.manager;
 
 import com.nexomc.nexo.api.NexoItems;
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
@@ -34,7 +34,6 @@ public class MinionManager {
 
             display.setBillboard(ItemDisplay.Billboard.FIXED);
             display.setInvulnerable(true);
-
             display.setInterpolationDuration(20);
             display.setInterpolationDelay(0);
 
@@ -58,8 +57,8 @@ public class MinionManager {
             TextDisplay holograma = loc.getWorld().spawn(holoLoc, TextDisplay.class, holo -> {
                 holo.setBillboard(TextDisplay.Billboard.CENTER);
                 holo.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 0));
-                // 🌟 Título de Carga en formato Ciberpunk
-                holo.text(NexoColor.parse("&#FFAA00Iniciando Sistemas..."));
+                // CrossplayUtils no es necesario aquí ya que el holograma no es por jugador
+                holo.text(me.nexo.core.utils.NexoColor.parse("&#ff00ffIniciando Sistemas..."));
             });
 
             pdc.set(new NamespacedKey(plugin, "minion_holo_id"), PersistentDataType.STRING, holograma.getUniqueId().toString());
@@ -71,8 +70,6 @@ public class MinionManager {
     public void recogerMinion(Player player, UUID displayId) {
         ActiveMinion minion = minionsActivos.remove(displayId);
         if (minion != null) {
-
-            // Devolver las Mejoras y Combustibles al recoger el minion
             for (ItemStack upgrade : minion.getUpgrades()) {
                 if (upgrade != null && !upgrade.getType().isAir()) {
                     var sobrante = player.getInventory().addItem(upgrade);
@@ -82,12 +79,9 @@ public class MinionManager {
                 }
             }
 
-            // 🌟 NUEVO: Entregarle al jugador los ítems que el minion tenía en su mochila
             if (minion.getStoredItems() > 0) {
                 int cantidad = minion.getStoredItems();
                 org.bukkit.Material mat = minion.getType().getTargetMaterial();
-
-                // Dividimos en stacks de 64 para no romper el inventario
                 while (cantidad > 0) {
                     int dar = Math.min(cantidad, 64);
                     ItemStack recompensa = new ItemStack(mat, dar);
@@ -97,28 +91,25 @@ public class MinionManager {
                     }
                     cantidad -= dar;
                 }
-                player.sendMessage(NexoColor.parse("&#00E5FF[📦] Extracción Remota: &#AAAAAAHas recuperado &#FFAA00" + minion.getStoredItems() + " ítems &#AAAAAAdel depósito del operario."));
+                CrossplayUtils.sendMessage(player, "&#00f5ff[📦] Extracción Remota: &#1c0f2aHas recuperado &#ff00ff" + minion.getStoredItems() + " ítems &#1c0f2adel depósito del operario.");
             }
 
             if (minion.getEntity() != null) minion.getEntity().remove();
             if (minion.getHitbox() != null) minion.getHitbox().remove();
             if (minion.getHolograma() != null) minion.getHolograma().remove();
 
-            // 🚨 CORRECCIÓN: Le devolvemos el espacio libre al VERDADERO DUEÑO
             Player owner = org.bukkit.Bukkit.getPlayer(minion.getOwnerId());
             if (owner != null && owner.isOnline()) {
                 addPlacedMinion(owner, -1);
-
                 if (owner.getUniqueId().equals(player.getUniqueId())) {
-                    owner.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>PROTOCOLO DE DESMANTELAMIENTO:</bold> &#AAAAAAOperario recogido con éxito. &#00E5FF(" + getPlacedMinions(owner) + "/" + getMaxMinions(owner) + ")"));
+                    CrossplayUtils.sendMessage(owner, "&#00f5ff[✓] <bold>PROTOCOLO DE DESMANTELAMIENTO:</bold> &#1c0f2aOperario recogido con éxito. &#00f5ff(" + getPlacedMinions(owner) + "/" + getMaxMinions(owner) + ")");
                 } else {
-                    owner.sendMessage(NexoColor.parse("&#FF5555[!] Alerta de Red: &#AAAAAAUn administrador corporativo ha desmantelado uno de tus operarios."));
-                    player.sendMessage(NexoColor.parse("&#55FF55[✓] Operario desmantelado. Cuota operativa restaurada al propietario original."));
+                    CrossplayUtils.sendMessage(owner, "&#8b0000[!] Alerta de Red: &#1c0f2aUn administrador corporativo ha desmantelado uno de tus operarios.");
+                    CrossplayUtils.sendMessage(player, "&#00f5ff[✓] Operario desmantelado. Cuota operativa restaurada al propietario original.");
                 }
             } else {
-                player.sendMessage(NexoColor.parse("&#FF5555[!] Advertencia del Sistema: &#AAAAAAEl propietario de la unidad está desconectado. Sincronización de cuota pospuesta."));
+                CrossplayUtils.sendMessage(player, "&#8b0000[!] Advertencia del Sistema: &#1c0f2aEl propietario de la unidad está desconectado. Sincronización de cuota pospuesta.");
             }
-
             plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "minion give " + player.getName() + " " + minion.getType().name() + " " + minion.getTier());
         }
     }
@@ -131,14 +122,10 @@ public class MinionManager {
                 minionsActivos.remove(minion.getEntity().getUniqueId());
                 continue;
             }
-
-            // 🌟 PARCHE DE MEMORIA RAM: Si el chunk se descarga, lo borramos de la RAM.
-            // Al volver, el MinionLoadListener lo reconstruirá y calculará el farmeo offline.
             if (!minion.getEntity().isValid()) {
                 minionsActivos.remove(minion.getEntity().getUniqueId());
                 continue;
             }
-
             minion.tick(currentTimeMillis);
         }
     }
@@ -147,9 +134,6 @@ public class MinionManager {
         return minionsActivos.get(displayId);
     }
 
-    // =========================================
-    // 🌟 SISTEMA DE LÍMITES POR JUGADOR
-    // =========================================
     public int getPlacedMinions(Player player) {
         NamespacedKey key = new NamespacedKey(plugin, "minions_placed");
         return player.getPersistentDataContainer().getOrDefault(key, PersistentDataType.INTEGER, 0);
@@ -165,7 +149,7 @@ public class MinionManager {
         for (int i = 50; i >= 1; i--) {
             if (player.hasPermission("nexominions.limit." + i)) return i;
         }
-        return 5; // Límite base para usuarios nuevos
+        return 5;
     }
 
     public ConcurrentHashMap<UUID, ActiveMinion> getMinionsActivos() {

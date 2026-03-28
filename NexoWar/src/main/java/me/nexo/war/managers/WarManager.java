@@ -26,10 +26,9 @@ public class WarManager {
     private final Map<UUID, WarContract> guerrasActivas = new ConcurrentHashMap<>();
     private final NamespacedKey militaryRationKey;
 
-    // 🌟 CONFIGURACIÓN DE LA GUERRA
-    private final long GRACE_PERIOD_MILLIS = 5 * 60 * 1000L; // 5 Minutos
-    private final int KILLS_TO_WIN = 20; // Bajas necesarias para ganar el pozo
-    private final int COSTO_SUMINISTROS = 100; // Costo industrial para iniciar la guerra
+    private final long GRACE_PERIOD_MILLIS = 5 * 60 * 1000L;
+    private final int KILLS_TO_WIN = 20;
+    private final int COSTO_SUMINISTROS = 100;
 
     public WarManager(NexoWar plugin) {
         this.plugin = plugin;
@@ -37,15 +36,12 @@ public class WarManager {
         iniciarRelojDeGuerras();
     }
 
-    // 🌟 NUEVO: Método Modificado para la Fase 2 (Economía de Guerra)
     public void iniciarDesafio(Player leader, NexoClan atacante, NexoClan defensor, BigDecimal apuesta) {
-        // 1. Verificación de Fondos Bancarios
         if (atacante.getBankBalance().compareTo(apuesta) < 0 || defensor.getBankBalance().compareTo(apuesta) < 0) {
-            leader.sendMessage(NexoColor.parse("&#FF5555[!] Auditoría Fallida: Uno de los sindicatos no posee liquidez para cubrir la apuesta."));
+            leader.sendMessage(NexoColor.parse("&#8b0000[!] Auditoría Fallida: Uno de los sindicatos no posee liquidez para cubrir la apuesta."));
             return;
         }
 
-        // 2. Escaneo Físico de Suministros Industriales (Módulo 5)
         int contadorSuministros = 0;
         for (ItemStack item : leader.getInventory().getContents()) {
             if (item != null && item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(militaryRationKey, PersistentDataType.BYTE)) {
@@ -53,14 +49,12 @@ public class WarManager {
             }
         }
 
-        // 3. Validación Industrial Estricta
         if (contadorSuministros < COSTO_SUMINISTROS) {
-            leader.sendMessage(NexoColor.parse("&#FF5555[!] Logística Deficiente: &#AAAAAASuministros insuficientes para sostener una campaña militar."));
-            leader.sendMessage(NexoColor.parse("&#AAAAAARequerido: &#FFFFFF" + COSTO_SUMINISTROS + "x Suministros Militares &#AAAAAA(Ensamblables en Factorías)."));
-            return; // ⛔ Cancelamos la guerra, no hay economía que la respalde
+            leader.sendMessage(NexoColor.parse("&#8b0000[!] Logística Deficiente: &#1c0f2aSuministros insuficientes para sostener una campaña militar."));
+            leader.sendMessage(NexoColor.parse("&#1c0f2aRequerido: &#ff00ff" + COSTO_SUMINISTROS + "x Suministros Militares &#1c0f2a(Ensamblables en Factorías)."));
+            return;
         }
 
-        // 4. Cobro Físico de Ítems (Consumiendo la economía del servidor)
         int faltanPorCobrar = COSTO_SUMINISTROS;
         for (ItemStack item : leader.getInventory().getContents()) {
             if (faltanPorCobrar <= 0) break;
@@ -68,21 +62,19 @@ public class WarManager {
             if (item != null && item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(militaryRationKey, PersistentDataType.BYTE)) {
                 if (item.getAmount() <= faltanPorCobrar) {
                     faltanPorCobrar -= item.getAmount();
-                    item.setAmount(0); // Borra el stack completo
+                    item.setAmount(0);
                 } else {
                     item.setAmount(item.getAmount() - faltanPorCobrar);
-                    faltanPorCobrar = 0; // Termina el cobro
+                    faltanPorCobrar = 0;
                 }
             }
         }
 
-        // 5. Escrow: Retirar dinero digital
         atacante.withdrawMoney(apuesta.doubleValue());
         defensor.withdrawMoney(apuesta.doubleValue());
         NexoClans.getPlugin(NexoClans.class).getClanManager().saveBankAsync(atacante);
         NexoClans.getPlugin(NexoClans.class).getClanManager().saveBankAsync(defensor);
 
-        // 6. Crear Contrato
         UUID warId = UUID.randomUUID();
         WarContract contrato = new WarContract(
                 warId, atacante.getId(), defensor.getId(), apuesta,
@@ -92,13 +84,11 @@ public class WarManager {
         guerrasActivas.put(warId, contrato);
         saveWarToDatabase(contrato);
 
-        // 7. Anuncio Global de Inicio (Estilo Ciberpunk)
-        Bukkit.broadcast(NexoColor.parse("&#FFAA00<bold>⚔ CONTRATO DE EXTERMINIO FIRMADO:</bold>"));
-        Bukkit.broadcast(NexoColor.parse("&#FFFFFF" + atacante.getName() + " &#AAAAAAy &#FFFFFF" + defensor.getName() + " &#AAAAAAhan bloqueado &#55FF55🪙 " + apuesta.multiply(BigDecimal.valueOf(2)) + " &#AAAAAAen la bóveda de Escrow."));
-        Bukkit.broadcast(NexoColor.parse("&#00E5FF[!] Fase de Preparación Iniciada: &#AAAAAA5 minutos para el colapso de escudos perimetrales."));
+        Bukkit.broadcast(NexoColor.parse("&#ff00ff<bold>⚔ CONTRATO DE EXTERMINIO FIRMADO:</bold>"));
+        Bukkit.broadcast(NexoColor.parse("&#1c0f2a" + atacante.getName() + " &#1c0f2ay &#1c0f2a" + defensor.getName() + " &#1c0f2ahan bloqueado &#00f5ff🪙 " + apuesta.multiply(BigDecimal.valueOf(2)) + " &#1c0f2aen la bóveda de Escrow."));
+        Bukkit.broadcast(NexoColor.parse("&#00f5ff[!] Fase de Preparación Iniciada: &#1c0f2a5 minutos para el colapso de escudos perimetrales."));
     }
 
-    // ⏱️ EL RELOJ MAESTRO
     private void iniciarRelojDeGuerras() {
         new BukkitRunnable() {
             @Override
@@ -108,7 +98,6 @@ public class WarManager {
                     if (guerra.status() == WarContract.WarStatus.GRACE_PERIOD) {
                         if (now - guerra.startTime() >= GRACE_PERIOD_MILLIS) {
 
-                            // 🌟 ¡Empieza la Guerra! Actualizamos el estado
                             WarContract activa = new WarContract(
                                     guerra.warId(), guerra.clanAtacante(), guerra.clanDefensor(),
                                     guerra.apuestaMonedas(), now, WarContract.WarStatus.ACTIVE, 0, 0
@@ -116,16 +105,15 @@ public class WarManager {
                             guerrasActivas.put(guerra.warId(), activa);
                             actualizarGuerraEnBD(activa);
 
-                            Bukkit.broadcast(NexoColor.parse("&#FF5555<bold>⚠ ¡ALERTA DE CONFLICTO ACTIVO! ⚠</bold>"));
-                            Bukkit.broadcast(NexoColor.parse("&#AAAAAALos escudos corporativos han caído. Fuego autorizado. Condición de victoria: &#FF5555" + KILLS_TO_WIN + " bajas."));
+                            Bukkit.broadcast(NexoColor.parse("&#8b0000<bold>⚠ ¡ALERTA DE CONFLICTO ACTIVO! ⚠</bold>"));
+                            Bukkit.broadcast(NexoColor.parse("&#1c0f2aLos escudos corporativos han caído. Fuego autorizado. Condición de victoria: &#8b0000" + KILLS_TO_WIN + " bajas."));
                         }
                     }
                 }
             }
-        }.runTaskTimer(plugin, 20L, 20L); // Chequea cada segundo
+        }.runTaskTimer(plugin, 20L, 20L);
     }
 
-    // 🔎 Búsquedas Rápidas (Para el Listener de PvP)
     public Optional<WarContract> getGuerraEntre(UUID clan1, UUID clan2) {
         return guerrasActivas.values().stream()
                 .filter(w -> (w.clanAtacante().equals(clan1) && w.clanDefensor().equals(clan2)) ||
@@ -142,7 +130,6 @@ public class WarManager {
         return guerra.isPresent() && guerra.get().status() == WarContract.WarStatus.ACTIVE;
     }
 
-    // 💀 RASTREADOR DE BAJAS
     public void registrarBaja(WarContract guerra, UUID clanAsesino, Player asesino, Player victima) {
         boolean esAtacante = clanAsesino.equals(guerra.clanAtacante());
         int killsA = guerra.killsAtacante() + (esAtacante ? 1 : 0);
@@ -154,37 +141,33 @@ public class WarManager {
         );
         guerrasActivas.put(guerra.warId(), actualizada);
 
-        asesino.sendMessage(NexoColor.parse("&#55FF55[✓] Baja Confirmada: &#AAAAAAProgreso táctico de tu sindicato: &#00E5FF" + (esAtacante ? killsA : killsD) + "/" + KILLS_TO_WIN));
+        asesino.sendMessage(NexoColor.parse("&#00f5ff[✓] Baja Confirmada: &#1c0f2aProgreso táctico de tu sindicato: &#00f5ff" + (esAtacante ? killsA : killsD) + "/" + KILLS_TO_WIN));
 
         if (killsA >= KILLS_TO_WIN || killsD >= KILLS_TO_WIN) {
             terminarGuerra(actualizada, clanAsesino);
         } else {
-            actualizarGuerraEnBD(actualizada); // Progreso parcial
+            actualizarGuerraEnBD(actualizada);
         }
     }
 
     private void terminarGuerra(WarContract guerra, UUID clanGanador) {
-        // 🌟 CORRECCIÓN: Creamos una nueva variable (guerraFinalizada) en lugar de sobrescribir el parámetro
         WarContract guerraFinalizada = new WarContract(guerra.warId(), guerra.clanAtacante(), guerra.clanDefensor(), guerra.apuestaMonedas(), guerra.startTime(), WarContract.WarStatus.FINISHED, guerra.killsAtacante(), guerra.killsDefensor());
         guerrasActivas.remove(guerraFinalizada.warId());
         actualizarGuerraEnBD(guerraFinalizada);
 
-        // 💰 Entregar el Premio
         NexoClans clansPlugin = NexoClans.getPlugin(NexoClans.class);
         clansPlugin.getClanManager().loadClanAsync(clanGanador, clan -> {
             if (clan != null) {
-                // Usamos guerraFinalizada, que es segura y final para el bloque lambda
                 BigDecimal premio = guerraFinalizada.apuestaMonedas().multiply(BigDecimal.valueOf(2));
                 clan.depositMoney(premio.doubleValue());
                 clansPlugin.getClanManager().saveBankAsync(clan);
 
-                Bukkit.broadcast(NexoColor.parse("&#55FF55<bold>🏆 AUDITORÍA FINALIZADA:</bold>"));
-                Bukkit.broadcast(NexoColor.parse("&#AAAAAAEl sindicato &#FFFFFF" + clan.getName() + " &#AAAAAAha masacrado a sus objetivos y asegura los fondos congelados de &#55FF55🪙 " + premio + "&#AAAAAA."));
+                Bukkit.broadcast(NexoColor.parse("&#00f5ff<bold>🏆 AUDITORÍA FINALIZADA:</bold>"));
+                Bukkit.broadcast(NexoColor.parse("&#1c0f2aEl sindicato &#ff00ff" + clan.getName() + " &#1c0f2aha masacrado a sus objetivos y asegura los fondos congelados de &#00f5ff🪙 " + premio + "&#1c0f2a."));
             }
         });
     }
 
-    // 💾 Persistencia
     private void saveWarToDatabase(WarContract war) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             String sql = "INSERT INTO nexo_wars (id, attacker_id, defender_id, bet_amount, status, kills_attacker, kills_defender) VALUES (CAST(? AS UUID), CAST(? AS UUID), CAST(? AS UUID), ?, ?, ?, ?)";

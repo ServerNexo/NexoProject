@@ -22,7 +22,7 @@ public class CombatComboManager implements Listener {
 
     private final Map<UUID, Integer> combos = new ConcurrentHashMap<>();
     private final Map<UUID, Long> ultimoKill = new ConcurrentHashMap<>();
-    public final Map<UUID, Long> enFrenesi = new ConcurrentHashMap<>(); // Usado para que la Energía cueste 0
+    public final Map<UUID, Long> enFrenesi = new ConcurrentHashMap<>();
 
     public CombatComboManager(NexoMechanics plugin) {
         this.plugin = plugin;
@@ -40,43 +40,39 @@ public class CombatComboManager implements Listener {
             combos.put(id, comboActual);
             ultimoKill.put(id, ahora);
 
-            // Efecto visual/sonoro según el combo
             p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f + (comboActual * 0.1f));
-            p.sendActionBar(NexoColor.parse("&#FF5555<bold>⚔ ¡RACHA DE COMBATE x" + comboActual + "!</bold>"));
+            p.sendActionBar(NexoColor.parse("&#8b0000<bold>⚔ ¡RACHA DE COMBATE x" + comboActual + "!</bold>"));
 
-            // Activar Frenesí al llegar a 10
             if (comboActual == 10) {
                 activarFrenesi(p);
-                combos.remove(id); // Reiniciamos el medidor después de activarlo
+                combos.remove(id);
             }
         }
     }
 
     private void activarFrenesi(Player p) {
         UUID id = p.getUniqueId();
-        enFrenesi.put(id, System.currentTimeMillis() + 10000L); // 10 segundos
+        enFrenesi.put(id, System.currentTimeMillis() + 10000L);
 
         p.sendTitle(
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FF5555<bold>¡FRENESÍ!</bold>")),
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FFAA00Energía de Núcleo Infinita")),
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#8b0000<bold>¡FRENESÍ!</bold>")),
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#ff00ffEnergía de Núcleo Infinita")),
                 5, 40, 5
         );
         p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1.5f);
         p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1, false, false, true));
 
-        // Magia de Paper: WorldBorder falso para poner la pantalla roja
         WorldBorder bordeRojo = Bukkit.createWorldBorder();
         bordeRojo.setCenter(p.getLocation());
-        bordeRojo.setSize(20000000); // Gigante para que no lo encierre
-        bordeRojo.setWarningDistance(20000000); // Triggerea el tinte rojo
+        bordeRojo.setSize(20000000);
+        bordeRojo.setWarningDistance(20000000);
         p.setWorldBorder(bordeRojo);
 
-        // Apagar frenesí después de 10s
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline()) {
-                p.setWorldBorder(null); // Quita la pantalla roja
-                p.sendMessage(NexoColor.parse("&#AAAAAAEl Frenesí se ha desvanecido. Sistemas retornando a la normalidad."));
-                enFrenesi.remove(id); // Limpiamos el mapa al terminar
+                p.setWorldBorder(null);
+                p.sendMessage(NexoColor.parse("&#1c0f2aEl Frenesí se ha desvanecido. Sistemas retornando a la normalidad."));
+                enFrenesi.remove(id);
             }
         }, 200L);
     }
@@ -85,11 +81,10 @@ public class CombatComboManager implements Listener {
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             long ahora = System.currentTimeMillis();
             for (UUID id : combos.keySet()) {
-                // Si pasaron 3 segundos sin matar, pierde el combo
                 if (ahora - ultimoKill.getOrDefault(id, 0L) > 3000) {
                     combos.remove(id);
                     Player p = Bukkit.getPlayer(id);
-                    if (p != null) p.sendActionBar(NexoColor.parse("&#555555Racha de combate finalizada."));
+                    if (p != null) p.sendActionBar(NexoColor.parse("&#1c0f2aRacha de combate finalizada."));
                 }
             }
         }, 10L, 10L);

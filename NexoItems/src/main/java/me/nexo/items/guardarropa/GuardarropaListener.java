@@ -20,9 +20,8 @@ public class GuardarropaListener implements Listener {
 
     private final GuardarropaManager manager;
 
-    // 🎨 Títulos limpios y seguros
     public static final String TITLE_PLAIN = "» Guardarropa RPG";
-    public static final String MENU_TITLE = "&#555555<bold>»</bold> &#00E5FFGuardarropa RPG";
+    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#00f5ffGuardarropa RPG";
 
     public GuardarropaListener(GuardarropaManager manager) {
         this.manager = manager;
@@ -38,13 +37,13 @@ public class GuardarropaListener implements Listener {
             ItemStack soporte = new ItemStack(Material.ARMOR_STAND);
             ItemMeta meta = soporte.getItemMeta();
             if (meta != null) {
-                meta.setDisplayName(serialize("&#FFAA00<bold>Preset de Armadura #" + presetNum + "</bold>"));
+                meta.setDisplayName(serialize("&#ff00ff<bold>Preset de Armadura #" + presetNum + "</bold>"));
                 meta.setLore(Arrays.asList(
-                        serialize("&#AAAAAAGuarda o equipa conjuntos de"),
-                        serialize("&#AAAAAAarmadura de forma instantánea."),
+                        serialize("&#1c0f2aGuarda o equipa conjuntos de"),
+                        serialize("&#1c0f2aarmadura de forma instantánea."),
                         serialize(" "),
-                        serialize("&#00E5FF▶ CLIC IZQUIERDO: &#FFFFFFEquipar Set"),
-                        serialize("&#FF5555▶ CLIC DERECHO: &#FFFFFFGuardar Conjunto Actual")
+                        serialize("&#00f5ff▶ CLIC IZQUIERDO: &#1c0f2aEquipar Set"),
+                        serialize("&#8b0000▶ CLIC DERECHO: &#1c0f2aGuardar Conjunto Actual")
                 ));
                 soporte.setItemMeta(meta);
             }

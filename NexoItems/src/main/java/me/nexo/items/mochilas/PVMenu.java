@@ -1,6 +1,5 @@
 package me.nexo.items.mochilas;
 
-import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import org.bukkit.Bukkit;
@@ -28,7 +27,7 @@ public class PVMenu implements InventoryHolder {
     }
 
     public void openMenu() {
-        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, "&#CC66FF🎒 Almacenamiento (PVs)");
+        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, "&#ff00ff🎒 Almacenamiento (PVs)");
         int tamano = CrossplayUtils.getOptimizedMenuSize(player, 36);
         this.inventory = Bukkit.createInventory(this, tamano, titulo);
 
@@ -38,17 +37,17 @@ public class PVMenu implements InventoryHolder {
             ItemStack pvItem = new ItemStack(tienePerm ? Material.ENDER_CHEST : Material.MINECART);
             ItemMeta meta = pvItem.getItemMeta();
 
-            meta.displayName(CrossplayUtils.parseCrossplay(player, (tienePerm ? "&#a8ff78" : "&#ff4b2b") + "<bold>Mochila " + i + "</bold>"));
+            meta.displayName(CrossplayUtils.parseCrossplay(player, (tienePerm ? "&#00f5ff" : "&#8b0000") + "<bold>Mochila " + i + "</bold>"));
 
             List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
             if (tienePerm) {
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#AAAAAATu espacio seguro en el vacío."));
+                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aTu espacio seguro en el vacío."));
                 lore.add(CrossplayUtils.parseCrossplay(player, " "));
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#a8ff78► Clic para abrir"));
+                lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff► Clic para abrir"));
                 meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "pv_action"), PersistentDataType.INTEGER, i);
             } else {
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#AAAAAANo tienes acceso a este espacio."));
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#ff4b2b[!] Requiere un rango superior."));
+                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aNo tienes acceso a este espacio."));
+                lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000[!] Requiere un rango superior."));
             }
             meta.lore(lore);
             pvItem.setItemMeta(meta);
@@ -56,8 +55,7 @@ public class PVMenu implements InventoryHolder {
             inventory.setItem(i + 8, pvItem);
         }
 
-        // Decoración
-        ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemStack glass = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta metaGlass = glass.getItemMeta();
         metaGlass.displayName(CrossplayUtils.parseCrossplay(player, " "));
         glass.setItemMeta(metaGlass);
@@ -65,10 +63,9 @@ public class PVMenu implements InventoryHolder {
             if (inventory.getItem(i) == null || inventory.getItem(i).getType().isAir()) inventory.setItem(i, glass);
         }
 
-        // ⬅️ VOLVER AL GRIMORIO
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta backMeta = back.getItemMeta();
-        backMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF3366⬅ Volver al Grimorio"));
+        backMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff⬅ Volver al Grimorio"));
         backMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "hub_action"), PersistentDataType.STRING, "open_hub");
         back.setItemMeta(backMeta);
 

@@ -34,7 +34,7 @@
         </dependency>
 
         <dependency>
-            <groupId>me.tunombre</groupId>
+            <groupId>me.nexo</groupId>
             <artifactId>NexoCore</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>provided</scope>
@@ -42,14 +42,22 @@
         <dependency>
             <groupId>dev.aurelium</groupId>
             <artifactId>auraskills-api-bukkit</artifactId>
-            <version>2.3.9</version> <scope>provided</scope>
+            <version>2.3.9</version>
+            <scope>provided</scope>
         </dependency>
-            <dependency>
-                <groupId>com.nexomc</groupId>
-                <artifactId>nexo</artifactId>
-                <version>1.20.1</version>
-                <scope>provided</scope>
-            </dependency>
+        <dependency>
+            <groupId>com.nexomc</groupId>
+            <artifactId>nexo</artifactId>
+            <version>1.20.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Mitigación de Vulnerabilidad CVE-2025-48924 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <version>3.14.0</version>
+        </dependency>
 
     </dependencies>
 

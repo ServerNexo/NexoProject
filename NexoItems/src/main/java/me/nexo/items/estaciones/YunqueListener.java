@@ -27,7 +27,7 @@ public class YunqueListener implements Listener {
     private final NexoItems plugin;
 
     public static final String TITLE_PLAIN = "» Yunque Mágico";
-    public static final String MENU_TITLE = "&#555555<bold>»</bold> &#FF55FFYunque Mágico";
+    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#ff00ffYunque Mágico";
 
     public YunqueListener(NexoItems plugin) {
         this.plugin = plugin;
@@ -36,25 +36,27 @@ public class YunqueListener implements Listener {
     public void abrirMenu(Player jugador) {
         Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
 
-        ItemStack cristal = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemStack cristal = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta metaCristal = cristal.getItemMeta();
         if (metaCristal != null) {
             metaCristal.setDisplayName(serialize(" "));
             cristal.setItemMeta(metaCristal);
         }
 
-        for (int i = 0; i < 27; i++) inv.setItem(i, cristal);
+        for (int i = 0; i < 27; i++) {
+            inv.setItem(i, cristal);
+        }
 
-        inv.setItem(11, new ItemStack(Material.AIR)); // Ítem a encantar
-        inv.setItem(15, new ItemStack(Material.AIR)); // Libro Mágico
+        inv.setItem(11, new ItemStack(Material.AIR));
+        inv.setItem(15, new ItemStack(Material.AIR));
 
         ItemStack yunque = new ItemStack(Material.ANVIL);
         ItemMeta metaYunque = yunque.getItemMeta();
         if (metaYunque != null) {
-            metaYunque.setDisplayName(serialize("&#FF55FF<bold>FUSIONAR MAGIA</bold>"));
+            metaYunque.setDisplayName(serialize("&#ff00ff<bold>FUSIONAR MAGIA</bold>"));
             metaYunque.setLore(Arrays.asList(
-                    serialize("&#AAAAAAAplica el encantamiento del libro"),
-                    serialize("&#AAAAAAa tu arma, herramienta o armadura.")
+                    serialize("&#1c0f2aAplica el encantamiento del libro"),
+                    serialize("&#1c0f2aa tu arma, herramienta o armadura.")
             ));
             yunque.setItemMeta(metaYunque);
         }
@@ -85,13 +87,13 @@ public class YunqueListener implements Listener {
             ItemStack libro = inv.getItem(15);
 
             if (itemObj == null || itemObj.getType() == Material.AIR) {
-                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Inserta un arma, herramienta o armadura en la bahía izquierda."));
+                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Inserta un arma, herramienta o armadura en la bahía izquierda."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             if (libro == null || !libro.hasItemMeta() || !libro.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveEnchantId, PersistentDataType.STRING)) {
-                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Necesitas un Módulo de Encantamiento válido en la bahía derecha."));
+                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Necesitas un Módulo de Encantamiento válido en la bahía derecha."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -103,7 +105,7 @@ public class YunqueListener implements Listener {
             boolean esArmadura = pdcItem.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING);
 
             if (!esArma && !esHerramienta && !esArmadura) {
-                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Este activo no soporta encantamientos corporativos."));
+                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Este activo no soporta encantamientos corporativos."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -114,23 +116,19 @@ public class YunqueListener implements Listener {
 
             String tipoItem = esArma ? "Arma" : (esHerramienta ? "Herramienta" : "Armadura");
 
-            // Validamos que el libro sea compatible con la pieza
             if (enchantDTO != null && !enchantDTO.aplicaA().contains(tipoItem) && !enchantDTO.aplicaA().contains("Cualquiera")) {
-                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Incompatibilidad: " + enchantDTO.nombre() + " no puede aplicarse a " + tipoItem + "s."));
+                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Incompatibilidad: " + enchantDTO.nombre() + " no puede aplicarse a " + tipoItem + "s."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
-            // ¡Magia aplicada!
             ItemStack itemEncantado = ItemManager.aplicarEncantamiento(itemObj, idEnchant, nivel);
-
-            // 🌟 FASE 5 EVOLUCIÓN CÉNIT: Sincronizamos para que actualice la estética sin perder Nivel
             ItemManager.sincronizarItemAsync(itemEncantado);
 
             inv.setItem(11, itemEncantado);
-            inv.setItem(15, new ItemStack(Material.AIR)); // Consumir el libro
+            inv.setItem(15, new ItemStack(Material.AIR));
 
-            jugador.sendMessage(NexoColor.parse("&#55FF55[✓] FUSIÓN EXITOSA. Módulo " + enchantDTO.nombre() + " inyectado en el activo."));
+            jugador.sendMessage(NexoColor.parse("&#00f5ff[✓] FUSIÓN EXITOSA. Módulo " + enchantDTO.nombre() + " inyectado en el activo."));
             jugador.playSound(jugador.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1f, 1f);
             jugador.playSound(jugador.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 2f);
         }
@@ -151,7 +149,6 @@ public class YunqueListener implements Listener {
         if (libro != null && libro.getType() != Material.AIR) jugador.getInventory().addItem(libro);
     }
 
-    // 🌟 PROTECCIÓN ANTI-CORRUPCIÓN (Bloqueo Yunque Vanilla)
     @EventHandler
     public void onAnvilPrepare(PrepareAnvilEvent event) {
         ItemStack item1 = event.getInventory().getItem(0);
@@ -160,7 +157,6 @@ public class YunqueListener implements Listener {
         if (item1 != null && item1.hasItemMeta() && result != null && result.hasItemMeta()) {
             ItemMeta meta1 = item1.getItemMeta();
 
-            // Si el ítem es del Nexo, bloqueamos el renombrado
             if (meta1.getPersistentDataContainer().has(ItemManager.llaveWeaponId, PersistentDataType.STRING) ||
                     meta1.getPersistentDataContainer().has(ItemManager.llaveHerramientaId, PersistentDataType.STRING) ||
                     meta1.getPersistentDataContainer().has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {

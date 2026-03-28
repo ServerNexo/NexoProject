@@ -19,12 +19,12 @@ public class QueueManager {
     private final LinkedList<UUID> waveQueue = new LinkedList<>();
     private final Map<String, Location> configuredArenas;
 
-    // 🎨 PALETA HEX
-    private static final String MSG_ALREADY_QUEUED = "&#ff4b2b[!] Ya te encuentras en la cola de emparejamiento.";
-    private static final String MSG_JOINED_QUEUE = "&#a8ff78[✓] Has ingresado a la cola del Simulador de Supervivencia.";
-    private static final String MSG_QUEUE_POS = "&#434343Posición estimada en la red: &#fbd72b#%pos%";
-    private static final String MSG_MATCH_FOUND = "&#fbd72b<bold>¡EMPAREJAMIENTO EXITOSO!</bold> &#434343Sector: &#00fbff%arena%";
-    private static final String MSG_SQUAD_SIZE = "&#434343Operarios en el escuadrón: &#a8ff78%size%";
+    // 🎨 PALETA VIVID VOID
+    private static final String MSG_ALREADY_QUEUED = "&#8b0000[!] Ya te encuentras en la cola de emparejamiento.";
+    private static final String MSG_JOINED_QUEUE = "&#00f5ff[✓] Has ingresado a la cola del Simulador de Supervivencia.";
+    private static final String MSG_QUEUE_POS = "&#1c0f2aPosición estimada en la red: &#ff00ff#%pos%";
+    private static final String MSG_MATCH_FOUND = "&#ff00ff<bold>¡EMPAREJAMIENTO EXITOSO!</bold> &#1c0f2aSector: &#00f5ff%arena%";
+    private static final String MSG_SQUAD_SIZE = "&#1c0f2aOperarios en el escuadrón: &#00f5ff%size%";
 
     public QueueManager(NexoDungeons plugin) {
         this.plugin = plugin;

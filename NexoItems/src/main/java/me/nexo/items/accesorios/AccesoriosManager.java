@@ -34,23 +34,18 @@ public class AccesoriosManager {
     }
 
     private void cargarBaseDeDatosAccesorios() {
-        // Minería
         registro.put("guijarro_magnetico", new AccessoryDTO("guijarro_magnetico", AccessoryDTO.Familia.MINERIA, AccessoryDTO.Rareza.COMUN, AccessoryDTO.StatType.FUERZA, 2, "Atrae minerales ligeramente."));
         registro.put("amuleto_espeleologo", new AccessoryDTO("amuleto_espeleologo", AccessoryDTO.Familia.MINERIA, AccessoryDTO.Rareza.EPICO, AccessoryDTO.StatType.VELOCIDAD, 0.05, "Visión en la oscuridad pura."));
         registro.put("reliquia_nucleo", new AccessoryDTO("reliquia_nucleo", AccessoryDTO.Familia.MINERIA, AccessoryDTO.Rareza.MITICO, AccessoryDTO.StatType.VIDA, 20, "Inmunidad parcial a la lava."));
-        // Tala
         registro.put("brote_magico", new AccessoryDTO("brote_magico", AccessoryDTO.Familia.TALA, AccessoryDTO.Rareza.COMUN, AccessoryDTO.StatType.ENERGIA_CUSTOM, 10, "Regenera energía en bosques."));
         registro.put("rama_viva", new AccessoryDTO("rama_viva", AccessoryDTO.Familia.TALA, AccessoryDTO.Rareza.RARO, AccessoryDTO.StatType.FUERZA, 5, "+Daño a mobs de madera."));
         registro.put("raiz_arbol_mundo", new AccessoryDTO("raiz_arbol_mundo", AccessoryDTO.Familia.TALA, AccessoryDTO.Rareza.LEGENDARIO, AccessoryDTO.StatType.VIDA, 40, "Resistencia extrema al empuje."));
-        // Cosecha
         registro.put("herradura_oxidada", new AccessoryDTO("herradura_oxidada", AccessoryDTO.Familia.COSECHA, AccessoryDTO.Rareza.COMUN, AccessoryDTO.StatType.VELOCIDAD, 0.02, "Ligeramente más rápido en pasto."));
         registro.put("trebol_4_hojas", new AccessoryDTO("trebol_4_hojas", AccessoryDTO.Familia.COSECHA, AccessoryDTO.Rareza.RARO, AccessoryDTO.StatType.ENERGIA_CUSTOM, 20, "Suerte en drops de cultivos."));
         registro.put("bendicion_demeter", new AccessoryDTO("bendicion_demeter", AccessoryDTO.Familia.COSECHA, AccessoryDTO.Rareza.MITICO, AccessoryDTO.StatType.VIDA, 30, "Aura de crecimiento automático."));
-        // Pesca
         registro.put("anzuelo_oxidado", new AccessoryDTO("anzuelo_oxidado", AccessoryDTO.Familia.PESCA, AccessoryDTO.Rareza.COMUN, AccessoryDTO.StatType.FUERZA, 1, "Poco útil."));
         registro.put("cebo_plata", new AccessoryDTO("cebo_plata", AccessoryDTO.Familia.PESCA, AccessoryDTO.Rareza.RARO, AccessoryDTO.StatType.VELOCIDAD, 0.03, "Atrae peces raros."));
         registro.put("esfera_leviatan", new AccessoryDTO("esfera_leviatan", AccessoryDTO.Familia.PESCA, AccessoryDTO.Rareza.LEGENDARIO, AccessoryDTO.StatType.ARMADURA, 8, "Respiración acuática infinita."));
-        // Combate (Tanque, Melee, Rango)
         registro.put("escudo_roto", new AccessoryDTO("escudo_roto", AccessoryDTO.Familia.TANQUE, AccessoryDTO.Rareza.COMUN, AccessoryDTO.StatType.ARMADURA, 2, "Bloqueo básico."));
         registro.put("egida", new AccessoryDTO("egida", AccessoryDTO.Familia.TANQUE, AccessoryDTO.Rareza.EPICO, AccessoryDTO.StatType.VIDA, 25, "Absorbe 10% del daño."));
         registro.put("coraza_titan", new AccessoryDTO("coraza_titan", AccessoryDTO.Familia.TANQUE, AccessoryDTO.Rareza.MITICO, AccessoryDTO.StatType.ARMADURA, 15, "Inmune al primer golpe."));
@@ -58,7 +53,6 @@ public class AccesoriosManager {
         registro.put("colmillo", new AccessoryDTO("colmillo", AccessoryDTO.Familia.MELEE, AccessoryDTO.Rareza.LEGENDARIO, AccessoryDTO.StatType.FUERZA, 18, "Robo de vida leve."));
         registro.put("pluma", new AccessoryDTO("pluma", AccessoryDTO.Familia.RANGO, AccessoryDTO.Rareza.RARO, AccessoryDTO.StatType.VELOCIDAD, 0.05, "Caída lenta."));
         registro.put("astrolabio", new AccessoryDTO("astrolabio", AccessoryDTO.Familia.RANGO, AccessoryDTO.Rareza.EPICO, AccessoryDTO.StatType.ENERGIA_CUSTOM, 30, "Precisión astral."));
-        // Utilidad
         registro.put("prisma", new AccessoryDTO("prisma", AccessoryDTO.Familia.ENERGIA, AccessoryDTO.Rareza.EPICO, AccessoryDTO.StatType.ENERGIA_CUSTOM, 50, "-5% Costo de Energía."));
         registro.put("ojo_intelecto", new AccessoryDTO("ojo_intelecto", AccessoryDTO.Familia.ENERGIA, AccessoryDTO.Rareza.MITICO, AccessoryDTO.StatType.ENERGIA_CUSTOM, 100, "Regeneración de Maná x2."));
         registro.put("vendaje", new AccessoryDTO("vendaje", AccessoryDTO.Familia.MOVILIDAD, AccessoryDTO.Rareza.COMUN, AccessoryDTO.StatType.VIDA, 5, "Cura pasiva leve."));
@@ -66,7 +60,6 @@ public class AccesoriosManager {
         registro.put("sello", new AccessoryDTO("sello", AccessoryDTO.Familia.RIQUEZA, AccessoryDTO.Rareza.LEGENDARIO, AccessoryDTO.StatType.ARMADURA, 5, "+15% Monedas obtenidas."));
         registro.put("moneda", new AccessoryDTO("moneda", AccessoryDTO.Familia.RIQUEZA, AccessoryDTO.Rareza.COMUN, AccessoryDTO.StatType.FUERZA, 0, "+1% Monedas obtenidas."));
         registro.put("talisman", new AccessoryDTO("talisman", AccessoryDTO.Familia.CAZAJEFES, AccessoryDTO.Rareza.EPICO, AccessoryDTO.StatType.FUERZA, 10, "+10% Daño a Jefes."));
-        // El Mito
         registro.put("corazon_nexo", new AccessoryDTO("corazon_nexo", AccessoryDTO.Familia.CAZAJEFES, AccessoryDTO.Rareza.COSMICO, AccessoryDTO.StatType.VIDA, 100, "Te revive una vez cada hora al recibir daño letal."));
     }
 
@@ -74,52 +67,40 @@ public class AccesoriosManager {
         return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
     }
 
-    // ==========================================
-    // 🎒 LÓGICA DEL GUI Y SLOTS DESBLOQUEADOS
-    // ==========================================
     public void abrirBolsa(Player p) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
             if (nexoCore == null || nexoCore.getDatabaseManager() == null) {
-                p.sendMessage(NexoColor.parse("&#FF5555[!] Error crítico: Enlace caído con la Base de Datos Central."));
+                p.sendMessage(NexoColor.parse("&#8b0000[!] Error crítico: Enlace caído con la Base de Datos Central."));
                 return;
             }
-
             String sql = "SELECT contenido FROM nexo_storage WHERE uuid = ? AND tipo = 'accesorios'";
             String base64Data = null;
-
             try (Connection conn = nexoCore.getDatabaseManager().getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, p.getUniqueId().toString());
                 ResultSet rs = ps.executeQuery();
                 if (rs.next()) base64Data = rs.getString("contenido");
             } catch (Exception e) { e.printStackTrace(); }
-
             String finalData = base64Data;
             Bukkit.getScheduler().runTask(plugin, () -> {
                 int slotsDesbloqueados = getSlotsDesbloqueados(p);
                 int filas = Math.max(1, (int) Math.ceil(slotsDesbloqueados / 9.0));
-
-                Inventory inv = Bukkit.createInventory(null, filas * 9, serialize("&#555555<bold>»</bold> &#FFAA00Bolsa de Accesorios"));
-
+                Inventory inv = Bukkit.createInventory(null, filas * 9, serialize("&#1c0f2a<bold>»</bold> &#ff00ffBolsa de Accesorios"));
                 if (finalData != null && !finalData.isEmpty()) {
                     inv.setContents(Base64Util.itemStackArrayFromBase64(finalData));
                 }
-
                 ItemStack cristalBloqueado = new ItemStack(Material.RED_STAINED_GLASS_PANE);
                 ItemMeta meta = cristalBloqueado.getItemMeta();
-                meta.setDisplayName(serialize("&#FF5555<bold>🔒 Slot Bloqueado</bold>"));
+                meta.setDisplayName(serialize("&#8b0000<bold>🔒 Slot Bloqueado</bold>"));
                 meta.setLore(Arrays.asList(
-                        serialize("&#AAAAAAAumenta tu Nivel de Colección"),
-                        serialize("&#AAAAAApara desbloquear este espacio.")
+                        serialize("&#1c0f2aAumenta tu Nivel de Colección"),
+                        serialize("&#1c0f2apara desbloquear este espacio.")
                 ));
                 cristalBloqueado.setItemMeta(meta);
-
                 for (int i = slotsDesbloqueados; i < inv.getSize(); i++) {
                     inv.setItem(i, cristalBloqueado);
                 }
-
                 p.openInventory(inv);
                 p.playSound(p.getLocation(), org.bukkit.Sound.ITEM_ARMOR_EQUIP_GOLD, 1f, 1f);
             });
@@ -127,23 +108,18 @@ public class AccesoriosManager {
     }
 
     public int getSlotsDesbloqueados(Player p) {
-        return 12; // 12 slots desbloqueados para probar
+        return 12;
     }
 
     public boolean cumpleRequisito(Player p, AccessoryDTO dto) {
         return true;
     }
 
-    // ==========================================
-    // ⚙️ PROCESAMIENTO MATEMÁTICO (No Stacking)
-    // ==========================================
     public void procesarYGuardarBolsa(Player p, Inventory inv) {
         String base64Data = Base64Util.itemStackArrayToBase64(inv.getContents());
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
             if (nexoCore == null || nexoCore.getDatabaseManager() == null) return;
-
             String sql = "INSERT INTO nexo_storage (uuid, tipo, contenido) VALUES (?, 'accesorios', ?) " +
                     "ON CONFLICT (uuid, tipo) DO UPDATE SET contenido = EXCLUDED.contenido;";
             try (Connection conn = nexoCore.getDatabaseManager().getConnection();
@@ -155,15 +131,12 @@ public class AccesoriosManager {
         });
 
         Map<AccessoryDTO.Familia, AccessoryDTO> accesoriosActivos = new EnumMap<>(AccessoryDTO.Familia.class);
-
         for (ItemStack item : inv.getContents()) {
             if (item == null || item.getType() == Material.RED_STAINED_GLASS_PANE || !item.hasItemMeta()) continue;
-
             var pdc = item.getItemMeta().getPersistentDataContainer();
             if (pdc.has(llaveAccesorio, PersistentDataType.STRING)) {
                 String id = pdc.get(llaveAccesorio, PersistentDataType.STRING);
                 AccessoryDTO dto = registro.get(id);
-
                 if (dto != null && cumpleRequisito(p, dto)) {
                     if (accesoriosActivos.containsKey(dto.family())) {
                         AccessoryDTO existente = accesoriosActivos.get(dto.family());
@@ -180,24 +153,17 @@ public class AccesoriosManager {
         Map<AccessoryDTO.StatType, Double> statsTotales = new EnumMap<>(AccessoryDTO.StatType.class);
         int poderTotal = 0;
         boolean corazon = false;
-
         for (AccessoryDTO activo : accesoriosActivos.values()) {
             poderTotal += activo.rarity().getPoderNexo();
             statsTotales.put(activo.statType(), statsTotales.getOrDefault(activo.statType(), 0.0) + activo.statValue());
-
             if (activo.id().equals("corazon_nexo")) corazon = true;
         }
-
         if (corazon) usuariosCorazonNexo.add(p.getUniqueId());
         else usuariosCorazonNexo.remove(p.getUniqueId());
-
         AccessoryStatsUpdateEvent evento = new AccessoryStatsUpdateEvent(p, statsTotales, poderTotal, corazon);
         Bukkit.getPluginManager().callEvent(evento);
     }
 
-    // ==========================================
-    // 🛠️ GENERADOR FÍSICO DE ACCESORIOS (Lo que le faltaba a tu código)
-    // ==========================================
     public ItemStack generarAccesorio(String id) {
         AccessoryDTO dto = registro.get(id.toLowerCase());
         if (dto == null) return null;
@@ -205,19 +171,16 @@ public class AccesoriosManager {
         ItemStack item = new ItemStack(Material.PAPER);
         ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName(serialize("&#FFAA00<bold>💍 " + dto.id().toUpperCase().replace("_", " ") + "</bold>"));
+        meta.setDisplayName(serialize("&#ff00ff<bold>💍 " + dto.id().toUpperCase().replace("_", " ") + "</bold>"));
         meta.setLore(Arrays.asList(
-                serialize("&#AAAAAAFamilia: &#00E5FF" + dto.family().name()),
-                serialize("&#AAAAAARareza: &#55FF55" + dto.rarity().name()),
+                serialize("&#1c0f2aFamilia: &#00f5ff" + dto.family().name()),
+                serialize("&#1c0f2aRareza: &#00f5ff" + dto.rarity().name()),
                 serialize(" "),
-                serialize("&#AAAAAABono: &#FFAA00+" + dto.statValue() + " " + dto.statType().name()),
-
-                // 🌟 CORRECCIÓN AQUÍ: abilityDescription()
-                serialize("&#AAAAAAAtributo Único: &#FFFFFF" + dto.abilityDescription())
+                serialize("&#1c0f2aBono: &#ff00ff+" + dto.statValue() + " " + dto.statType().name()),
+                serialize("&#1c0f2aAtributo Único: &#00f5ff" + dto.abilityDescription())
         ));
 
         meta.getPersistentDataContainer().set(llaveAccesorio, PersistentDataType.STRING, dto.id());
-
         item.setItemMeta(meta);
         return item;
     }

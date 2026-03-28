@@ -38,33 +38,30 @@ public class BazaarChatListener implements Listener {
         Player player = event.getPlayer();
         if (!activeSessions.containsKey(player.getUniqueId())) return;
 
-        event.setCancelled(true); // Bloqueamos el mensaje para que nadie más lo lea
+        event.setCancelled(true);
         OrderSession session = activeSessions.get(player.getUniqueId());
         String msg = event.getMessage().trim().toLowerCase();
 
         if (msg.equals("cancelar") || msg.equals("cancel")) {
             activeSessions.remove(player.getUniqueId());
-            player.sendMessage(NexoColor.parse("&#ff4b2b[!] Operación financiera abortada."));
+            player.sendMessage(NexoColor.parse("&#8b0000[!] Operación financiera abortada."));
             return;
         }
 
         try {
             if (session.amount == -1) {
-                // Paso 1: Leer Cantidad
                 int cant = Integer.parseInt(msg);
                 if (cant <= 0) throw new NumberFormatException();
 
                 session.amount = cant;
-                player.sendMessage(NexoColor.parse("&#a8ff78[✓] Cantidad fijada en " + cant + " unidades."));
-                player.sendMessage(NexoColor.parse("&#00fbff[NEXO] Escribe en el chat el &#fbd72bPRECIO POR UNIDAD&#00fbff que ofreces:"));
+                player.sendMessage(NexoColor.parse("&#00f5ff[✓] Cantidad fijada en " + cant + " unidades."));
+                player.sendMessage(NexoColor.parse("&#00f5ff[NEXO] Escribe en el chat el &#ff00ffPRECIO POR UNIDAD&#00f5ff que ofreces:"));
             } else {
-                // Paso 2: Leer Precio
                 BigDecimal price = new BigDecimal(msg);
                 if (price.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
 
                 activeSessions.remove(player.getUniqueId());
 
-                // Volver al hilo principal para crear la orden
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     if (session.orderType.equals("BUY")) {
                         plugin.getBazaarManager().crearOrdenCompra(player, session.itemId, session.amount, price);
@@ -74,7 +71,7 @@ public class BazaarChatListener implements Listener {
                 });
             }
         } catch (NumberFormatException e) {
-            player.sendMessage(NexoColor.parse("&#ff4b2b[!] Valor inválido. Ingresa un número válido o escribe 'cancelar'."));
+            player.sendMessage(NexoColor.parse("&#8b0000[!] Valor inválido. Ingresa un número válido o escribe 'cancelar'."));
         }
     }
 }

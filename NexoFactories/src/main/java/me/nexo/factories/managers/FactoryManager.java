@@ -13,91 +13,106 @@ import me.nexo.protections.NexoProtections;
 import me.nexo.protections.core.ProtectionStone;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.World;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 public class FactoryManager {
 
     private final NexoFactories plugin;
     private final Cache<UUID, ActiveFactory> factoryCache;
-
-    // ⏳ Parámetros de la Evaluación Pasiva (Nexo Architect V3.0)
     private final ScriptEvaluator logicEngine;
+
     private static final double ENERGY_COST_PER_CYCLE = 15.0;
-    private static final long CYCLE_DURATION_MS = 60_000L; // 1 ciclo = 60 segundos (1 minuto)
+    private static final long CYCLE_DURATION_MS = 60_000L;
 
     public FactoryManager(NexoFactories plugin) {
         this.plugin = plugin;
         this.logicEngine = new ScriptEvaluator();
         this.factoryCache = Caffeine.newBuilder()
                 .expireAfterAccess(30, TimeUnit.MINUTES)
-                .maximumSize(10_000) // Soporta hasta 10,000 máquinas cargadas en RAM
+                .maximumSize(10_000)
                 .build();
     }
 
-    // ==========================================
-    // ⏳ MOTOR DE PRODUCCIÓN PASIVA (Timestamp Diff)
-    // ==========================================
-    public void evaluateOfflineProduction(ActiveFactory factory) {
-        long now = System.currentTimeMillis();
-        long diff = now - factory.getLastEvaluationTime();
-        long cycles = diff / CYCLE_DURATION_MS;
+    public CompletableFuture<Void> loadFactoriesAsync() {
+        return CompletableFuture.runAsync(() -> {
+            String sql = "SELECT * FROM nexo_factories";
+            try (Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
 
-        // Si no ha pasado ni 1 minuto, no hacemos nada (Evita micro-cálculos innecesarios)
-        if (cycles <= 0) return;
+                while (rs.next()) {
+                    String[] locParts = rs.getString("core_location").split(",");
+                    World world = Bukkit.getWorld(locParts[0]);
+                    if (world == null) continue;
+                    Location coreLocation = new Location(world, Double.parseDouble(locParts[1]), Double.parseDouble(locParts[2]), Double.parseDouble(locParts[3]));
 
-        // Consultamos el núcleo de protección donde está conectada
-        ProtectionStone stone = NexoProtections.getPlugin(NexoProtections.class).getClaimManager().getStoneById(factory.getStoneId());
-        if (stone == null) {
-            factory.setCurrentStatus("NO_STONE");
-            return;
-        }
-
-        // 1. EL MOTOR LÓGICO: ¿La máquina debería estar encendida según su programación?
-        if (!logicEngine.shouldRun(factory, stone, factory.getJsonLogic())) {
-            factory.setCurrentStatus("SCRIPT_PAUSED");
-            return;
-        }
-
-        // 2. CÁLCULO DE ENERGÍA Y CICLOS REALES
-        double requiredEnergy = ENERGY_COST_PER_CYCLE * cycles;
-        long actualCycles = cycles;
-
-        // Si la piedra no tiene suficiente energía para todos los ciclos que estuvo desconectado
-        if (stone.getCurrentEnergy() < requiredEnergy) {
-            actualCycles = (long) (stone.getCurrentEnergy() / ENERGY_COST_PER_CYCLE); // Hace los ciclos que pueda
-            factory.setCurrentStatus("NO_ENERGY");
-        } else {
-            factory.setCurrentStatus("ACTIVE");
-        }
-
-        // 3. GENERACIÓN MASIVA (Zero-Tick Loop)
-        if (actualCycles > 0) {
-            stone.drainEnergy(ENERGY_COST_PER_CYCLE * actualCycles);
-
-            int baseProduction = factory.getLevel() * 2;
-            double multiplier = getProfessionMultiplier(factory.getOwnerId(), factory.getFactoryType());
-
-            // ⚡ COMPONENTE DE HARDWARE: Catalizador Overclock, +50% de producción
-            if (factory.getCatalystItem() != null && factory.getCatalystItem().equals("OVERCLOCK_T1")) {
-                multiplier += 0.5;
+                    ActiveFactory factory = new ActiveFactory(
+                            UUID.fromString(rs.getString("id")),
+                            UUID.fromString(rs.getString("stone_id")),
+                            UUID.fromString(rs.getString("owner_id")),
+                            rs.getString("factory_type"),
+                            rs.getInt("level"),
+                            rs.getString("current_status"),
+                            rs.getInt("stored_output"),
+                            coreLocation,
+                            rs.getString("catalyst_item"),
+                            rs.getString("json_logic"),
+                            rs.getLong("last_evaluation")
+                    );
+                    factoryCache.put(factory.getId(), factory);
+                }
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.SEVERE, "Error loading factories from database", e);
             }
-
-            int finalOutput = (int) Math.round(baseProduction * multiplier * actualCycles);
-            factory.addOutput(finalOutput);
-
-            // Actualizamos el reloj, dejando el "residuo" de tiempo intacto para el próximo ciclo
-            factory.setLastEvaluationTime(now - (diff % CYCLE_DURATION_MS));
-
-            // Guardamos el resultado en la base de datos de fondo
-            saveFactoryStatusAsync(factory);
-        }
+        });
     }
 
-    // 🎓 INTEGRACIÓN RPG: El nivel de AuraSkills mejora las fábricas de los jugadores
+    public void tickFactories() {
+        long now = System.currentTimeMillis();
+        factoryCache.asMap().values().forEach(factory -> CompletableFuture.runAsync(() -> {
+            long diff = now - factory.getLastEvaluationTime();
+            if (diff < CYCLE_DURATION_MS) return;
+
+            long cycles = diff / CYCLE_DURATION_MS;
+            ProtectionStone stone = NexoProtections.getClaimManager().getStoneById(factory.getStoneId());
+
+            if (stone == null) {
+                factory.setCurrentStatus("NO_STONE");
+                return;
+            }
+
+            if (!logicEngine.shouldRun(factory, stone, factory.getJsonLogic())) {
+                factory.setCurrentStatus("SCRIPT_PAUSED");
+                return;
+            }
+
+            double requiredEnergy = ENERGY_COST_PER_CYCLE * cycles;
+            long actualCycles = (stone.getCurrentEnergy() < requiredEnergy) ? (long) (stone.getCurrentEnergy() / ENERGY_COST_PER_CYCLE) : cycles;
+
+            if (actualCycles > 0) {
+                stone.drainEnergy(ENERGY_COST_PER_CYCLE * actualCycles);
+                double multiplier = getProfessionMultiplier(factory.getOwnerId(), factory.getFactoryType());
+                if (factory.getCatalystItem() != null && factory.getCatalystItem().equals("OVERCLOCK_T1")) {
+                    multiplier += 0.5;
+                }
+                int finalOutput = (int) Math.round((factory.getLevel() * 2) * multiplier * actualCycles);
+                factory.addOutput(finalOutput);
+            }
+
+            factory.setCurrentStatus(actualCycles == cycles ? "ACTIVE" : "NO_ENERGY");
+            factory.setLastEvaluationTime(now - (diff % CYCLE_DURATION_MS));
+            saveFactoryStatusAsync(factory);
+        }));
+    }
+
     private double getProfessionMultiplier(UUID ownerId, String factoryType) {
         try {
             SkillsUser user = AuraSkillsApi.get().getUser(ownerId);
@@ -106,27 +121,19 @@ public class FactoryManager {
                 if (factoryType.contains("MINA") || factoryType.contains("FORJA")) level = user.getSkillLevel(Skills.MINING);
                 else if (factoryType.contains("ASERRADERO")) level = user.getSkillLevel(Skills.FORAGING);
                 else if (factoryType.contains("GRANJA")) level = user.getSkillLevel(Skills.FARMING);
-
-                return 1.0 + (level * 0.02); // +2% de producción por cada nivel
+                return 1.0 + (level * 0.02);
             }
-        } catch (NoClassDefFoundError | IllegalStateException ignored) {
-            // Falla silenciosa si AuraSkills no está cargado
-        }
+        } catch (NoClassDefFoundError | IllegalStateException ignored) {}
         return 1.0;
     }
 
-    // ==========================================
-    // 💾 GESTIÓN DE BASE DE DATOS Y CACHÉ
-    // ==========================================
-    public void createFactoryAsync(ActiveFactory factory) {
-        factory.setLastEvaluationTime(System.currentTimeMillis()); // 🌟 Inicia el reloj
+    public CompletableFuture<Void> createFactoryAsync(ActiveFactory factory) {
+        factory.setLastEvaluationTime(System.currentTimeMillis());
         factoryCache.put(factory.getId(), factory);
-
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            String sql = "INSERT INTO nexo_factories (id, stone_id, owner_id, factory_type, level, current_status, stored_output, core_location, last_evaluation) VALUES (CAST(? AS UUID), CAST(? AS UUID), CAST(? AS UUID), ?, ?, ?, ?, ?, ?)";
+        return CompletableFuture.runAsync(() -> {
+            String sql = "INSERT INTO nexo_factories (id, stone_id, owner_id, factory_type, level, current_status, stored_output, core_location, last_evaluation, catalyst_item, json_logic) VALUES (CAST(? AS UUID), CAST(? AS UUID), CAST(? AS UUID), ?, ?, ?, ?, ?, ?, ?, ?)";
             try (Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
-
                 ps.setString(1, factory.getId().toString());
                 ps.setString(2, factory.getStoneId().toString());
                 ps.setString(3, factory.getOwnerId().toString());
@@ -134,58 +141,40 @@ public class FactoryManager {
                 ps.setInt(5, factory.getLevel());
                 ps.setString(6, factory.getCurrentStatus());
                 ps.setInt(7, factory.getStoredOutput());
-
-                String locStr = factory.getCoreLocation().getWorld().getName() + "," +
-                        factory.getCoreLocation().getBlockX() + "," +
-                        factory.getCoreLocation().getBlockY() + "," +
-                        factory.getCoreLocation().getBlockZ();
+                String locStr = factory.getCoreLocation().getWorld().getName() + "," + factory.getCoreLocation().getBlockX() + "," + factory.getCoreLocation().getBlockY() + "," + factory.getCoreLocation().getBlockZ();
                 ps.setString(8, locStr);
-
-                ps.setLong(9, factory.getLastEvaluationTime()); // 🌟 Guardar Timestamp
-
+                ps.setLong(9, factory.getLastEvaluationTime());
+                ps.setString(10, factory.getCatalystItem());
+                ps.setString(11, factory.getJsonLogic());
                 ps.executeUpdate();
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.SEVERE, "Error creating factory in database", e);
+            }
         });
     }
 
     public void saveFactoryStatusAsync(ActiveFactory factory) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        CompletableFuture.runAsync(() -> {
             String sql = "UPDATE nexo_factories SET current_status = ?, stored_output = ?, last_evaluation = ? WHERE id = CAST(? AS UUID)";
             try (Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
-
                 ps.setString(1, factory.getCurrentStatus());
                 ps.setInt(2, factory.getStoredOutput());
-                ps.setLong(3, factory.getLastEvaluationTime()); // 🌟 Mantenemos el tiempo
+                ps.setLong(3, factory.getLastEvaluationTime());
                 ps.setString(4, factory.getId().toString());
-
                 ps.executeUpdate();
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.SEVERE, "Error saving factory status to database", e);
+            }
         });
-    }
-
-    public ActiveFactory getFactoryFromCache(UUID id) {
-        ActiveFactory factory = factoryCache.getIfPresent(id);
-        if (factory != null) evaluateOfflineProduction(factory); // 🌟 Evalúa automáticamente al consultar
-        return factory;
     }
 
     public ActiveFactory getFactoryAt(Location loc) {
         for (ActiveFactory factory : factoryCache.asMap().values()) {
-            if (factory.getCoreLocation() != null &&
-                    factory.getCoreLocation().getWorld().equals(loc.getWorld()) &&
-                    factory.getCoreLocation().getBlockX() == loc.getBlockX() &&
-                    factory.getCoreLocation().getBlockY() == loc.getBlockY() &&
-                    factory.getCoreLocation().getBlockZ() == loc.getBlockZ()) {
-
-                evaluateOfflineProduction(factory); // 🌟 Evalúa el paso del tiempo justo antes de devolverla
+            if (factory.getCoreLocation() != null && factory.getCoreLocation().equals(loc)) {
                 return factory;
             }
         }
         return null;
-    }
-
-    public Cache<UUID, ActiveFactory> getCache() {
-        return factoryCache;
     }
 }

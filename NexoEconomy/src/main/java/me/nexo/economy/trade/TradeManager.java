@@ -21,9 +21,9 @@ public class TradeManager {
 
     private final Map<UUID, TradeSession> activeSessions = new HashMap<>();
 
-    // 🎨 PALETA HEX
-    private static final String MSG_SENT = "&#a8ff78[✓] Petición de intercambio enviada a &#fbd72b%target%";
-    private static final String MSG_RECEIVED = "&#fbd72b%sender% &#00fbffsolicita abrir un canal de intercambio comercial contigo. Escribe: &#a8ff78/trade accept %sender%";
+    // 🎨 PALETA VIVID VOID
+    private static final String MSG_SENT = "&#00f5ff[✓] Petición de intercambio enviada a &#ff00ff%target%";
+    private static final String MSG_RECEIVED = "&#ff00ff%sender% &#00f5ffsolicita abrir un canal de intercambio comercial contigo. Escribe: &#00f5ff/trade accept %sender%";
 
     public TradeManager(NexoEconomy plugin) {
         this.plugin = plugin;

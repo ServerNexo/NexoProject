@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>me.tunombre</groupId>
+    <groupId>me.nexo</groupId>
     <artifactId>NexoMechanics</artifactId>
     <version>1.0-SNAPSHOT</version>
 
@@ -30,7 +30,7 @@
         </dependency>
 
         <dependency>
-            <groupId>me.tunombre</groupId>
+            <groupId>me.nexo</groupId>
             <artifactId>NexoCore</artifactId>
             <version>1.0-SNAPSHOT</version>
             <scope>provided</scope>

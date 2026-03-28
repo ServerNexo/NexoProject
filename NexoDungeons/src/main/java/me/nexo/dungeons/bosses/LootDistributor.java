@@ -13,14 +13,14 @@ import java.util.UUID;
 
 public class LootDistributor {
 
-    // 🎨 PALETA HEX
-    private static final String BC_DIVIDER = "&#434343=======================================";
-    private static final String MSG_BOSS_DEFEATED = "&#8b008b<bold>☠ %boss% ELIMINADO</bold>";
-    private static final String MSG_DAMAGE_STAT = "&#434343Daño registrado: &#ff4b2b%dmg% &#434343(%pct%%)";
-    private static final String MSG_TOP_1 = "&#fbd72b🏆 <bold>¡RENDIMIENTO ÓPTIMO (TOP #1)!</bold> &#434343Extrayendo Botín Mítico.";
-    private static final String MSG_TOP_3 = "&#a8ff78🥈 <bold>¡SOBRESALIENTE (TOP #%rank%)!</bold> &#434343Extrayendo Botín Épico.";
-    private static final String MSG_PARTICIPATION = "&#00fbff🎖 Participación confirmada. &#434343Extrayendo Botín Estándar.";
-    private static final String MSG_XP_REWARD = "&#00fbff✨ Transferencia de +500 XP de Combate completada.";
+    // 🎨 PALETA VIVID VOID
+    private static final String BC_DIVIDER = "&#1c0f2a=======================================";
+    private static final String MSG_BOSS_DEFEATED = "&#8b0000<bold>☠ %boss% ELIMINADO</bold>";
+    private static final String MSG_DAMAGE_STAT = "&#1c0f2aDaño registrado: &#8b0000%dmg% &#1c0f2a(%pct%%)";
+    private static final String MSG_TOP_1 = "&#ff00ff🏆 <bold>¡RENDIMIENTO ÓPTIMO (TOP #1)!</bold> &#1c0f2aExtrayendo Botín Mítico.";
+    private static final String MSG_TOP_3 = "&#00f5ff🥈 <bold>¡SOBRESALIENTE (TOP #%rank%)!</bold> &#1c0f2aExtrayendo Botín Épico.";
+    private static final String MSG_PARTICIPATION = "&#00f5ff🎖 Participación confirmada. &#1c0f2aExtrayendo Botín Estándar.";
+    private static final String MSG_XP_REWARD = "&#00f5ff✨ Transferencia de +500 XP de Combate completada.";
 
     public static void distributeLoot(String bossInternalName, Map<UUID, Double> damageMap) {
         List<Map.Entry<UUID, Double>> ranking = damageMap.entrySet().stream()

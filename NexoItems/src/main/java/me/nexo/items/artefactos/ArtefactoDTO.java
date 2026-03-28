@@ -9,14 +9,13 @@ public record ArtefactoDTO(
         HabilidadType type,
         double power
 ) {
-    // Definimos las rarezas con sus respectivos colores Ciberpunk
     public enum Rareza {
-        COMUN("&#AAAAAA"),       // Gris Plomo
-        RARO("&#5555FF"),        // Azul Neón
-        EPICO("&#AA00AA"),       // Púrpura Profundo
-        LEGENDARIO("&#FFAA00"),  // Naranja/Dorado Corporativo
-        MITICO("&#FF5555"),      // Rojo Alerta
-        COSMICO("&#00E5FF");     // Cian Ciberpunk
+        COMUN("&#1c0f2a"),
+        RARO("&#00f5ff"),
+        EPICO("&#ff00ff"),
+        LEGENDARIO("&#ff00ff"),
+        MITICO("&#8b0000"),
+        COSMICO("&#00f5ff");
 
         private final String color;
 
@@ -29,10 +28,9 @@ public record ArtefactoDTO(
         }
     }
 
-    // Definimos el tipo de ejecución de la habilidad
     public enum HabilidadType {
-        ACTIVA,       // Se usa una vez y entra en cooldown
-        TOGGLE,       // Se prende y se apaga (como las Alas)
-        DESPLIEGUE    // Invoca una entidad temporal (como el Orbe)
+        ACTIVA,
+        TOGGLE,
+        DESPLIEGUE
     }
 }

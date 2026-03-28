@@ -1,7 +1,6 @@
 package me.nexo.items;
 
 import me.nexo.core.utils.NexoColor;
-import me.nexo.items.managers.ItemManager;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -15,12 +14,12 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 public class ComandoDesguace implements CommandExecutor {
 
-    private static final String ERR_NOT_PLAYER = "&#FF5555[!] El terminal requiere un operario humano.";
+    private static final String ERR_NOT_PLAYER = "&#8b0000[!] El terminal requiere un operario humano.";
     public static final String TITLE_PLAIN = "» Desguace Automático";
-    public static final String MENU_TITLE = "&#555555<bold>»</bold> &#FF5555Desguace Automático";
-    private static final String ITEM_NAME = "&#FFAA00<bold>⚡ Iniciar Desguace</bold>";
-    private static final String ITEM_LORE_1 = "&#AAAAAAHaz clic para desguazar todos los ítems";
-    private static final String ITEM_LORE_2 = "&#AAAAAAválidos que hayas introducido.";
+    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#8b0000Desguace Automático";
+    private static final String ITEM_NAME = "&#8b0000<bold>⚡ Iniciar Desguace</bold>";
+    private static final String ITEM_LORE_1 = "&#1c0f2aHaz clic para desguazar todos los ítems";
+    private static final String ITEM_LORE_2 = "&#1c0f2aválidos que hayas introducido.";
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -31,7 +30,7 @@ public class ComandoDesguace implements CommandExecutor {
 
         Inventory inv = Bukkit.createInventory(null, 54, NexoColor.parse(MENU_TITLE));
 
-        ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemStack glass = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta glassMeta = glass.getItemMeta();
         if (glassMeta != null) {
             glassMeta.setDisplayName(" ");

@@ -27,11 +27,11 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
     }
 
     public void openMenu() {
-        this.inventory = Bukkit.createInventory(this, 54, NexoColor.parse("&#FFAA00Mis Órdenes Activas"));
+        this.inventory = Bukkit.createInventory(this, 54, NexoColor.parse("&#ff00ffMis Órdenes Activas"));
 
         ItemStack loading = new ItemStack(Material.CLOCK);
         ItemMeta lMeta = loading.getItemMeta();
-        lMeta.displayName(NexoColor.parse("&#AAAAAAConsultando Base de Datos..."));
+        lMeta.displayName(NexoColor.parse("&#1c0f2aConsultando Base de Datos..."));
         loading.setItemMeta(lMeta);
         inventory.setItem(22, loading);
 
@@ -39,14 +39,13 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
         addBackButton();
         player.openInventory(inventory);
 
-        // Carga asíncrona para no dar lag al servidor
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             List<BazaarManager.ActiveOrderDTO> orders = plugin.getBazaarManager().getMisOrdenes(player.getUniqueId());
 
             Bukkit.getScheduler().runTask(plugin, () -> {
                 if (!player.getOpenInventory().getTitle().contains("Mis Órdenes")) return;
 
-                inventory.setItem(22, new ItemStack(Material.AIR)); // Quitar reloj
+                inventory.setItem(22, new ItemStack(Material.AIR));
 
                 int slot = 10;
                 for (BazaarManager.ActiveOrderDTO order : orders) {
@@ -59,17 +58,17 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
                     ItemMeta meta = item.getItemMeta();
 
                     boolean isBuy = order.type.equals("BUY");
-                    String color = isBuy ? "&#a8ff78" : "&#ff4b2b";
+                    String color = isBuy ? "&#00f5ff" : "&#8b0000";
                     String tipo = isBuy ? "Compra" : "Venta";
 
                     meta.displayName(NexoColor.parse(color + "<bold>Orden de " + tipo + "</bold>"));
 
                     List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                    lore.add(NexoColor.parse("&#e0e0e0Ítem: &#fbd72b" + order.itemId));
-                    lore.add(NexoColor.parse("&#e0e0e0Cantidad Restante: &#fbd72b" + order.amount));
-                    lore.add(NexoColor.parse("&#e0e0e0Precio Cotizado C/U: &#fbd72b" + order.price + " 🪙"));
+                    lore.add(NexoColor.parse("&#1c0f2aÍtem: &#ff00ff" + order.itemId));
+                    lore.add(NexoColor.parse("&#1c0f2aCantidad Restante: &#ff00ff" + order.amount));
+                    lore.add(NexoColor.parse("&#1c0f2aPrecio Cotizado C/U: &#ff00ff" + order.price + " 🪙"));
                     lore.add(NexoColor.parse(" "));
-                    lore.add(NexoColor.parse("&#FF3366► Clic para CANCELAR orden"));
+                    lore.add(NexoColor.parse("&#8b0000► Clic para CANCELAR orden"));
 
                     meta.lore(lore);
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "cancel_order");
@@ -85,7 +84,7 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
                 if (orders.isEmpty()) {
                     ItemStack empty = new ItemStack(Material.BARRIER);
                     ItemMeta em = empty.getItemMeta();
-                    em.displayName(NexoColor.parse("&#ff4b2bNo tienes órdenes activas."));
+                    em.displayName(NexoColor.parse("&#8b0000No tienes órdenes activas."));
                     empty.setItemMeta(em);
                     inventory.setItem(22, empty);
                 }
@@ -96,14 +95,14 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
     private void addBackButton() {
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta meta = back.getItemMeta();
-        meta.displayName(NexoColor.parse("&#FF3366⬅ Volver"));
+        meta.displayName(NexoColor.parse("&#00f5ff⬅ Volver"));
         meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "back_main");
         back.setItemMeta(meta);
         inventory.setItem(inventory.getSize() - 5, back);
     }
 
     private void fillBorders() {
-        ItemStack glass = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemStack glass = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta meta = glass.getItemMeta();
         meta.displayName(net.kyori.adventure.text.Component.empty());
         glass.setItemMeta(meta);

@@ -46,7 +46,7 @@ public class WaveArena {
             int checkpoint = this.currentWave - 1;
             spawnCenter.getWorld().getNearbyEntities(spawnCenter, 30, 30, 30).forEach(e -> {
                 if (e instanceof org.bukkit.entity.Player p) {
-                    p.sendMessage(NexoColor.parse("&#a8ff78<bold>¡PUNTO DE CONTROL!</bold> &#434343Simulación asegurada en la Oleada &#fbd72b" + checkpoint));
+                    p.sendMessage(NexoColor.parse("&#00f5ff<bold>¡PUNTO DE CONTROL!</bold> &#1c0f2aSimulación asegurada en la Oleada &#ff00ff" + checkpoint));
                     p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
                 }
             });
@@ -54,11 +54,10 @@ public class WaveArena {
 
         spawnCenter.getWorld().getNearbyEntities(spawnCenter, 30, 30, 30).forEach(e -> {
             if (e instanceof org.bukkit.entity.Player p) {
-                // 🌟 TITLES NATIVOS DE PAPER (ADVENTURE API)
                 Title.Times times = Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(2500), Duration.ofMillis(500));
                 Title title = Title.title(
-                        NexoColor.parse("&#ff4b2b<bold>SIMULACIÓN " + currentWave + "</bold>"),
-                        NexoColor.parse("&#fbd72b¡Prepárate para el impacto!"),
+                        NexoColor.parse("&#8b0000<bold>SIMULACIÓN " + currentWave + "</bold>"),
+                        NexoColor.parse("&#ff00ff¡Prepárate para el impacto!"),
                         times
                 );
                 p.showTitle(title);

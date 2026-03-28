@@ -31,7 +31,7 @@ public class BlackMarketListener implements Listener {
 
         if (!plugin.getBlackMarketManager().isMarketOpen()) {
             player.closeInventory();
-            player.sendMessage(NexoColor.parse("&#ff4b2b[!] El Mercader ha huido repentinamente entre las sombras..."));
+            player.sendMessage(NexoColor.parse("&#8b0000[!] El Mercader ha huido repentinamente entre las sombras..."));
             return;
         }
 
@@ -46,7 +46,7 @@ public class BlackMarketListener implements Listener {
         if (index != -1 && index < stock.size()) {
             BlackMarketItem bmItem = stock.get(index);
 
-            player.sendMessage(NexoColor.parse("&#8b008b[MERCADER] &#434343Procesando el pago con el inframundo..."));
+            player.sendMessage(NexoColor.parse("&#ff00ff[MERCADER] &#1c0f2aProcesando el pago con el inframundo..."));
 
             plugin.getEconomyManager().updateBalanceAsync(
                     player.getUniqueId(),
@@ -62,11 +62,11 @@ public class BlackMarketListener implements Listener {
                     } else {
                         player.getInventory().addItem(item);
                     }
-                    player.sendMessage(NexoColor.parse("&#8b008b[MERCADER] &#00fbffHa sido un placer hacer negocios oscuros contigo..."));
+                    player.sendMessage(NexoColor.parse("&#ff00ff[MERCADER] &#00f5ffHa sido un placer hacer negocios oscuros contigo..."));
                     player.closeInventory();
                 } else {
                     String divisa = bmItem.currency() == NexoAccount.Currency.GEMS ? "Gemas" : "Maná";
-                    player.sendMessage(NexoColor.parse("&#ff4b2b[!] Fondos insuficientes de " + divisa + " para completar la transacción."));
+                    player.sendMessage(NexoColor.parse("&#8b0000[!] Fondos insuficientes de " + divisa + " para completar la transacción."));
                 }
             });
         }

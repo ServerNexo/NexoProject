@@ -25,9 +25,8 @@ public class DesguaceListener implements Listener {
 
     private final NexoItems plugin;
 
-    // 🎨 Títulos limpios y seguros para Paper 1.21
     public static final String TITLE_PLAIN = "» Desguace del Nexo";
-    public static final String MENU_TITLE = "&#555555<bold>»</bold> &#FF5555Desguace del Nexo";
+    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#8b0000Desguace del Nexo";
 
     public DesguaceListener(NexoItems plugin) {
         this.plugin = plugin;
@@ -40,8 +39,7 @@ public class DesguaceListener implements Listener {
     public void abrirMenu(Player jugador) {
         Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
 
-        // Decoración
-        ItemStack cristal = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
+        ItemStack cristal = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta metaCristal = cristal.getItemMeta();
         if (metaCristal != null) {
             metaCristal.setDisplayName(serialize(" "));
@@ -52,20 +50,18 @@ public class DesguaceListener implements Listener {
             inv.setItem(i, cristal);
         }
 
-        // Slot de entrada
         inv.setItem(11, new ItemStack(Material.AIR));
 
-        // Botón de Destruir
         ItemStack trituradora = new ItemStack(Material.BLAST_FURNACE);
         ItemMeta metaTrituradora = trituradora.getItemMeta();
         if (metaTrituradora != null) {
-            metaTrituradora.setDisplayName(serialize("&#FF5555<bold>DESTRUIR ACTIVO</bold>"));
+            metaTrituradora.setDisplayName(serialize("&#8b0000<bold>DESTRUIR ACTIVO</bold>"));
             metaTrituradora.setLore(Arrays.asList(
-                    serialize("&#AAAAAAHaz clic aquí para destruir el"),
-                    serialize("&#AAAAAAactivo de la izquierda y reciclarlo"),
-                    serialize("&#AAAAAAen &#FFAA00Polvo Estelar&#AAAAAA."),
+                    serialize("&#1c0f2aHaz clic aquí para destruir el"),
+                    serialize("&#1c0f2aactivo de la izquierda y reciclarlo"),
+                    serialize("&#1c0f2aen &#ff00ffPolvo Estelar&#1c0f2a."),
                     serialize(" "),
-                    serialize("&#FF5555<bold>⚠ ESTA ACCIÓN ES IRREVERSIBLE ⚠</bold>")
+                    serialize("&#8b0000<bold>⚠ ESTA ACCIÓN ES IRREVERSIBLE ⚠</bold>")
             ));
             trituradora.setItemMeta(metaTrituradora);
         }
@@ -82,56 +78,48 @@ public class DesguaceListener implements Listener {
         Player jugador = (Player) event.getWhoClicked();
         int slot = event.getRawSlot();
 
-        // Inventario del jugador
         if (slot >= 27) return;
 
-        // Bloquear cristales
         if (slot != 11 && slot != 15) {
             event.setCancelled(true);
             return;
         }
 
-        // CLIC EN DESTRUIR
         if (slot == 15) {
             event.setCancelled(true);
             Inventory inv = event.getInventory();
             ItemStack arma = inv.getItem(11);
 
             if (arma == null || arma.getType() == Material.AIR) {
-                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Inserta un activo en la bahía de desguace (izquierda)."));
+                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Inserta un activo en la bahía de desguace (izquierda)."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             if (!arma.hasItemMeta() || !arma.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER)) {
-                jugador.sendMessage(NexoColor.parse("&#FF5555[!] Activo incompatible. No posee la firma mágica del Nexo requerida para reciclar."));
+                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Activo incompatible. No posee la firma mágica del Nexo requerida para reciclar."));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
-            // Calculamos cuánto polvo dar (1 base + 1 por cada nivel que tuviera el arma)
             int nivel = arma.getItemMeta().getPersistentDataContainer().getOrDefault(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, 0);
             int cantidadPolvo = 1 + nivel;
 
-            // Destruimos el arma
             inv.setItem(11, new ItemStack(Material.AIR));
 
-            // Creamos y damos el polvo
             ItemStack recompensa = ItemManager.crearPolvoEstelar();
             recompensa.setAmount(cantidadPolvo);
 
-            // Si tiene el inventario lleno, lo tiramos al piso
             HashMap<Integer, ItemStack> sobrante = jugador.getInventory().addItem(recompensa);
             if (!sobrante.isEmpty()) {
                 jugador.getWorld().dropItemNaturally(jugador.getLocation(), sobrante.get(0));
             }
 
-            jugador.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>¡RECICLAJE EXITOSO!</bold> Materia recuperada: &#FFAA00" + cantidadPolvo + "x Polvo Estelar."));
+            jugador.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>¡RECICLAJE EXITOSO!</bold> Materia recuperada: &#ff00ff" + cantidadPolvo + "x Polvo Estelar."));
             jugador.playSound(jugador.getLocation(), Sound.BLOCK_GRINDSTONE_USE, 1f, 1f);
         }
     }
 
-    // ANTI-DUPE
     @EventHandler
     public void alCerrar(InventoryCloseEvent event) {
         String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());

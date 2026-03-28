@@ -2,7 +2,7 @@ package me.nexo.economy.commands;
 
 import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
-import me.nexo.economy.bazar.BazaarMenu; // 🌟 IMPORT NUEVO PARA LA GUI
+import me.nexo.economy.bazar.BazaarMenu;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -16,21 +16,21 @@ public class ComandoBazar implements CommandExecutor {
 
     private final NexoEconomy plugin;
 
-    // 🎨 PALETA HEX
-    private static final String BC_DIVIDER = "&#434343========================================";
-    private static final String MSG_TITLE = "&#fbd72b<bold>📈 BAZAR GLOBAL DE NEXO</bold>";
-    private static final String MSG_HELP_SELL = "&#fbd72b/bazar sell <precio_c/u> &#434343- Vende el ítem de tu mano.";
-    private static final String MSG_HELP_BUY = "&#fbd72b/bazar buy <item> <cantidad> <precio_c/u> &#434343- Crea orden de compra.";
-    private static final String MSG_HELP_CLAIM = "&#fbd72b/bazar claim &#434343- Recoge tus extracciones pendientes.";
+    // 🎨 PALETA VIVID VOID
+    private static final String BC_DIVIDER = "&#1c0f2a========================================";
+    private static final String MSG_TITLE = "&#ff00ff<bold>📈 BAZAR GLOBAL DE NEXO</bold>";
+    private static final String MSG_HELP_SELL = "&#ff00ff/bazar sell <precio_c/u> &#1c0f2a- Vende el ítem de tu mano.";
+    private static final String MSG_HELP_BUY = "&#ff00ff/bazar buy <item> <cantidad> <precio_c/u> &#1c0f2a- Crea orden de compra.";
+    private static final String MSG_HELP_CLAIM = "&#ff00ff/bazar claim &#1c0f2a- Recoge tus extracciones pendientes.";
 
-    private static final String MSG_CLAIM_START = "&#00fbff[NEXO] Conectando con tu buzón en Wall Street...";
-    private static final String ERR_USAGE_SELL = "&#ff4b2b[!] Error de sintaxis. Uso: &#fbd72b/bazar sell <precio_c/u>";
-    private static final String ERR_NO_ITEM = "&#ff4b2b[!] Manos vacías. Debes sostener un activo para venderlo.";
-    private static final String ERR_PRICE_ZERO = "&#ff4b2b[!] El valor de cotización debe ser mayor a 0.";
-    private static final String ERR_INVALID_PRICE = "&#ff4b2b[!] Formato de precio inválido.";
-    private static final String ERR_USAGE_BUY = "&#ff4b2b[!] Uso: &#fbd72b/bazar buy <item_id> <cantidad> <precio_c/u>";
-    private static final String ERR_AMOUNT_ZERO = "&#ff4b2b[!] La cantidad y el precio de cotización deben ser mayores a 0.";
-    private static final String ERR_INVALID_DATA = "&#ff4b2b[!] Datos financieros inválidos. Verifica los parámetros.";
+    private static final String MSG_CLAIM_START = "&#00f5ff[NEXO] Conectando con tu buzón en Wall Street...";
+    private static final String ERR_USAGE_SELL = "&#8b0000[!] Error de sintaxis. Uso: &#ff00ff/bazar sell <precio_c/u>";
+    private static final String ERR_NO_ITEM = "&#8b0000[!] Manos vacías. Debes sostener un activo para venderlo.";
+    private static final String ERR_PRICE_ZERO = "&#8b0000[!] El valor de cotización debe ser mayor a 0.";
+    private static final String ERR_INVALID_PRICE = "&#8b0000[!] Formato de precio inválido.";
+    private static final String ERR_USAGE_BUY = "&#8b0000[!] Uso: &#ff00ff/bazar buy <item_id> <cantidad> <precio_c/u>";
+    private static final String ERR_AMOUNT_ZERO = "&#8b0000[!] La cantidad y el precio de cotización deben ser mayores a 0.";
+    private static final String ERR_INVALID_DATA = "&#8b0000[!] Datos financieros inválidos. Verifica los parámetros.";
 
     public ComandoBazar(NexoEconomy plugin) {
         this.plugin = plugin;
@@ -40,7 +40,6 @@ public class ComandoBazar implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) return true;
 
-        // 🌟 NUEVO: Si ponen solo /bazar, abre la interfaz gráfica
         if (args.length == 0) {
             new BazaarMenu(plugin, player, BazaarMenu.MenuType.MAIN).openMain();
             return true;
@@ -48,7 +47,6 @@ public class ComandoBazar implements CommandExecutor {
 
         String subCommand = args[0].toLowerCase();
 
-        // ❓ /bazar help (Para mostrar los comandos de texto avanzados)
         if (subCommand.equals("help")) {
             player.sendMessage(NexoColor.parse(BC_DIVIDER));
             player.sendMessage(NexoColor.parse(MSG_TITLE));
@@ -59,26 +57,22 @@ public class ComandoBazar implements CommandExecutor {
             return true;
         }
 
-        // 📦 /bazar claim
         if (subCommand.equals("claim")) {
             player.sendMessage(NexoColor.parse(MSG_CLAIM_START));
             plugin.getBazaarManager().reclamarBuzon(player);
             return true;
         }
 
-        // 📉 /bazar sell <precio_unidad>
         if (subCommand.equals("sell")) {
             if (args.length < 2) {
                 player.sendMessage(NexoColor.parse(ERR_USAGE_SELL));
                 return true;
             }
-
             ItemStack itemHand = player.getInventory().getItemInMainHand();
             if (itemHand == null || itemHand.getType() == Material.AIR) {
                 player.sendMessage(NexoColor.parse(ERR_NO_ITEM));
                 return true;
             }
-
             try {
                 BigDecimal precioUnidad = new BigDecimal(args[1]);
                 if (precioUnidad.compareTo(BigDecimal.ZERO) <= 0) {
@@ -92,18 +86,15 @@ public class ComandoBazar implements CommandExecutor {
             return true;
         }
 
-        // 📈 /bazar buy <item> <cantidad> <precio_unidad>
         if (subCommand.equals("buy")) {
             if (args.length < 4) {
                 player.sendMessage(NexoColor.parse(ERR_USAGE_BUY));
                 return true;
             }
-
             try {
                 String itemId = args[1].toUpperCase();
                 int cantidad = Integer.parseInt(args[2]);
                 BigDecimal precioUnidad = new BigDecimal(args[3]);
-
                 if (cantidad <= 0 || precioUnidad.compareTo(BigDecimal.ZERO) <= 0) {
                     player.sendMessage(NexoColor.parse(ERR_AMOUNT_ZERO));
                     return true;

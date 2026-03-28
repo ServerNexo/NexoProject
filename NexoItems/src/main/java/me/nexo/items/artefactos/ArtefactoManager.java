@@ -35,9 +35,6 @@ public class ArtefactoManager {
         registrarEstrategias();
     }
 
-    // ==========================================
-    // ⚡ GESTIÓN DE ENERGÍA CUSTOM Y COOLDOWNS
-    // ==========================================
     public boolean procesarUso(Player p, ArtefactoDTO dto) {
         UUID uuid = p.getUniqueId();
         long ahora = System.currentTimeMillis();
@@ -47,14 +44,14 @@ public class ArtefactoManager {
 
         if (playerCds.containsKey(dto.id()) && playerCds.get(dto.id()) > ahora) {
             double restante = (playerCds.get(dto.id()) - ahora) / 1000.0;
-            p.sendActionBar(NexoColor.parse("&#FF5555❄ Enfriamiento Táctico: " + String.format("%.1f", restante) + "s"));
+            p.sendActionBar(NexoColor.parse("&#8b0000❄ Enfriamiento Táctico: " + String.format("%.1f", restante) + "s"));
             p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             return false;
         }
 
         NexoUser user = NexoAPI.getInstance().getUserLocal(uuid);
         if (user == null) {
-            p.sendMessage(NexoColor.parse("&#FF5555[!] Sincronizando datos neuronales. Espera..."));
+            p.sendMessage(NexoColor.parse("&#8b0000[!] Sincronizando datos neuronales. Espera..."));
             return false;
         }
 
@@ -67,14 +64,14 @@ public class ArtefactoManager {
         }
 
         if (energiaActual < costoFinal) {
-            p.sendActionBar(NexoColor.parse("&#FF5555⚡ Energía Insuficiente (" + energiaActual + "/" + costoFinal + ")"));
+            p.sendActionBar(NexoColor.parse("&#8b0000⚡ Energía Insuficiente (" + energiaActual + "/" + costoFinal + ")"));
             p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
             return false;
         }
 
         ArtefactoStrategy estrategia = estrategias.get(dto.id());
         if (estrategia == null) {
-            p.sendMessage(NexoColor.parse("&#FF5555[!] Error de Firmware: Esta habilidad aún no está programada."));
+            p.sendMessage(NexoColor.parse("&#8b0000[!] Error de Firmware: Esta habilidad aún no está programada."));
             return false;
         }
 
@@ -93,9 +90,6 @@ public class ArtefactoManager {
         cooldowns.remove(uuid);
     }
 
-    // ==========================================
-    // ⚔️ LAS 11 ESTRATEGIAS DE ARTEFACTOS
-    // ==========================================
     private void registrarEstrategias() {
 
         estrategias.put("gancho_cobre", (p, dto) -> {
@@ -240,7 +234,7 @@ public class ArtefactoManager {
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (invulnerables.remove(p.getUniqueId())) {
-                    p.sendMessage(NexoColor.parse("&#AAAAAALa Capa Espectral se ha desvanecido. Tu firma vuelve a ser visible."));
+                    p.sendMessage(NexoColor.parse("&#1c0f2aLa Capa Espectral se ha desvanecido. Tu firma vuelve a ser visible."));
                     p.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1f, 1f);
                 }
             }, 80L);
@@ -250,7 +244,7 @@ public class ArtefactoManager {
         estrategias.put("reloj_astral", (p, dto) -> {
             limpiarCooldowns(p.getUniqueId());
             p.playSound(p.getLocation(), Sound.BLOCK_BELL_RESONATE, 1f, 1.5f);
-            p.sendMessage(NexoColor.parse("&#00E5FF✨ <bold>PARADOJA TEMPORAL:</bold> &#FFFFFFTus sistemas de enfriamiento han sido reseteados."));
+            p.sendMessage(NexoColor.parse("&#00f5ff✨ <bold>PARADOJA TEMPORAL:</bold> &#1c0f2aTus sistemas de enfriamiento han sido reseteados."));
             return true;
         });
 
@@ -260,13 +254,13 @@ public class ArtefactoManager {
                 alasActivas.remove(uuid);
                 p.setAllowFlight(false);
                 p.setFlying(false);
-                p.sendMessage(NexoColor.parse("&#FF5555[!] Alas del Nexo desactivadas. Guardando rotores."));
+                p.sendMessage(NexoColor.parse("&#8b0000[!] Alas del Nexo desactivadas. Guardando rotores."));
                 cooldowns.get(uuid).put(dto.id(), System.currentTimeMillis() + (dto.cooldown() * 1000L));
                 return false;
             } else {
                 alasActivas.add(uuid);
                 p.setAllowFlight(true);
-                p.sendMessage(NexoColor.parse("&#00E5FF[✓] Alas del Nexo en línea. Drenando " + dto.cost() + " ⚡/s."));
+                p.sendMessage(NexoColor.parse("&#00f5ff[✓] Alas del Nexo en línea. Drenando " + dto.cost() + " ⚡/s."));
 
                 new BukkitRunnable() {
                     @Override
@@ -288,7 +282,7 @@ public class ArtefactoManager {
                             alasActivas.remove(uuid);
                             p.setAllowFlight(false);
                             p.setFlying(false);
-                            p.sendMessage(NexoColor.parse("&#FF5555[!] ⚡ Reservas de energía críticas. Alas desactivadas por seguridad."));
+                            p.sendMessage(NexoColor.parse("&#8b0000[!] ⚡ Reservas de energía críticas. Alas desactivadas por seguridad."));
                             cooldowns.get(uuid).put(dto.id(), System.currentTimeMillis() + (dto.cooldown() * 1000L));
                             cancel();
                             return;

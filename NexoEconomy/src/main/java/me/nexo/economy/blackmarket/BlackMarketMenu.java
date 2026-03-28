@@ -17,17 +17,17 @@ import java.util.List;
 public class BlackMarketMenu {
 
     public static final String TITLE_PLAIN = "» Mercado Negro";
-    public static final String TITLE_MENU = "&#434343<bold>»</bold> &#8b008bMercado Negro";
+    public static final String TITLE_MENU = "&#1c0f2a<bold>»</bold> &#ff00ffMercado Negro";
 
     public static void open(Player player, NexoEconomy plugin) {
         if (!plugin.getBlackMarketManager().isMarketOpen()) {
-            player.sendMessage(NexoColor.parse("&#ff4b2b[!] Las sombras están vacías... El Mercader no está aquí."));
+            player.sendMessage(NexoColor.parse("&#8b0000[!] Las sombras están vacías... El Mercader no está aquí."));
             return;
         }
 
         Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(TITLE_MENU));
 
-        ItemStack filler = new ItemStack(Material.BLACK_STAINED_GLASS_PANE);
+        ItemStack filler = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta fillerMeta = filler.getItemMeta();
         if (fillerMeta != null) {
             fillerMeta.setDisplayName(serialize(" "));
@@ -47,13 +47,13 @@ public class BlackMarketMenu {
                 List<String> lore = meta.hasLore() ? meta.getLore() : new ArrayList<>();
                 lore.add(serialize(" "));
 
-                String color = bmItem.currency() == NexoAccount.Currency.GEMS ? "&#a8ff78" : "&#00fbff";
+                String color = bmItem.currency() == NexoAccount.Currency.GEMS ? "&#00f5ff" : "&#ff00ff";
                 String divisaNombre = bmItem.currency() == NexoAccount.Currency.GEMS ? "💎 Gemas" : "💧 Maná";
 
-                lore.add(serialize("&#434343======================="));
-                lore.add(serialize("&#434343Tarifa: " + color + bmItem.price() + " " + divisaNombre));
-                lore.add(serialize("&#434343======================="));
-                lore.add(serialize("&#fbd72b▶ Clic para pactar compra"));
+                lore.add(serialize("&#1c0f2a======================="));
+                lore.add(serialize("&#1c0f2aTarifa: " + color + bmItem.price() + " " + divisaNombre));
+                lore.add(serialize("&#1c0f2a======================="));
+                lore.add(serialize("&#00f5ff▶ Clic para pactar compra"));
 
                 meta.setLore(lore);
                 display.setItemMeta(meta);

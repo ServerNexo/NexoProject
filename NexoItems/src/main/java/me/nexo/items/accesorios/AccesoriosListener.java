@@ -30,13 +30,10 @@ public class AccesoriosListener implements Listener {
     private final NexoItems plugin;
     private final AccesoriosManager manager;
 
-    // 🎨 Títulos y prefijos limpios y seguros
     public static final String TITLE_PLAIN = "» Bolsa de Accesorios";
 
-    // Cooldown del Corazón del Nexo (1 Hora)
     private final Map<UUID, Long> cooldownCorazon = new ConcurrentHashMap<>();
 
-    // Llaves únicas para los modificadores de atributos (Seguridad Anti-Infinito)
     private final NamespacedKey keyVida;
     private final NamespacedKey keyFuerza;
     private final NamespacedKey keyVelocidad;
@@ -55,9 +52,6 @@ public class AccesoriosListener implements Listener {
         return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
     }
 
-    // ==========================================
-    // 🔒 PROTECCIÓN Y GUARDADO DEL INVENTARIO
-    // ==========================================
     @EventHandler
     public void alCerrarBolsa(InventoryCloseEvent event) {
         String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
@@ -73,16 +67,13 @@ public class AccesoriosListener implements Listener {
         if (tituloLimpio.equals(TITLE_PLAIN)) {
             ItemStack currentItem = event.getCurrentItem();
 
-            // PROTECCIÓN 1: Evitar clics directos sobre los cristales de bloqueo
             if (currentItem != null && currentItem.getType() == Material.RED_STAINED_GLASS_PANE) {
                 event.setCancelled(true);
                 return;
             }
 
-            // PROTECCIÓN 2: Evitar trucos con teclas de números (Hotbar Swap) hacia slots bloqueados
             if (event.getClick().name().contains("NUMBER_KEY")) {
                 int slotDestino = event.getRawSlot();
-                // Si están apuntando al inventario de arriba y está bloqueado
                 if (slotDestino < event.getView().getTopInventory().getSize()) {
                     ItemStack slotItem = event.getView().getTopInventory().getItem(slotDestino);
                     if (slotItem != null && slotItem.getType() == Material.RED_STAINED_GLASS_PANE) {
@@ -92,80 +83,67 @@ public class AccesoriosListener implements Listener {
                 }
             }
 
-            // PROTECCIÓN 3: Evitar Shift-Clicks extraños que metan cristales
             if (event.isShiftClick() && currentItem != null && currentItem.getType() == Material.RED_STAINED_GLASS_PANE) {
                 event.setCancelled(true);
             }
         }
     }
 
-    // ==========================================
-    // ⚙️ APLICACIÓN DE STATS GLOBALES (API 1.21.11)
-    // ==========================================
     @EventHandler
     public void alActualizarStats(AccessoryStatsUpdateEvent event) {
         Player p = event.getPlayer();
         Map<AccessoryDTO.StatType, Double> stats = event.getStats();
 
-        // 1. Aplicamos Atributos Nativos de Bukkit
         aplicarAtributo(p, Attribute.GENERIC_MAX_HEALTH, keyVida, stats.getOrDefault(AccessoryDTO.StatType.VIDA, 0.0));
         aplicarAtributo(p, Attribute.GENERIC_ATTACK_DAMAGE, keyFuerza, stats.getOrDefault(AccessoryDTO.StatType.FUERZA, 0.0));
         aplicarAtributo(p, Attribute.GENERIC_MOVEMENT_SPEED, keyVelocidad, stats.getOrDefault(AccessoryDTO.StatType.VELOCIDAD, 0.0));
         aplicarAtributo(p, Attribute.GENERIC_ARMOR, keyArmadura, stats.getOrDefault(AccessoryDTO.StatType.ARMADURA, 0.0));
 
-        // 2. 🟢 ARQUITECTURA LIMPIA: Guardamos la energía extra en el NexoUser
         int energiaExtra = stats.getOrDefault(AccessoryDTO.StatType.ENERGIA_CUSTOM, 0.0).intValue();
         NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
         if (user != null) {
             user.setEnergiaExtraAccesorios(energiaExtra);
         }
 
-        p.sendMessage(NexoColor.parse("&#00E5FF✨ Enlace de Hardware Estable. Poder de Red: &#FFAA00<bold>" + event.getNexoPower() + " PX</bold>"));
+        p.sendMessage(NexoColor.parse("&#00f5ff✨ Enlace de Hardware Estable. Poder de Red: &#ff00ff<bold>" + event.getNexoPower() + " PX</bold>"));
     }
 
     private void aplicarAtributo(Player p, Attribute atributo, NamespacedKey key, double valor) {
         AttributeInstance instancia = p.getAttribute(atributo);
         if (instancia == null) return;
 
-        // Limpieza de modificadores anteriores para evitar bug de stats infinitos
         for (AttributeModifier mod : instancia.getModifiers()) {
             if (mod.getKey().equals(key)) {
                 instancia.removeModifier(mod);
             }
         }
 
-        // Si hay un valor que agregar, lo añadimos
         if (valor > 0) {
             AttributeModifier modificador = new AttributeModifier(key, valor, AttributeModifier.Operation.ADD_NUMBER);
             instancia.addModifier(modificador);
         }
     }
 
-    // ==========================================
-    // 💖 MECÁNICA MÍTICA: EL CORAZÓN DEL NEXO
-    // ==========================================
     @EventHandler
     public void alMorir(EntityResurrectEvent event) {
         if (event.getEntity() instanceof Player p) {
-            // Si el evento está cancelado, significa que el jugador va a morir (no tiene Totem en la mano)
             if (event.isCancelled() && manager.usuariosCorazonNexo.contains(p.getUniqueId())) {
 
                 long ahora = System.currentTimeMillis();
-                long cooldownMilis = 3600 * 1000L; // 1 Hora en milisegundos
+                long cooldownMilis = 3600 * 1000L;
 
                 if (!cooldownCorazon.containsKey(p.getUniqueId()) || (ahora - cooldownCorazon.get(p.getUniqueId())) > cooldownMilis) {
 
-                    // ¡REVIVIR!
                     event.setCancelled(false);
                     cooldownCorazon.put(p.getUniqueId(), ahora);
 
-                    p.setHealth(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.5); // Revive con 50% HP
+                    p.setHealth(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.5);
                     p.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, p.getLocation(), 150);
                     p.playSound(p.getLocation(), Sound.ITEM_TOTEM_USE, 1f, 0.5f);
 
                     p.sendTitle(
-                            serialize("&#00E5FF<bold>MILAGRO DE HARDWARE</bold>"),
-                            serialize("&#AAAAAAEl Corazón del Nexo ha purgado tus fallos vitales."),
+                            serialize("&#00f5ff<bold>MILAGRO DE HARDWARE</bold>"),
+                            serialize("&#1c0f2aEl Corazón del Nexo ha purgado tus fallos vitales."),
                             10, 60, 10
                     );
                 }
@@ -173,9 +151,6 @@ public class AccesoriosListener implements Listener {
         }
     }
 
-    // ==========================================
-    // 🧹 PREVENCIÓN DE FUGAS DE MEMORIA (RAM)
-    // ==========================================
     @EventHandler
     public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
         cooldownCorazon.remove(event.getPlayer().getUniqueId());

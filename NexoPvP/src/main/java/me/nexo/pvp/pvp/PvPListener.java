@@ -1,6 +1,6 @@
 package me.nexo.pvp.pvp;
 
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
+import me.nexo.core.utils.NexoColor;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -33,25 +33,19 @@ public class PvPListener implements Listener {
         if (atacante != null && event.getEntity() instanceof Player victima) {
             if (atacante.equals(victima)) return;
 
-            // 🌟 VERIFICAR ZONA SEGURA (NexoProtections)
             if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
                 me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(victima.getLocation());
 
                 if (stone != null && !stone.getFlag("pvp")) {
-
-                    // 🌟 MODO HONOR: ¿Están en guerra? Si es así, IGNORAMOS la zona segura.
                     boolean ignorarProteccion = false;
                     if (Bukkit.getPluginManager().isPluginEnabled("NexoWar")) {
                         ignorarProteccion = me.nexo.war.NexoWar.getPlugin(me.nexo.war.NexoWar.class).getWarManager().estanEnGuerraActiva(atacante.getUniqueId(), victima.getUniqueId());
                     }
 
                     if (!ignorarProteccion) {
-                        atacante.sendMessage(NexoColor.parse("&#FF5555[!] Bloqueo de Armamento: &#AAAAAAEl objetivo se encuentra en una zona neutral."));
+                        atacante.sendMessage(NexoColor.parse("&#8b0000[!] Bloqueo de Armamento: &#1c0f2aEl objetivo se encuentra en una zona neutral."));
                         event.setCancelled(true);
-                        return; // Cortamos el evento antes de que entren en combate
-                    } else {
-                        // Opcional: Avisarle que está en territorio enemigo
-                        // atacante.sendMessage(NexoColor.parse("&#FF5555[!] ALERTA TÁCTICA: Fuego autorizado en territorio hostil."));
+                        return;
                     }
                 }
             }
@@ -66,9 +60,6 @@ public class PvPListener implements Listener {
         }
     }
 
-    // ==========================================
-    // 🏆 SISTEMA DE HONOR Y BOUNTY
-    // ==========================================
     @EventHandler
     public void onMuerte(PlayerDeathEvent event) {
         Player victima = event.getEntity();
@@ -82,15 +73,13 @@ public class PvPListener implements Listener {
 
             int honorActual = manager.puntosHonor.getOrDefault(idAsesino, 0) + 1;
             manager.puntosHonor.put(idAsesino, honorActual);
-            asesino.sendMessage(NexoColor.parse("&#FFAA00⚔ <bold>OBJETIVO NEUTRALIZADO:</bold> &#AAAAAA" + victima.getName() + " &#55FF55(+1 Honor)"));
+            asesino.sendMessage(NexoColor.parse("&#ff00ff⚔ <bold>OBJETIVO NEUTRALIZADO:</bold> &#1c0f2a" + victima.getName() + " &#00f5ff(+1 Honor)"));
 
             int rachaVictima = manager.rachaAsesinatos.getOrDefault(idVictima, 0);
 
             if (rachaVictima >= 3) {
-                // 🌟 CORRECCIÓN: Usamos Bukkit.broadcast() para enviar el Component
-                Bukkit.broadcast(NexoColor.parse("&#00E5FF<bold>[CAZARRECOMPENSAS]</bold> &#FFFFFF" + asesino.getName() + " &#AAAAAAha cobrado el contrato por la cabeza de &#FF5555" + victima.getName() + "&#AAAAAA!"));
-
-                asesino.sendMessage(NexoColor.parse("&#00E5FF[💎] <bold>Bounty Reclamado:</bold> &#AAAAAATransferencia de +5 Honor y recurso primario completada."));
+                Bukkit.broadcast(NexoColor.parse("&#00f5ff<bold>[CAZARRECOMPENSAS]</bold> &#1c0f2a" + asesino.getName() + " &#1c0f2aha cobrado el contrato por la cabeza de &#8b0000" + victima.getName() + "&#1c0f2a!"));
+                asesino.sendMessage(NexoColor.parse("&#00f5ff[💎] <bold>Bounty Reclamado:</bold> &#1c0f2aTransferencia de +5 Honor y recurso primario completada."));
                 manager.puntosHonor.put(idAsesino, honorActual + 5);
                 asesino.getInventory().addItem(new ItemStack(Material.DIAMOND));
                 asesino.playSound(asesino.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
@@ -100,11 +89,9 @@ public class PvPListener implements Listener {
             manager.rachaAsesinatos.put(idAsesino, rachaAsesino);
 
             if (rachaAsesino == 3) {
-                // 🌟 CORRECCIÓN: Usamos Bukkit.broadcast()
-                Bukkit.broadcast(NexoColor.parse("&#FF5555<bold>[OBJETIVO PRIORITARIO]</bold> &#FFFFFF" + asesino.getName() + " &#AAAAAAestá en racha letal (3 Kills). ¡Contrato de caza emitido!"));
+                Bukkit.broadcast(NexoColor.parse("&#8b0000<bold>[OBJETIVO PRIORITARIO]</bold> &#1c0f2a" + asesino.getName() + " &#1c0f2aestá en racha letal (3 Kills). ¡Contrato de caza emitido!"));
             } else if (rachaAsesino > 3) {
-                // 🌟 CORRECCIÓN: Usamos Bukkit.broadcast()
-                Bukkit.broadcast(NexoColor.parse("&#FF5555<bold>[AMENAZA NIVEL OMEGA]</bold> &#FFFFFF" + asesino.getName() + " &#AAAAAAha alcanzado " + rachaAsesino + " Kills consecutivas!"));
+                Bukkit.broadcast(NexoColor.parse("&#8b0000<bold>[AMENAZA NIVEL OMEGA]</bold> &#1c0f2a" + asesino.getName() + " &#1c0f2aha alcanzado " + rachaAsesino + " Kills consecutivas!"));
             }
         }
 
@@ -117,8 +104,7 @@ public class PvPListener implements Listener {
         if (manager.estaEnCombate(p)) {
             p.setHealth(0.0);
             manager.enCombate.remove(p.getUniqueId());
-            // 🌟 CORRECCIÓN: Usamos Bukkit.broadcast() en lugar de Bukkit.broadcastMessage()
-            Bukkit.broadcast(NexoColor.parse("&#FF5555☠ <bold>DESCONEXIÓN COBARDE:</bold> &#FFFFFF" + p.getName() + " &#AAAAAAevadió el combate y sus sistemas fueron purgados."));
+            Bukkit.broadcast(NexoColor.parse("&#8b0000☠ <bold>DESCONEXIÓN COBARDE:</bold> &#1c0f2a" + p.getName() + " &#1c0f2aevadió el combate y sus sistemas fueron purgados."));
         }
     }
 }

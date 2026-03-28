@@ -6,16 +6,21 @@ import me.nexo.core.utils.NexoColor;
 import org.bukkit.Bukkit;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.NamespacedKey;
 
 import java.util.UUID;
 
 public class HudTask extends BukkitRunnable {
 
     private final NexoCore plugin;
+    private final NamespacedKey classKey;
 
     public HudTask(NexoCore plugin) {
         this.plugin = plugin;
+        this.classKey = new NamespacedKey("nexoitems", "nexo_class");
     }
 
     @Override
@@ -26,31 +31,15 @@ public class HudTask extends BukkitRunnable {
             UUID id = p.getUniqueId();
             NexoUser user = NexoAPI.getInstance().getUserLocal(id);
 
-            int maxEnergia = 100;
-            int energiaActual = 100;
-            
-            // 🌟 VALIDACIÓN DE LA BENDICIÓN (Booster Cookie)
+            // 1. LÓGICA DE BENDICIÓN (Booster Cookie)
             String voidIcon = "";
-
-            if (user != null) {
-                int nivelNexo = user.getNexoNivel();
-                maxEnergia = 100 + ((nivelNexo - 1) * 20) + user.getEnergiaExtraAccesorios();
-                energiaActual = user.getEnergiaMineria();
-
-                if (energiaActual < maxEnergia) {
-                    int nuevaEnergia = Math.min(energiaActual + 5, maxEnergia);
-                    user.setEnergiaMineria(nuevaEnergia);
-                    energiaActual = nuevaEnergia;
-                }
-                
-                // 🌟 Icono Magenta Eléctrico si está activo
-                if (user.isVoidBlessingActive()) {
-                    voidIcon = " &#ff00ff✧ ";
-                }
+            if (user != null && user.isVoidBlessingActive()) {
+                voidIcon = " &#ff00ff✧";
             }
 
+            // 2. LÓGICA DE MANÁ (AuraSkills u otro)
             int manaActual = 0;
-            int maxMana = 0;
+            int maxMana = 100;
             try {
                 dev.aurelium.auraskills.api.user.SkillsUser userAura = dev.aurelium.auraskills.api.AuraSkillsApi.get().getUser(id);
                 if (userAura != null) {
@@ -59,15 +48,65 @@ public class HudTask extends BukkitRunnable {
                 }
             } catch (Exception ignored) {}
 
-            int hpActual = (int) Math.ceil(p.getHealth());
-            int hpMax = 20;
-            if (p.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
-                hpMax = (int) p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
+            // Si tiene el Set de Inquisidor equipado, su maná máximo es x2 visualmente y funcionalmente
+            if (hasFullSet(p, "INQUISITOR")) {
+                maxMana *= 2; 
+                // Aquí podrías sumar maná extra a manaActual si regenera rápido
             }
 
-            // 🌟 NATIVO DE PAPER: Enviamos el HUD añadiendo el icono del vacío al final
-            String hudFormat = "&#ff4b2b❤ " + hpActual + "/" + hpMax + "   &#00fbff💧 " + manaActual + "/" + maxMana + "   &#fbd72b⚡ " + energiaActual + "/" + maxEnergia + voidIcon;
+            // 3. BARRA DE MANÁ VISUAL [ ■■■■□ ]
+            String manaBar = buildProgressBar(manaActual, maxMana, 5, "&#00f5ff■", "&#1c0f2a■");
+
+            // 4. ESTADO DE CLASE O SKILL ACTIVA
+            String activeFocus = "Ninguna";
+            if (hasFullSet(p, "ASSASSIN")) activeFocus = "&#8b0000Asesino";
+            else if (hasFullSet(p, "INQUISITOR")) activeFocus = "&#ff00ffInquisidor";
+            else activeFocus = "&#1c0f2aAventurero";
+
+            // 5. RENDERIZADO FINAL DEL ACTION BAR (Vivid Void Protocol)
+            // Ejemplo: [ ■■■■□ ] 80/100 MP | Clase: Inquisidor ✧
+            String hudFormat = String.format("%s &#00f5ff%d/%d MP &#1c0f2a| &#00f5ffClase: %s%s", 
+                    manaBar, manaActual, maxMana, activeFocus, voidIcon);
+
             p.sendActionBar(NexoColor.parse(hudFormat));
         }
+    }
+
+    // 🌟 MOTOR DE RENDERIZADO DE BARRAS (Ultra ligero)
+    private String buildProgressBar(int current, int max, int totalBars, String filledSymbol, String emptySymbol) {
+        if (max <= 0) max = 1;
+        float percent = (float) current / max;
+        int progressBars = (int) (totalBars * percent);
+
+        StringBuilder bar = new StringBuilder("&#1c0f2a[ ");
+        for (int i = 0; i < totalBars; i++) {
+            if (i < progressBars) bar.append(filledSymbol);
+            else bar.append(emptySymbol);
+        }
+        bar.append(" &#1c0f2a]");
+        return bar.toString();
+    }
+
+    // Validador rápido de Sets para el HUD
+    private boolean hasFullSet(Player player, String targetClass) {
+        if (player.getInventory().getHelmet() == null) return false;
+        String helmClass = getClassTag(player.getInventory().getHelmet());
+        if (helmClass == null || !helmClass.equalsIgnoreCase(targetClass)) return false;
+
+        String chestClass = getClassTag(player.getInventory().getChestplate());
+        String legsClass = getClassTag(player.getInventory().getLeggings());
+        String bootsClass = getClassTag(player.getInventory().getBoots());
+
+        return targetClass.equalsIgnoreCase(chestClass) && 
+               targetClass.equalsIgnoreCase(legsClass) && 
+               targetClass.equalsIgnoreCase(bootsClass);
+    }
+
+    private String getClassTag(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) return null;
+        if (item.getItemMeta().getPersistentDataContainer().has(classKey, PersistentDataType.STRING)) {
+            return item.getItemMeta().getPersistentDataContainer().get(classKey, PersistentDataType.STRING);
+        }
+        return null;
     }
 }

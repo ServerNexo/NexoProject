@@ -7,11 +7,10 @@ import me.nexo.colecciones.data.CollectionCategory;
 import me.nexo.colecciones.data.CollectionItem;
 import me.nexo.colecciones.data.Tier;
 import me.nexo.core.NexoCore;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.permissions.PermissionAttachment;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
@@ -24,16 +23,12 @@ public class CollectionManager {
 
     private final NexoColecciones plugin;
 
-    // 🎨 PALETA HEX - CONSTANTES DEL VACÍO
-    private static final String BC_DIVIDER = "&#434343=======================================";
-    private static final String MSG_LEVEL_UP_TITLE = "&#fbd72b<bold>⭐ ¡NUEVO NIVEL DE COLECCIÓN ALCANZADO!</bold>";
-    private static final String MSG_LEVEL_UP_DESC = "&#e0e0e0Has alcanzado el Nivel %level% en: &#00fbff%item%";
+    private static final String BC_DIVIDER = "&#1c0f2a=======================================";
+    private static final String MSG_LEVEL_UP_TITLE = "&#ff00ff<bold>⭐ ¡NUEVO NIVEL DE COLECCIÓN ALCANZADO!</bold>";
+    private static final String MSG_LEVEL_UP_DESC = "&#1c0f2aHas alcanzado el Nivel %level% en: &#00f5ff%item%";
+    private static final String MSG_REWARD_CLAIMED = "&#00f5ff[✓] <bold>RECOMPENSA RECLAMADA:</bold> &#1c0f2aEl vacío te ha entregado su poder.";
+    private static final String BC_MAX_LEVEL = "&#1c0f2a[&#ff00ff<bold>NEXO</bold>&#1c0f2a] &#00f5ff¡El operario &#ff00ff%player% &#00f5ffha dominado por completo la colección de &#ff00ff%item%&#00f5ff!";
 
-    private static final String MSG_REWARD_CLAIMED = "&#55FF55[✓] <bold>RECOMPENSA RECLAMADA:</bold> &#e0e0e0El vacío te ha entregado su poder.";
-
-    private static final String BC_MAX_LEVEL = "&#434343[&#fbd72b<bold>NEXO</bold>&#434343] &#00fbff¡El operario &#a8ff78%player% &#00fbffha dominado por completo la colección de &#fbd72b%item%&#00fbff!";
-
-    // Mapeo en Memoria
     private Map<String, CollectionCategory> categoriasRegistradas = new HashMap<>();
     private final Map<UUID, CollectionProfile> perfilesJugadores = new ConcurrentHashMap<>();
     private final Gson gson = new Gson();
@@ -42,35 +37,24 @@ public class CollectionManager {
         this.plugin = plugin;
     }
 
-    // ==========================================================
-    // ⚙️ MOTOR DE CARGA (Lee del Config y Base de Datos)
-    // ==========================================================
-
     public void cargarDesdeConfig() {
-        // Usa el nuevo motor de ensamblaje que creamos en ColeccionesConfig
         this.categoriasRegistradas = plugin.getColeccionesConfig().cargarCategoriasEnRam();
         plugin.getLogger().info("Se han cargado " + categoriasRegistradas.size() + " categorías de colecciones.");
     }
 
     public void loadPlayerFromDatabase(UUID uuid, DataSource dataSource) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            // Actualiza tu SQL para leer también la columna 'claimed_tiers' (Asegúrate de crear esta columna en tu DB)
             String sql = "SELECT collections_data, claimed_tiers FROM nexo_collections WHERE uuid = ?";
-
             try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, uuid.toString());
                 ResultSet rs = ps.executeQuery();
-
                 if (rs.next()) {
                     String jsonProgress = rs.getString("collections_data");
                     String jsonClaimed = rs.getString("claimed_tiers");
-
                     Map<String, Integer> mapProgress = gson.fromJson(jsonProgress, new TypeToken<Map<String, Integer>>(){}.getType());
                     Map<String, Set<Integer>> mapClaimed = gson.fromJson(jsonClaimed, new TypeToken<Map<String, Set<Integer>>>(){}.getType());
-
                     if (mapProgress == null) mapProgress = new HashMap<>();
                     if (mapClaimed == null) mapClaimed = new HashMap<>();
-
                     perfilesJugadores.put(uuid, new CollectionProfile(uuid, mapProgress, mapClaimed));
                 } else {
                     perfilesJugadores.put(uuid, new CollectionProfile(uuid, new HashMap<>(), new HashMap<>()));
@@ -82,12 +66,8 @@ public class CollectionManager {
         });
     }
 
-    // ==========================================================
-    // 🧮 MOTOR DE PROGRESO SILENCIOSO Y TÍTULOS
-    // ==========================================================
-
     public void addProgress(Player player, String itemId, int amount) {
-        itemId = itemId.toLowerCase(); // Normalizamos IDs
+        itemId = itemId.toLowerCase();
         CollectionItem item = getItemGlobal(itemId);
         if (item == null) return;
 
@@ -98,39 +78,26 @@ public class CollectionManager {
         profile.addProgress(itemId, amount);
         int nivelNuevo = calcularNivel(item, profile.getProgress(itemId));
 
-        // Si subió de nivel, le avisamos con un TÍTULO EN PANTALLA y Mensajes (Bedrock Compatible)
         if (nivelNuevo > nivelViejo) {
-
-            // 🌟 PARCHE A: Título masivo en pantalla (Usando LegacySection para colores seguros en Bedrock/Java)
-            String titleStr = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#fbd72b⭐ NIVEL " + nivelNuevo + " ⭐"));
-            String subStr = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#00fbff¡" + item.getNombre() + " subió de nivel!"));
-
-            player.sendTitle(titleStr, subStr, 10, 70, 20);
-
-            // Mensajes en el Chat
-            player.sendMessage(NexoColor.parse(BC_DIVIDER));
-            player.sendMessage(NexoColor.parse(MSG_LEVEL_UP_TITLE));
-            player.sendMessage(NexoColor.parse(MSG_LEVEL_UP_DESC.replace("%level%", String.valueOf(nivelNuevo)).replace("%item%", item.getNombre())));
-            player.sendMessage(NexoColor.parse(BC_DIVIDER));
-
-            // Sonido Épico
+            CrossplayUtils.sendTitle(player, "&#ff00ff⭐ NIVEL " + nivelNuevo + " ⭐", "&#00f5ff¡" + item.getNombre() + " subió de nivel!");
+            CrossplayUtils.sendMessage(player, BC_DIVIDER);
+            CrossplayUtils.sendMessage(player, MSG_LEVEL_UP_TITLE);
+            CrossplayUtils.sendMessage(player, MSG_LEVEL_UP_DESC.replace("%level%", String.valueOf(nivelNuevo)).replace("%item%", item.getNombre()));
+            CrossplayUtils.sendMessage(player, BC_DIVIDER);
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
 
-            // Anuncio global si alcanzó el nivel máximo
             if (nivelNuevo == item.getMaxTier()) {
-                Bukkit.broadcast(NexoColor.parse(" "));
-                Bukkit.broadcast(NexoColor.parse(BC_MAX_LEVEL.replace("%player%", player.getName()).replace("%item%", item.getNombre())));
-                Bukkit.broadcast(NexoColor.parse(" "));
+                CrossplayUtils.broadcastMessage(" ");
+                CrossplayUtils.broadcastMessage(BC_MAX_LEVEL.replace("%player%", player.getName()).replace("%item%", item.getNombre()));
+                CrossplayUtils.broadcastMessage(" ");
             }
         }
     }
 
     public int calcularNivel(CollectionItem item, int cantidadFarmeada) {
         int nivelAlcanzado = 0;
-        // Ordenamos los tiers de menor a mayor
         List<Integer> niveles = new ArrayList<>(item.getTiers().keySet());
         Collections.sort(niveles);
-
         for (int nivel : niveles) {
             Tier tier = item.getTier(nivel);
             if (cantidadFarmeada >= tier.getRequerido()) {
@@ -142,34 +109,20 @@ public class CollectionManager {
         return nivelAlcanzado;
     }
 
-    // ==========================================================
-    // 🎁 MOTOR DE RECOMPENSAS MANUAL
-    // ==========================================================
-
     public void reclamarRecompensa(Player player, String itemId, int targetTier) {
         CollectionProfile profile = perfilesJugadores.get(player.getUniqueId());
         if (profile == null) return;
-
         CollectionItem item = getItemGlobal(itemId);
         if (item == null) return;
-
         Tier tier = item.getTier(targetTier);
         if (tier == null) return;
-
-        // Verificar que tiene suficiente progreso
         if (profile.getProgress(itemId) < tier.getRequerido()) return;
-
-        // Verificar que no lo haya reclamado ya
         if (profile.hasClaimedTier(itemId, targetTier)) return;
 
-        // Entregar la recompensa
         ejecutarRecompensas(player, tier.getRecompensas());
-
-        // Marcar como reclamado
         profile.markTierAsClaimed(itemId, targetTier);
 
-        // Efectos épicos (Dopamina)
-        player.sendMessage(NexoColor.parse(MSG_REWARD_CLAIMED));
+        CrossplayUtils.sendMessage(player, MSG_REWARD_CLAIMED);
         player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
         player.getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, player.getLocation().add(0, 1, 0), 100, 0.5, 0.5, 0.5, 0.1);
     }
@@ -177,79 +130,58 @@ public class CollectionManager {
     private void ejecutarRecompensas(Player player, List<String> acciones) {
         for (String accion : acciones) {
             String pName = player.getName();
-
             if (accion.startsWith("[comando] ")) {
                 String cmd = accion.replace("[comando] ", "").replace("{player}", pName).trim();
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-
             } else if (accion.startsWith("[permiso] ")) {
                 String perm = accion.replace("[permiso] ", "").replace("{player}", pName).trim();
-                // Otorga el permiso a través del sistema base de Bukkit (Temporal) o ejecuta comando LuckPerms
                 Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + pName + " permission set " + perm + " true");
             }
         }
     }
 
-    // ==========================================================
-    // 🏆 SISTEMA DE TOP GLOBAL (SUPABASE)
-    // ==========================================================
-
     public void calcularTopAsync(Player player, String itemId) {
         CollectionItem cItem = getItemGlobal(itemId);
-
         if (cItem == null) {
-            player.sendMessage(NexoColor.parse("&#ff4b2b[!] Error: Esa colección no existe en la base de datos."));
+            CrossplayUtils.sendMessage(player, "&#8b0000[!] Error: Esa colección no existe en la base de datos.");
             return;
         }
-
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            // Consulta SQL adaptada para leer de tu JSONB
             String sql = "SELECT j.name, CAST(c.collections_data->>? AS INTEGER) as amount " +
                     "FROM nexo_collections c " +
                     "JOIN jugadores j ON c.uuid = j.uuid " +
                     "WHERE c.collections_data ? ? " +
                     "ORDER BY amount DESC LIMIT 5";
-
             try (Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
-
-                // Usamos el ID exacto que se guarda en el JSON
                 ps.setString(1, cItem.getId());
                 ps.setString(2, cItem.getId());
                 ResultSet rs = ps.executeQuery();
-
-                List<net.kyori.adventure.text.Component> lineasTop = new ArrayList<>();
+                List<String> lineasTop = new ArrayList<>();
                 int rank = 1;
                 while (rs.next()) {
                     String pName = rs.getString("name");
                     int amt = rs.getInt("amount");
-                    lineasTop.add(NexoColor.parse("&#fbd72b" + rank + ". &#a8ff78" + pName + " &#434343- &#00fbff" + amt + " &#e0e0e0farmeados"));
+                    lineasTop.add("&#ff00ff" + rank + ". &#00f5ff" + pName + " &#1c0f2a- &#ff00ff" + amt + " &#1c0f2afarmeados");
                     rank++;
                 }
-
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.sendMessage(NexoColor.parse(BC_DIVIDER));
-                    player.sendMessage(NexoColor.parse("&#fbd72b<bold>🏆 TOP 5 GLOBAL: </bold>" + cItem.getNombre()));
-
+                    CrossplayUtils.sendMessage(player, BC_DIVIDER);
+                    CrossplayUtils.sendMessage(player, "&#ff00ff<bold>🏆 TOP 5 GLOBAL: </bold>" + cItem.getNombre());
                     if (lineasTop.isEmpty()) {
-                        player.sendMessage(NexoColor.parse("&#434343Nadie ha farmeado este recurso todavía..."));
+                        CrossplayUtils.sendMessage(player, "&#1c0f2aNadie ha farmeado este recurso todavía...");
                     } else {
-                        for (net.kyori.adventure.text.Component l : lineasTop) {
-                            player.sendMessage(l);
+                        for (String l : lineasTop) {
+                            CrossplayUtils.sendMessage(player, l);
                         }
                     }
-                    player.sendMessage(NexoColor.parse(BC_DIVIDER));
+                    CrossplayUtils.sendMessage(player, BC_DIVIDER);
                 });
-
             } catch (Exception e) {
-                Bukkit.getScheduler().runTask(plugin, () -> player.sendMessage(NexoColor.parse("&#ff4b2b[!] Error crítico de red al contactar con la base de datos.")));
+                Bukkit.getScheduler().runTask(plugin, () -> CrossplayUtils.sendMessage(player, "&#8b0000[!] Error crítico de red al contactar con la base de datos."));
             }
         });
     }
-
-    // ==========================================================
-    // 🔍 UTILIDADES Y GETTERS
-    // ==========================================================
 
     public CollectionItem getItemGlobal(String itemId) {
         for (CollectionCategory cat : categoriasRegistradas.values()) {
@@ -264,5 +196,4 @@ public class CollectionManager {
     public CollectionProfile getProfile(UUID uuid) { return perfilesJugadores.get(uuid); }
     public void removeProfile(UUID uuid) { perfilesJugadores.remove(uuid); }
     public Map<UUID, CollectionProfile> getPerfiles() { return perfilesJugadores; }
-
 }

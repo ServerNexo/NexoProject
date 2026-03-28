@@ -1,6 +1,6 @@
 package me.nexo.pvp.pvp;
 
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
+import me.nexo.core.utils.NexoColor;
 import me.nexo.pvp.NexoPvP;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -17,7 +17,6 @@ public class PvPManager {
     public final Set<UUID> pvpActivo = ConcurrentHashMap.newKeySet();
     public final Map<UUID, Long> enCombate = new ConcurrentHashMap<>();
 
-    // 🏆 SISTEMA DE HONOR Y BOUNTY (Prueba en RAM)
     public final Map<UUID, Integer> puntosHonor = new ConcurrentHashMap<>();
     public final Map<UUID, Integer> rachaAsesinatos = new ConcurrentHashMap<>();
 
@@ -34,16 +33,16 @@ public class PvPManager {
         UUID id = p.getUniqueId();
 
         if (estaEnCombate(p)) {
-            p.sendMessage(NexoColor.parse("&#FF5555[!] Error de Seguridad: No puedes desactivar la hostilidad con un enlace de combate activo."));
+            p.sendMessage(NexoColor.parse("&#8b0000[!] Error de Seguridad: No puedes desactivar la hostilidad con un enlace de combate activo."));
             return;
         }
 
         if (pvpActivo.contains(id)) {
             pvpActivo.remove(id);
-            p.sendMessage(NexoColor.parse("&#55FF55[✓] <bold>PROTOCOLO DE PAZ:</bold> &#AAAAAAHostilidad desactivada. Escudos neuronales activos."));
+            p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>PROTOCOLO DE PAZ:</bold> &#1c0f2aHostilidad desactivada. Escudos neuronales activos."));
         } else {
             pvpActivo.add(id);
-            p.sendMessage(NexoColor.parse("&#FF5555[!] <bold>PROTOCOLO DE GUERRA:</bold> &#AAAAAAHostilidad activada. Sistemas de armamento en línea."));
+            p.sendMessage(NexoColor.parse("&#8b0000[!] <bold>PROTOCOLO DE GUERRA:</bold> &#1c0f2aHostilidad activada. Sistemas de armamento en línea."));
         }
     }
 
@@ -51,10 +50,10 @@ public class PvPManager {
         long expiracion = System.currentTimeMillis() + 15000L;
 
         if (!estaEnCombate(p1)) {
-            p1.sendMessage(NexoColor.parse("&#FF5555<bold>¡ALERTA DE COMBATE!</bold> &#AAAAAAEnlace táctico detectado (15s). No te desconectes."));
+            p1.sendMessage(NexoColor.parse("&#8b0000<bold>¡ALERTA DE COMBATE!</bold> &#1c0f2aEnlace táctico detectado (15s). No te desconectes."));
         }
         if (!estaEnCombate(p2)) {
-            p2.sendMessage(NexoColor.parse("&#FF5555<bold>¡ALERTA DE COMBATE!</bold> &#AAAAAAEnlace táctico detectado (15s). No te desconectes."));
+            p2.sendMessage(NexoColor.parse("&#8b0000<bold>¡ALERTA DE COMBATE!</bold> &#1c0f2aEnlace táctico detectado (15s). No te desconectes."));
         }
 
         enCombate.put(p1.getUniqueId(), expiracion);
@@ -73,7 +72,7 @@ public class PvPManager {
                     enCombate.remove(entry.getKey());
                     Player p = Bukkit.getPlayer(entry.getKey());
                     if (p != null) {
-                        p.sendMessage(NexoColor.parse("&#55FF55[✓] Enlace de combate finalizado. Sistemas estabilizados."));
+                        p.sendMessage(NexoColor.parse("&#00f5ff[✓] Enlace de combate finalizado. Sistemas estabilizados."));
                     }
                 }
             }
