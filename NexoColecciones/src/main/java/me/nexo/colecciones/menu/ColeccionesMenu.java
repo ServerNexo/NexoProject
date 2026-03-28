@@ -19,6 +19,7 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ColeccionesMenu implements InventoryHolder {
 
@@ -41,17 +42,16 @@ public class ColeccionesMenu implements InventoryHolder {
     }
 
     public void openMain() {
-        this.inventory = Bukkit.createInventory(this, 27, CrossplayUtils.parseCrossplay(player, "&#00f5ffGrimorio del Vacío"));
+        this.inventory = Bukkit.createInventory(this, 27, CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.colecciones.titulo")));
         for (CollectionCategory cat : plugin.getCollectionManager().getCategorias().values()) {
             ItemStack item = new ItemStack(cat.getIcono());
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
                 meta.displayName(CrossplayUtils.parseCrossplay(player, cat.getNombre()));
-                List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aExplora las colecciones"));
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2ade esta rama arcana."));
-                lore.add(net.kyori.adventure.text.Component.empty());
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff¡Clic para abrir!"));
+                List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.colecciones.categoria-lore");
+                List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
+                        .map(line -> CrossplayUtils.parseCrossplay(player, line))
+                        .collect(Collectors.toList());
                 meta.lore(lore);
                 meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
                 meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_category");
@@ -82,10 +82,11 @@ public class ColeccionesMenu implements InventoryHolder {
                 item = new ItemStack(Material.PURPLE_DYE);
                 meta = item.getItemMeta();
                 if (meta != null) {
-                    meta.displayName(CrossplayUtils.parseCrossplay(player, "&#8b0000Ítem Desconocido"));
-                    List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                    lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aAún no has descubierto"));
-                    lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aesta materia en el mundo."));
+                    meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.colecciones.item-desconocido.titulo")));
+                    List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.colecciones.item-desconocido.lore");
+                    List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
+                            .map(line -> CrossplayUtils.parseCrossplay(player, line))
+                            .collect(Collectors.toList());
                     meta.lore(lore);
                 }
             } else {
@@ -93,11 +94,13 @@ public class ColeccionesMenu implements InventoryHolder {
                 meta = item.getItemMeta();
                 if (meta != null) {
                     meta.displayName(CrossplayUtils.parseCrossplay(player, cItem.getNombre()));
-                    List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                    lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aNivel Alcanzado: &#00f5ff" + nivelActual + " / " + cItem.getMaxTier()));
-                    lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aProgreso Total: &#ff00ff" + progreso));
-                    lore.add(net.kyori.adventure.text.Component.empty());
-                    lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff¡Clic para ver las recompensas!"));
+                    List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.colecciones.item-descubierto.lore");
+                    List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
+                            .map(line -> CrossplayUtils.parseCrossplay(player, line
+                                    .replace("%level%", String.valueOf(nivelActual))
+                                    .replace("%max_tier%", String.valueOf(cItem.getMaxTier()))
+                                    .replace("%progress%", String.valueOf(progreso))))
+                            .collect(Collectors.toList());
                     meta.lore(lore);
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_item");
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING, cItem.getId());
@@ -119,7 +122,7 @@ public class ColeccionesMenu implements InventoryHolder {
         CollectionItem cItem = plugin.getCollectionManager().getItemGlobal(itemId);
         if (cItem == null) return;
 
-        this.inventory = Bukkit.createInventory(this, 45, CrossplayUtils.parseCrossplay(player, "&#00f5ffTiers de Colección"));
+        this.inventory = Bukkit.createInventory(this, 45, CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.colecciones.tiers.titulo")));
         CollectionProfile profile = plugin.getCollectionManager().getProfile(player.getUniqueId());
         int progreso = profile != null ? profile.getProgress(cItem.getId()) : 0;
 
@@ -139,37 +142,36 @@ public class ColeccionesMenu implements InventoryHolder {
             if (reclamado) {
                 item = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
                 meta = item.getItemMeta();
-                meta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff<bold>NIVEL " + nivel + " COMPLETADO</bold>"));
-                List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aRequería: &#00f5ff" + tier.getRequerido()));
-                lore.add(net.kyori.adventure.text.Component.empty());
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff[✓] El poder ya fluye en ti."));
+                meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.colecciones.tiers.reclamado.titulo").replace("%level%", String.valueOf(nivel))));
+                List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.colecciones.tiers.reclamado.lore");
+                List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
+                        .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%required%", String.valueOf(tier.getRequerido()))))
+                        .collect(Collectors.toList());
                 meta.lore(lore);
             } else if (desbloqueado) {
                 item = new ItemStack(Material.YELLOW_STAINED_GLASS_PANE);
                 meta = item.getItemMeta();
-                meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>⭐ NIVEL " + nivel + " ALCANZADO ⭐</bold>"));
+                meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.colecciones.tiers.listo-reclamar.titulo").replace("%level%", String.valueOf(nivel))));
                 meta.addEnchant(org.bukkit.enchantments.Enchantment.LURE, 1, true);
                 List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aRequería: &#00f5ff" + tier.getRequerido()));
-                lore.add(net.kyori.adventure.text.Component.empty());
-                for (String l : tier.getLoreRecompensa()) {
-                    lore.add(CrossplayUtils.parseCrossplay(player, l));
-                }
-                lore.add(net.kyori.adventure.text.Component.empty());
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff¡Clic para reclamar el poder!"));
+                plugin.getConfigManager().getMessages().getStringList("menus.colecciones.tiers.listo-reclamar.lore-base").forEach(line ->
+                        lore.add(CrossplayUtils.parseCrossplay(player, line.replace("%required%", String.valueOf(tier.getRequerido())))));
+                tier.getLoreRecompensa().forEach(line -> lore.add(CrossplayUtils.parseCrossplay(player, line)));
+                plugin.getConfigManager().getMessages().getStringList("menus.colecciones.tiers.listo-reclamar.lore-accion").forEach(line ->
+                        lore.add(CrossplayUtils.parseCrossplay(player, line)));
                 meta.lore(lore);
                 meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "claim_tier");
                 meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "tier_level"), PersistentDataType.INTEGER, nivel);
             } else {
                 item = new ItemStack(Material.RED_STAINED_GLASS_PANE);
                 meta = item.getItemMeta();
-                meta.displayName(CrossplayUtils.parseCrossplay(player, "&#8b0000<bold>NIVEL " + nivel + " BLOQUEADO</bold>"));
-                List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aProgreso: &#8b0000" + progreso + " / " + tier.getRequerido()));
-                lore.add(net.kyori.adventure.text.Component.empty());
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aMisterios aguardan a quienes"));
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2ademuestren su valía..."));
+                meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.colecciones.tiers.bloqueado.titulo").replace("%level%", String.valueOf(nivel))));
+                List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.colecciones.tiers.bloqueado.lore");
+                List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
+                        .map(line -> CrossplayUtils.parseCrossplay(player, line
+                                .replace("%progress%", String.valueOf(progreso))
+                                .replace("%required%", String.valueOf(tier.getRequerido()))))
+                        .collect(Collectors.toList());
                 meta.lore(lore);
             }
             meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
@@ -182,11 +184,11 @@ public class ColeccionesMenu implements InventoryHolder {
 
         ItemStack info = new ItemStack(Material.NETHER_STAR);
         ItemMeta iMeta = info.getItemMeta();
-        iMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ffEstadísticas Globales"));
-        List<net.kyori.adventure.text.Component> iLore = new ArrayList<>();
-        iLore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aTu progreso: &#ff00ff" + progreso));
-        iLore.add(net.kyori.adventure.text.Component.empty());
-        iLore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff¡Clic para ver el Top 5 en Chat!"));
+        iMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.colecciones.tiers.stats-globales.titulo")));
+        List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.colecciones.tiers.stats-globales.lore");
+        List<net.kyori.adventure.text.Component> iLore = loreConfig.stream()
+                .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%progress%", String.valueOf(progreso))))
+                .collect(Collectors.toList());
         iMeta.lore(iLore);
         iMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "show_top");
         iMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING, cItem.getId());
@@ -200,7 +202,7 @@ public class ColeccionesMenu implements InventoryHolder {
     private void addBackButton(String target) {
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta meta = back.getItemMeta();
-        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff⬅ Volver"));
+        meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.colecciones.tiers.boton-volver")));
         meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "back_" + target);
         back.setItemMeta(meta);
         inventory.setItem(inventory.getSize() - 5, back);
@@ -219,7 +221,15 @@ public class ColeccionesMenu implements InventoryHolder {
     }
 
     @Override
-    public Inventory getInventory() { return inventory; }
-    public String getCategoryId() { return categoryId; }
-    public String getItemId() { return itemId; }
+    public Inventory getInventory() {
+        return inventory;
+    }
+
+    public String getCategoryId() {
+        return categoryId;
+    }
+
+    public String getItemId() {
+        return itemId;
+    }
 }

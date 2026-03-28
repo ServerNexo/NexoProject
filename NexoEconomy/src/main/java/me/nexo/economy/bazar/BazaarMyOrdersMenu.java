@@ -1,6 +1,6 @@
 package me.nexo.economy.bazar;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.economy.NexoEconomy;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -12,8 +12,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class BazaarMyOrdersMenu implements InventoryHolder {
 
@@ -27,11 +27,11 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
     }
 
     public void openMenu() {
-        this.inventory = Bukkit.createInventory(this, 54, NexoColor.parse("&#ff00ffMis Órdenes Activas"));
+        this.inventory = Bukkit.createInventory(this, 54, CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.titulo")));
 
         ItemStack loading = new ItemStack(Material.CLOCK);
         ItemMeta lMeta = loading.getItemMeta();
-        lMeta.displayName(NexoColor.parse("&#1c0f2aConsultando Base de Datos..."));
+        lMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.cargando")));
         loading.setItemMeta(lMeta);
         inventory.setItem(22, loading);
 
@@ -43,7 +43,7 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
             List<BazaarManager.ActiveOrderDTO> orders = plugin.getBazaarManager().getMisOrdenes(player.getUniqueId());
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!player.getOpenInventory().getTitle().contains("Mis Órdenes")) return;
+                if (!CrossplayUtils.getChatPlain(player, player.getOpenInventory().title()).contains("Mis Órdenes")) return;
 
                 inventory.setItem(22, new ItemStack(Material.AIR));
 
@@ -58,19 +58,18 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
                     ItemMeta meta = item.getItemMeta();
 
                     boolean isBuy = order.type.equals("BUY");
-                    String color = isBuy ? "&#00f5ff" : "&#8b0000";
-                    String tipo = isBuy ? "Compra" : "Venta";
+                    String titulo = isBuy ? plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.orden.compra") : plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.orden.venta");
+                    meta.displayName(CrossplayUtils.parseCrossplay(player, titulo));
 
-                    meta.displayName(NexoColor.parse(color + "<bold>Orden de " + tipo + "</bold>"));
-
-                    List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                    lore.add(NexoColor.parse("&#1c0f2aÍtem: &#ff00ff" + order.itemId));
-                    lore.add(NexoColor.parse("&#1c0f2aCantidad Restante: &#ff00ff" + order.amount));
-                    lore.add(NexoColor.parse("&#1c0f2aPrecio Cotizado C/U: &#ff00ff" + order.price + " 🪙"));
-                    lore.add(NexoColor.parse(" "));
-                    lore.add(NexoColor.parse("&#8b0000► Clic para CANCELAR orden"));
-
+                    List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.bazar.mis-ordenes-menu.orden.lore");
+                    List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
+                            .map(line -> CrossplayUtils.parseCrossplay(player, line
+                                    .replace("%item_id%", order.itemId)
+                                    .replace("%amount%", String.valueOf(order.amount))
+                                    .replace("%price%", order.price.toString())))
+                            .collect(Collectors.toList());
                     meta.lore(lore);
+
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "cancel_order");
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "order_id"), PersistentDataType.INTEGER, order.id);
                     item.setItemMeta(meta);
@@ -84,7 +83,7 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
                 if (orders.isEmpty()) {
                     ItemStack empty = new ItemStack(Material.BARRIER);
                     ItemMeta em = empty.getItemMeta();
-                    em.displayName(NexoColor.parse("&#8b0000No tienes órdenes activas."));
+                    em.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.vacio")));
                     empty.setItemMeta(em);
                     inventory.setItem(22, empty);
                 }
@@ -95,7 +94,7 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
     private void addBackButton() {
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta meta = back.getItemMeta();
-        meta.displayName(NexoColor.parse("&#00f5ff⬅ Volver"));
+        meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.boton-volver")));
         meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "back_main");
         back.setItemMeta(meta);
         inventory.setItem(inventory.getSize() - 5, back);
@@ -104,7 +103,7 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
     private void fillBorders() {
         ItemStack glass = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta meta = glass.getItemMeta();
-        meta.displayName(net.kyori.adventure.text.Component.empty());
+        meta.displayName(CrossplayUtils.parseCrossplay(player, " "));
         glass.setItemMeta(meta);
         for (int j = 0; j < inventory.getSize(); j++) {
             if (inventory.getItem(j) == null || inventory.getItem(j).getType().isAir()) inventory.setItem(j, glass);
@@ -112,5 +111,7 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
     }
 
     @Override
-    public Inventory getInventory() { return inventory; }
+    public Inventory getInventory() {
+        return inventory;
+    }
 }

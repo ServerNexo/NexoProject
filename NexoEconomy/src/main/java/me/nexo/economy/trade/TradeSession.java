@@ -1,9 +1,8 @@
 package me.nexo.economy.trade;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -12,14 +11,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class TradeSession {
 
-    public static final String TITLE_PLAIN = "» Canal de Intercambio";
-    public static final String TITLE_MENU = "&#1c0f2a<bold>»</bold> &#00f5ffCanal de Intercambio";
-
+    private final NexoEconomy plugin;
     private final Player player1;
     private final Player player2;
     private final Inventory inventory;
@@ -36,22 +33,23 @@ public class TradeSession {
 
     private int taskID = -1;
 
-    public TradeSession(Player player1, Player player2) {
+    public TradeSession(NexoEconomy plugin, Player player1, Player player2) {
+        this.plugin = plugin;
         this.player1 = player1;
         this.player2 = player2;
-        this.inventory = Bukkit.createInventory(null, 54, NexoColor.parse(TITLE_MENU));
+        this.inventory = Bukkit.createInventory(null, 54, CrossplayUtils.parseCrossplay(player1, plugin.getConfigManager().getMessage("menus.trade.titulo")));
         setupGUI();
     }
 
     private void setupGUI() {
-        setItem(13, Material.GOLD_INGOT, "&#ff00ff🪙 Transferir 1,000 Monedas", "&#1c0f2aClic para depositar en el fondo.");
-        setItem(22, Material.EMERALD, "&#00f5ff💎 Transferir 100 Gemas", "&#1c0f2aClic para depositar en el fondo.");
-        setItem(31, Material.AMETHYST_SHARD, "&#00f5ff💧 Transferir 10 Maná", "&#1c0f2aClic para depositar en el fondo.");
+        setItem(13, Material.GOLD_INGOT, plugin.getConfigManager().getMessage("menus.trade.transferir-monedas"), plugin.getConfigManager().getMessage("menus.trade.depositar-lore"));
+        setItem(22, Material.EMERALD, plugin.getConfigManager().getMessage("menus.trade.transferir-gemas"), plugin.getConfigManager().getMessage("menus.trade.depositar-lore"));
+        setItem(31, Material.AMETHYST_SHARD, plugin.getConfigManager().getMessage("menus.trade.transferir-mana"), plugin.getConfigManager().getMessage("menus.trade.depositar-lore"));
 
         ItemStack separator = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta sepMeta = separator.getItemMeta();
         if (sepMeta != null) {
-            sepMeta.setDisplayName(serialize(" "));
+            sepMeta.displayName(CrossplayUtils.parseCrossplay(player1, " "));
             separator.setItemMeta(sepMeta);
         }
 
@@ -62,37 +60,43 @@ public class TradeSession {
         updateReadyButtons();
     }
 
-    private void setItem(int slot, Material mat, String hexName, String... hexLore) {
+    private void setItem(int slot, Material mat, String name, String... lore) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(serialize(hexName));
-            List<String> loreList = new ArrayList<>();
-            for (String l : hexLore) loreList.add(serialize(l));
+            meta.displayName(CrossplayUtils.parseCrossplay(player1, name));
+            List<net.kyori.adventure.text.Component> loreList = new java.util.ArrayList<>();
+            for (String l : lore) {
+                loreList.add(CrossplayUtils.parseCrossplay(player1, l));
+            }
             meta.setLore(loreList);
             item.setItemMeta(meta);
         }
         inventory.setItem(slot, item);
     }
 
-    private String serialize(String hex) {
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
-    }
-
     public void updateReadyButtons() {
-        String p1Color = p1Ready ? "&#00f5ff<bold>AUTORIZADO</bold>" : "&#8b0000<bold>ESPERANDO...</bold>";
-        setItem(45, p1Ready ? Material.LIME_DYE : Material.RED_DYE, p1Color,
-                "&#1c0f2aFondo total de " + player1.getName() + ":",
-                "&#ff00ff🪙 " + p1Coins + " Monedas",
-                "&#00f5ff💎 " + p1Gems + " Gemas",
-                "&#00f5ff💧 " + p1Mana + " Maná");
+        String p1Color = p1Ready ? plugin.getConfigManager().getMessage("menus.trade.estado.autorizado") : plugin.getConfigManager().getMessage("menus.trade.estado.esperando");
+        List<String> p1LoreConfig = plugin.getConfigManager().getMessages().getStringList("menus.trade.estado.lore");
+        List<net.kyori.adventure.text.Component> p1Lore = p1LoreConfig.stream()
+                .map(line -> CrossplayUtils.parseCrossplay(player1, line
+                        .replace("%player%", player1.getName())
+                        .replace("%coins%", p1Coins.toString())
+                        .replace("%gems%", p1Gems.toString())
+                        .replace("%mana%", p1Mana.toString())))
+                .collect(Collectors.toList());
+        setItem(45, p1Ready ? Material.LIME_DYE : Material.RED_DYE, p1Color, p1Lore.stream().map(c -> "").toArray(String[]::new));
 
-        String p2Color = p2Ready ? "&#00f5ff<bold>AUTORIZADO</bold>" : "&#8b0000<bold>ESPERANDO...</bold>";
-        setItem(53, p2Ready ? Material.LIME_DYE : Material.RED_DYE, p2Color,
-                "&#1c0f2aFondo total de " + player2.getName() + ":",
-                "&#ff00ff🪙 " + p2Coins + " Monedas",
-                "&#00f5ff💎 " + p2Gems + " Gemas",
-                "&#00f5ff💧 " + p2Mana + " Maná");
+        String p2Color = p2Ready ? plugin.getConfigManager().getMessage("menus.trade.estado.autorizado") : plugin.getConfigManager().getMessage("menus.trade.estado.esperando");
+        List<String> p2LoreConfig = plugin.getConfigManager().getMessages().getStringList("menus.trade.estado.lore");
+        List<net.kyori.adventure.text.Component> p2Lore = p2LoreConfig.stream()
+                .map(line -> CrossplayUtils.parseCrossplay(player2, line
+                        .replace("%player%", player2.getName())
+                        .replace("%coins%", p2Coins.toString())
+                        .replace("%gems%", p2Gems.toString())
+                        .replace("%mana%", p2Mana.toString())))
+                .collect(Collectors.toList());
+        setItem(53, p2Ready ? Material.LIME_DYE : Material.RED_DYE, p2Color, p2Lore.stream().map(c -> "").toArray(String[]::new));
     }
 
     public void addCurrency(Player p, NexoAccount.Currency currency, BigDecimal amount) {
@@ -120,9 +124,9 @@ public class TradeSession {
     }
 
     private void iniciarCuentaRegresiva() {
-        taskID = Bukkit.getScheduler().scheduleSyncDelayedTask(NexoEconomy.getPlugin(NexoEconomy.class), this::ejecutarIntercambio, 60L);
-        player1.sendMessage(NexoColor.parse("&#ff00ff[INFO] La transacción comercial se ejecutará en 3 segundos..."));
-        player2.sendMessage(NexoColor.parse("&#ff00ff[INFO] La transacción comercial se ejecutará en 3 segundos..."));
+        taskID = Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, this::ejecutarIntercambio, 60L);
+        CrossplayUtils.sendMessage(player1, plugin.getConfigManager().getMessage("eventos.trade.session.cuenta-regresiva"));
+        CrossplayUtils.sendMessage(player2, plugin.getConfigManager().getMessage("eventos.trade.session.cuenta-regresiva"));
     }
 
     public void cancelarCuenta() {
@@ -136,25 +140,24 @@ public class TradeSession {
         transferirLado(true);
         transferirLado(false);
 
-        NexoEconomy eco = NexoEconomy.getPlugin(NexoEconomy.class);
-        transferCurrency(eco, NexoAccount.Currency.COINS, p1Coins, p2Coins);
-        transferCurrency(eco, NexoAccount.Currency.GEMS, p1Gems, p2Gems);
-        transferCurrency(eco, NexoAccount.Currency.MANA, p1Mana, p2Mana);
+        transferCurrency(NexoAccount.Currency.COINS, p1Coins, p2Coins);
+        transferCurrency(NexoAccount.Currency.GEMS, p1Gems, p2Gems);
+        transferCurrency(NexoAccount.Currency.MANA, p1Mana, p2Mana);
 
         player1.closeInventory();
         player2.closeInventory();
-        player1.sendMessage(NexoColor.parse("&#00f5ff[✓] Intercambio corporativo realizado con éxito."));
-        player2.sendMessage(NexoColor.parse("&#00f5ff[✓] Intercambio corporativo realizado con éxito."));
+        CrossplayUtils.sendMessage(player1, plugin.getConfigManager().getMessage("eventos.trade.session.intercambio-exitoso"));
+        CrossplayUtils.sendMessage(player2, plugin.getConfigManager().getMessage("eventos.trade.session.intercambio-exitoso"));
     }
 
-    private void transferCurrency(NexoEconomy eco, NexoAccount.Currency currency, BigDecimal amountP1, BigDecimal amountP2) {
+    private void transferCurrency(NexoAccount.Currency currency, BigDecimal amountP1, BigDecimal amountP2) {
         if (amountP1.compareTo(BigDecimal.ZERO) > 0) {
-            eco.getEconomyManager().updateBalanceAsync(player1.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP1, false);
-            eco.getEconomyManager().updateBalanceAsync(player2.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP1, true);
+            plugin.getEconomyManager().updateBalanceAsync(player1.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP1, false);
+            plugin.getEconomyManager().updateBalanceAsync(player2.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP1, true);
         }
         if (amountP2.compareTo(BigDecimal.ZERO) > 0) {
-            eco.getEconomyManager().updateBalanceAsync(player2.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP2, false);
-            eco.getEconomyManager().updateBalanceAsync(player1.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP2, true);
+            plugin.getEconomyManager().updateBalanceAsync(player2.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP2, false);
+            plugin.getEconomyManager().updateBalanceAsync(player1.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP2, true);
         }
     }
 
@@ -167,7 +170,8 @@ public class TradeSession {
             if (esSlotDeOrigen) {
                 ItemStack item = inventory.getItem(i);
                 if (item != null && item.getType() != Material.AIR) {
-                    if (receptor.getInventory().firstEmpty() == -1) receptor.getWorld().dropItemNaturally(receptor.getLocation(), item);
+                    if (receptor.getInventory().firstEmpty() == -1)
+                        receptor.getWorld().dropItemNaturally(receptor.getLocation(), item);
                     else receptor.getInventory().addItem(item);
                     inventory.setItem(i, null);
                 }
@@ -175,10 +179,24 @@ public class TradeSession {
         }
     }
 
-    public void unready() { p1Ready = false; p2Ready = false; updateReadyButtons(); cancelarCuenta(); }
-    public Inventory getInventory() { return inventory; }
-    public Player getPlayer1() { return player1; }
-    public Player getPlayer2() { return player2; }
+    public void unready() {
+        p1Ready = false;
+        p2Ready = false;
+        updateReadyButtons();
+        cancelarCuenta();
+    }
+
+    public Inventory getInventory() {
+        return inventory;
+    }
+
+    public Player getPlayer1() {
+        return player1;
+    }
+
+    public Player getPlayer2() {
+        return player2;
+    }
 
     public void open() {
         player1.openInventory(inventory);

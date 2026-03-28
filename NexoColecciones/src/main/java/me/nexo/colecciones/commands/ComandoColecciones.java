@@ -11,9 +11,6 @@ import org.bukkit.entity.Player;
 public class ComandoColecciones implements CommandExecutor {
     private final NexoColecciones plugin;
 
-    private static final String MSG_RELOAD_SUCCESS = "&#00f5ff[✓] Sistemas de Colecciones y Slayers sincronizados y en línea.";
-    private static final String ERR_NO_PERM = "&#8b0000Acceso Denegado. Se requiere autorización de administrador.";
-
     public ComandoColecciones(NexoColecciones plugin) {
         this.plugin = plugin;
     }
@@ -26,14 +23,14 @@ public class ComandoColecciones implements CommandExecutor {
                 plugin.getColeccionesConfig().recargarConfig();
                 plugin.getCollectionManager().cargarDesdeConfig();
                 plugin.getSlayerManager().cargarSlayers();
-                sender.sendMessage(CrossplayUtils.parseCrossplay(null, MSG_RELOAD_SUCCESS));
+                CrossplayUtils.sendMessage(null, plugin.getConfigManager().getMessage("comandos.colecciones.recarga-exito"));
             }
             return true;
         }
 
         if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
             if (!player.hasPermission("nexocolecciones.admin")) {
-                CrossplayUtils.sendMessage(player, ERR_NO_PERM);
+                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.sin-permiso"));
                 return true;
             }
 
@@ -41,7 +38,7 @@ public class ComandoColecciones implements CommandExecutor {
             plugin.getCollectionManager().cargarDesdeConfig();
             plugin.getSlayerManager().cargarSlayers();
 
-            CrossplayUtils.sendMessage(player, MSG_RELOAD_SUCCESS);
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.recarga-exito"));
             return true;
         }
 

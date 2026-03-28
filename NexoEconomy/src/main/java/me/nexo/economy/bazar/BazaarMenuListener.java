@@ -1,6 +1,6 @@
 package me.nexo.economy.bazar;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.economy.NexoEconomy;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -50,21 +50,18 @@ public class BazaarMenuListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 new BazaarMenu(plugin, player, BazaarMenu.MenuType.CATEGORY).openCategory(cat);
             }, 3L);
-        }
-        else if (action.equals("open_options")) {
+        } else if (action.equals("open_options")) {
             String itemId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
             player.closeInventory();
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 new BazaarMenu(plugin, player, BazaarMenu.MenuType.ITEM_OPTIONS).openItemOptions(itemId);
             }, 3L);
-        }
-        else if (action.equals("claim_deliveries")) {
+        } else if (action.equals("claim_deliveries")) {
             player.closeInventory();
             player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 1.0f, 1.0f);
             plugin.getBazaarManager().reclamarBuzon(player);
-        }
-        else if (action.startsWith("back_")) {
+        } else if (action.startsWith("back_")) {
             String target = action.replace("back_", "");
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
             player.closeInventory();
@@ -76,31 +73,28 @@ public class BazaarMenuListener implements Listener {
                     new BazaarMenu(plugin, player, BazaarMenu.MenuType.CATEGORY).openCategory(target.replace("cat_", ""));
                 }
             }, 3L);
-        }
-        else if (action.equals("open_my_orders")) {
+        } else if (action.equals("open_my_orders")) {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
             player.closeInventory();
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 new BazaarMyOrdersMenu(plugin, player).openMenu();
             }, 3L);
-        }
-        else if (action.equals("cancel_order")) {
+        } else if (action.equals("cancel_order")) {
             int orderId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "order_id"), PersistentDataType.INTEGER);
             player.closeInventory();
             plugin.getBazaarManager().cancelarOrden(player, orderId);
-        }
-        else if (action.equals("create_buy_order") || action.equals("create_sell_order")) {
+        } else if (action.equals("create_buy_order") || action.equals("create_sell_order")) {
             String itemId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING);
             player.closeInventory();
 
             String type = action.equals("create_buy_order") ? "BUY" : "SELL";
             BazaarChatListener.activeSessions.put(player.getUniqueId(), new BazaarChatListener.OrderSession(itemId, type));
 
-            player.sendMessage(NexoColor.parse("&#1c0f2a========================================"));
-            player.sendMessage(NexoColor.parse("&#00f5ff[NEXO] Has iniciado una cotización para: &#ff00ff" + itemId));
-            player.sendMessage(NexoColor.parse("&#00f5ffEscribe en el chat la &#ff00ffCANTIDAD TOTAL&#00f5ff de ítems:"));
-            player.sendMessage(NexoColor.parse("&#1c0f2a(O escribe 'cancelar' para abortar)"));
-            player.sendMessage(NexoColor.parse("&#1c0f2a========================================"));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.bazar.ayuda.divisor"));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.chat.solicitar-precio").replace("%item_id%", itemId));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.chat.cantidad-fijada").replace("%amount%", "CANTIDAD TOTAL"));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.chat.valor-invalido"));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.bazar.ayuda.divisor"));
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
         }
     }

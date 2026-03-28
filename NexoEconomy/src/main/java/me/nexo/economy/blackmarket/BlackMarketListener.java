@@ -1,6 +1,6 @@
 package me.nexo.economy.blackmarket;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -23,7 +23,7 @@ public class BlackMarketListener implements Listener {
     @EventHandler
     public void onClick(InventoryClickEvent event) {
         String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!plainTitle.equals(BlackMarketMenu.TITLE_PLAIN)) return;
+        if (!plainTitle.equals(plugin.getConfigManager().getMessage("menus.blackmarket.titulo").replaceAll("<[^>]*>", ""))) return;
 
         event.setCancelled(true);
 
@@ -31,7 +31,7 @@ public class BlackMarketListener implements Listener {
 
         if (!plugin.getBlackMarketManager().isMarketOpen()) {
             player.closeInventory();
-            player.sendMessage(NexoColor.parse("&#8b0000[!] El Mercader ha huido repentinamente entre las sombras..."));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-huido"));
             return;
         }
 
@@ -46,7 +46,7 @@ public class BlackMarketListener implements Listener {
         if (index != -1 && index < stock.size()) {
             BlackMarketItem bmItem = stock.get(index);
 
-            player.sendMessage(NexoColor.parse("&#ff00ff[MERCADER] &#1c0f2aProcesando el pago con el inframundo..."));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blackmarket.procesando-pago"));
 
             plugin.getEconomyManager().updateBalanceAsync(
                     player.getUniqueId(),
@@ -62,11 +62,11 @@ public class BlackMarketListener implements Listener {
                     } else {
                         player.getInventory().addItem(item);
                     }
-                    player.sendMessage(NexoColor.parse("&#ff00ff[MERCADER] &#00f5ffHa sido un placer hacer negocios oscuros contigo..."));
+                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blackmarket.negocios-exitosos"));
                     player.closeInventory();
                 } else {
                     String divisa = bmItem.currency() == NexoAccount.Currency.GEMS ? "Gemas" : "Maná";
-                    player.sendMessage(NexoColor.parse("&#8b0000[!] Fondos insuficientes de " + divisa + " para completar la transacción."));
+                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blackmarket.fondos-insuficientes").replace("%divisa%", divisa));
                 }
             });
         }

@@ -23,12 +23,6 @@ public class CollectionManager {
 
     private final NexoColecciones plugin;
 
-    private static final String BC_DIVIDER = "&#1c0f2a=======================================";
-    private static final String MSG_LEVEL_UP_TITLE = "&#ff00ff<bold>⭐ ¡NUEVO NIVEL DE COLECCIÓN ALCANZADO!</bold>";
-    private static final String MSG_LEVEL_UP_DESC = "&#1c0f2aHas alcanzado el Nivel %level% en: &#00f5ff%item%";
-    private static final String MSG_REWARD_CLAIMED = "&#00f5ff[✓] <bold>RECOMPENSA RECLAMADA:</bold> &#1c0f2aEl vacío te ha entregado su poder.";
-    private static final String BC_MAX_LEVEL = "&#1c0f2a[&#ff00ff<bold>NEXO</bold>&#1c0f2a] &#00f5ff¡El operario &#ff00ff%player% &#00f5ffha dominado por completo la colección de &#ff00ff%item%&#00f5ff!";
-
     private Map<String, CollectionCategory> categoriasRegistradas = new HashMap<>();
     private final Map<UUID, CollectionProfile> perfilesJugadores = new ConcurrentHashMap<>();
     private final Gson gson = new Gson();
@@ -51,8 +45,8 @@ public class CollectionManager {
                 if (rs.next()) {
                     String jsonProgress = rs.getString("collections_data");
                     String jsonClaimed = rs.getString("claimed_tiers");
-                    Map<String, Integer> mapProgress = gson.fromJson(jsonProgress, new TypeToken<Map<String, Integer>>(){}.getType());
-                    Map<String, Set<Integer>> mapClaimed = gson.fromJson(jsonClaimed, new TypeToken<Map<String, Set<Integer>>>(){}.getType());
+                    Map<String, Integer> mapProgress = gson.fromJson(jsonProgress, new TypeToken<Map<String, Integer>>() {}.getType());
+                    Map<String, Set<Integer>> mapClaimed = gson.fromJson(jsonClaimed, new TypeToken<Map<String, Set<Integer>>>() {}.getType());
                     if (mapProgress == null) mapProgress = new HashMap<>();
                     if (mapClaimed == null) mapClaimed = new HashMap<>();
                     perfilesJugadores.put(uuid, new CollectionProfile(uuid, mapProgress, mapClaimed));
@@ -79,16 +73,21 @@ public class CollectionManager {
         int nivelNuevo = calcularNivel(item, profile.getProgress(itemId));
 
         if (nivelNuevo > nivelViejo) {
-            CrossplayUtils.sendTitle(player, "&#ff00ff⭐ NIVEL " + nivelNuevo + " ⭐", "&#00f5ff¡" + item.getNombre() + " subió de nivel!");
-            CrossplayUtils.sendMessage(player, BC_DIVIDER);
-            CrossplayUtils.sendMessage(player, MSG_LEVEL_UP_TITLE);
-            CrossplayUtils.sendMessage(player, MSG_LEVEL_UP_DESC.replace("%level%", String.valueOf(nivelNuevo)).replace("%item%", item.getNombre()));
-            CrossplayUtils.sendMessage(player, BC_DIVIDER);
+            CrossplayUtils.sendTitle(player,
+                    plugin.getConfigManager().getMessage("eventos.subida-nivel.titulo-pantalla").replace("%level%", String.valueOf(nivelNuevo)),
+                    plugin.getConfigManager().getMessage("eventos.subida-nivel.subtitulo-pantalla").replace("%item_name%", item.getNombre()));
+
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-divisor"));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.subida-nivel.titulo"));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.subida-nivel.descripcion")
+                    .replace("%level%", String.valueOf(nivelNuevo)).replace("%item%", item.getNombre()));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-divisor"));
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
 
             if (nivelNuevo == item.getMaxTier()) {
                 CrossplayUtils.broadcastMessage(" ");
-                CrossplayUtils.broadcastMessage(BC_MAX_LEVEL.replace("%player%", player.getName()).replace("%item%", item.getNombre()));
+                CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.max-nivel")
+                        .replace("%player%", player.getName()).replace("%item%", item.getNombre()));
                 CrossplayUtils.broadcastMessage(" ");
             }
         }
@@ -122,7 +121,7 @@ public class CollectionManager {
         ejecutarRecompensas(player, tier.getRecompensas());
         profile.markTierAsClaimed(itemId, targetTier);
 
-        CrossplayUtils.sendMessage(player, MSG_REWARD_CLAIMED);
+        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.recompensa-reclamada"));
         player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
         player.getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, player.getLocation().add(0, 1, 0), 100, 0.5, 0.5, 0.5, 0.1);
     }
@@ -143,7 +142,7 @@ public class CollectionManager {
     public void calcularTopAsync(Player player, String itemId) {
         CollectionItem cItem = getItemGlobal(itemId);
         if (cItem == null) {
-            CrossplayUtils.sendMessage(player, "&#8b0000[!] Error: Esa colección no existe en la base de datos.");
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-error"));
             return;
         }
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -162,20 +161,23 @@ public class CollectionManager {
                 while (rs.next()) {
                     String pName = rs.getString("name");
                     int amt = rs.getInt("amount");
-                    lineasTop.add("&#ff00ff" + rank + ". &#00f5ff" + pName + " &#1c0f2a- &#ff00ff" + amt + " &#1c0f2afarmeados");
+                    lineasTop.add(plugin.getConfigManager().getMessage("comandos.colecciones.top-linea")
+                            .replace("%rank%", String.valueOf(rank))
+                            .replace("%player%", pName)
+                            .replace("%amount%", String.valueOf(amt)));
                     rank++;
                 }
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    CrossplayUtils.sendMessage(player, BC_DIVIDER);
-                    CrossplayUtils.sendMessage(player, "&#ff00ff<bold>🏆 TOP 5 GLOBAL: </bold>" + cItem.getNombre());
+                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-divisor"));
+                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-titulo").replace("%collection_name%", cItem.getNombre()));
                     if (lineasTop.isEmpty()) {
-                        CrossplayUtils.sendMessage(player, "&#1c0f2aNadie ha farmeado este recurso todavía...");
+                        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-vacio"));
                     } else {
                         for (String l : lineasTop) {
                             CrossplayUtils.sendMessage(player, l);
                         }
                     }
-                    CrossplayUtils.sendMessage(player, BC_DIVIDER);
+                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-divisor"));
                 });
             } catch (Exception e) {
                 Bukkit.getScheduler().runTask(plugin, () -> CrossplayUtils.sendMessage(player, "&#8b0000[!] Error crítico de red al contactar con la base de datos."));
@@ -192,8 +194,19 @@ public class CollectionManager {
         return null;
     }
 
-    public Map<String, CollectionCategory> getCategorias() { return categoriasRegistradas; }
-    public CollectionProfile getProfile(UUID uuid) { return perfilesJugadores.get(uuid); }
-    public void removeProfile(UUID uuid) { perfilesJugadores.remove(uuid); }
-    public Map<UUID, CollectionProfile> getPerfiles() { return perfilesJugadores; }
+    public Map<String, CollectionCategory> getCategorias() {
+        return categoriasRegistradas;
+    }
+
+    public CollectionProfile getProfile(UUID uuid) {
+        return perfilesJugadores.get(uuid);
+    }
+
+    public void removeProfile(UUID uuid) {
+        perfilesJugadores.remove(uuid);
+    }
+
+    public Map<UUID, CollectionProfile> getPerfiles() {
+        return perfilesJugadores;
+    }
 }

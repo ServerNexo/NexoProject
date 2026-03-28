@@ -1,6 +1,7 @@
 package me.nexo.factories;
 
 import me.nexo.factories.commands.ComandoFactory;
+import me.nexo.factories.config.ConfigManager;
 import me.nexo.factories.listeners.FactoryInteractListener;
 import me.nexo.factories.managers.BlueprintManager;
 import me.nexo.factories.managers.FactoryManager;
@@ -13,11 +14,14 @@ public class NexoFactories extends JavaPlugin {
     private FactoryManager factoryManager;
     private BlueprintManager blueprintManager;
     private LogicMenu logicMenu;
+    private ConfigManager configManager;
 
     @Override
     public void onEnable() {
         getLogger().info("========================================");
         getLogger().info("🏭 Iniciando NexoFactories (Motor Industrial Zero-Lag)...");
+
+        this.configManager = new ConfigManager(this);
 
         if (getServer().getPluginManager().getPlugin("NexoCore") == null ||
                 getServer().getPluginManager().getPlugin("NexoProtections") == null) {
@@ -56,7 +60,19 @@ public class NexoFactories extends JavaPlugin {
         getLogger().info("🏭 Apagando NexoFactories... Limpiando memoria.");
     }
 
-    public FactoryManager getFactoryManager() { return factoryManager; }
-    public BlueprintManager getBlueprintManager() { return blueprintManager; }
-    public LogicMenu getLogicMenu() { return logicMenu; }
+    public FactoryManager getFactoryManager() {
+        return factoryManager;
+    }
+
+    public BlueprintManager getBlueprintManager() {
+        return blueprintManager;
+    }
+
+    public LogicMenu getLogicMenu() {
+        return logicMenu;
+    }
+
+    public ConfigManager getConfigManager() {
+        return configManager;
+    }
 }

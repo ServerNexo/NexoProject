@@ -17,9 +17,6 @@ public class ComandoChatClan implements CommandExecutor {
 
     private final NexoClans plugin;
 
-    private static final String ERR_NO_CLAN = "&#8b0000[!] Comunicación Fallida: No tienes un enlace de clan activo.";
-    private static final String ERR_USAGE = "&#8b0000[!] Sintaxis de red: /cc <mensaje>";
-
     public ComandoChatClan(NexoClans plugin) {
         this.plugin = plugin;
     }
@@ -31,12 +28,12 @@ public class ComandoChatClan implements CommandExecutor {
         NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
 
         if (user == null || !user.hasClan()) {
-            CrossplayUtils.sendMessage(player, ERR_NO_CLAN);
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.chat.errores.sin-clan"));
             return true;
         }
 
         if (args.length == 0) {
-            CrossplayUtils.sendMessage(player, ERR_USAGE);
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.chat.errores.uso"));
             return true;
         }
 
@@ -44,13 +41,14 @@ public class ComandoChatClan implements CommandExecutor {
 
         Optional<NexoClan> clanOpt = plugin.getClanManager().getClanFromCache(user.getClanId());
         if (clanOpt.isEmpty()) {
-            CrossplayUtils.sendMessage(player, ERR_NO_CLAN);
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.chat.errores.sin-clan"));
             return true;
         }
 
         NexoClan clan = clanOpt.get();
 
-        String formato = "&#1c0f2a[Clan] " + clan.getName() + " &#1c0f2a| &#ff00ff%player% &#1c0f2a» &#00f5ff%message%"
+        String formato = plugin.getConfigManager().getMessage("comandos.chat.formato")
+                .replace("%clan_name%", clan.getName())
                 .replace("%player%", player.getName())
                 .replace("%message%", mensaje);
 

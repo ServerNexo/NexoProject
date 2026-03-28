@@ -12,10 +12,6 @@ import org.bukkit.entity.Player;
 public class ComandoSlayer implements CommandExecutor {
     private final NexoColecciones plugin;
 
-    private static final String ERR_NOT_PLAYER = "&#8b0000Error: El terminal requiere un operario humano.";
-    private static final String MSG_CANCELLED = "&#00f5ffProtocolo de cacería abortado exitosamente.";
-    private static final String ERR_NO_ACTIVE = "&#8b0000Registro limpio. No tienes ninguna cacería activa en este momento.";
-
     public ComandoSlayer(NexoColecciones plugin) {
         this.plugin = plugin;
     }
@@ -23,7 +19,7 @@ public class ComandoSlayer implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            CrossplayUtils.sendMessage(null, ERR_NOT_PLAYER);
+            CrossplayUtils.sendMessage(null, plugin.getConfigManager().getMessage("comandos.slayer.no-jugador"));
             return true;
         }
 
@@ -32,9 +28,9 @@ public class ComandoSlayer implements CommandExecutor {
             if (activo != null) {
                 if (activo.getBossBar() != null) activo.getBossBar().removeAll();
                 plugin.getSlayerManager().removeActiveSlayer(player.getUniqueId());
-                CrossplayUtils.sendMessage(player, MSG_CANCELLED);
+                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.slayer.cancelado"));
             } else {
-                CrossplayUtils.sendMessage(player, ERR_NO_ACTIVE);
+                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.slayer.no-activo"));
             }
             return true;
         }

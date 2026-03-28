@@ -1,6 +1,6 @@
 package me.nexo.dungeons.matchmaking;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -19,13 +19,6 @@ public class QueueManager {
     private final LinkedList<UUID> waveQueue = new LinkedList<>();
     private final Map<String, Location> configuredArenas;
 
-    // 🎨 PALETA VIVID VOID
-    private static final String MSG_ALREADY_QUEUED = "&#8b0000[!] Ya te encuentras en la cola de emparejamiento.";
-    private static final String MSG_JOINED_QUEUE = "&#00f5ff[✓] Has ingresado a la cola del Simulador de Supervivencia.";
-    private static final String MSG_QUEUE_POS = "&#1c0f2aPosición estimada en la red: &#ff00ff#%pos%";
-    private static final String MSG_MATCH_FOUND = "&#ff00ff<bold>¡EMPAREJAMIENTO EXITOSO!</bold> &#1c0f2aSector: &#00f5ff%arena%";
-    private static final String MSG_SQUAD_SIZE = "&#1c0f2aOperarios en el escuadrón: &#00f5ff%size%";
-
     public QueueManager(NexoDungeons plugin) {
         this.plugin = plugin;
         this.configuredArenas = Map.of(
@@ -37,12 +30,12 @@ public class QueueManager {
 
     public void addPlayerToWaves(Player p) {
         if (waveQueue.contains(p.getUniqueId())) {
-            p.sendMessage(NexoColor.parse(MSG_ALREADY_QUEUED));
+            CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.queue.ya-en-cola"));
             return;
         }
         waveQueue.add(p.getUniqueId());
-        p.sendMessage(NexoColor.parse(MSG_JOINED_QUEUE));
-        p.sendMessage(NexoColor.parse(MSG_QUEUE_POS.replace("%pos%", String.valueOf(waveQueue.size()))));
+        CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.queue.unido-cola"));
+        CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.queue.posicion-cola").replace("%pos%", String.valueOf(waveQueue.size())));
     }
 
     public void removePlayer(Player p) {
@@ -74,8 +67,8 @@ public class QueueManager {
                     for (Player p : escuadron) {
                         p.teleport(entry.getValue());
                         p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                        p.sendMessage(NexoColor.parse(MSG_MATCH_FOUND.replace("%arena%", arenaId)));
-                        p.sendMessage(NexoColor.parse(MSG_SQUAD_SIZE.replace("%size%", String.valueOf(escuadron.size()))));
+                        CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.queue.emparejamiento-exitoso").replace("%arena%", arenaId));
+                        CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.queue.tamano-escuadron").replace("%size%", String.valueOf(escuadron.size())));
                     }
 
                     plugin.getWaveManager().startArena(arenaId, entry.getValue());

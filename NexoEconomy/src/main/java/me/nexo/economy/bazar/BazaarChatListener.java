@@ -1,6 +1,6 @@
 package me.nexo.economy.bazar;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.economy.NexoEconomy;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -44,7 +44,7 @@ public class BazaarChatListener implements Listener {
 
         if (msg.equals("cancelar") || msg.equals("cancel")) {
             activeSessions.remove(player.getUniqueId());
-            player.sendMessage(NexoColor.parse("&#8b0000[!] Operación financiera abortada."));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.chat.operacion-abortada"));
             return;
         }
 
@@ -54,8 +54,8 @@ public class BazaarChatListener implements Listener {
                 if (cant <= 0) throw new NumberFormatException();
 
                 session.amount = cant;
-                player.sendMessage(NexoColor.parse("&#00f5ff[✓] Cantidad fijada en " + cant + " unidades."));
-                player.sendMessage(NexoColor.parse("&#00f5ff[NEXO] Escribe en el chat el &#ff00ffPRECIO POR UNIDAD&#00f5ff que ofreces:"));
+                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.chat.cantidad-fijada").replace("%amount%", String.valueOf(cant)));
+                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.chat.solicitar-precio"));
             } else {
                 BigDecimal price = new BigDecimal(msg);
                 if (price.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
@@ -71,7 +71,7 @@ public class BazaarChatListener implements Listener {
                 });
             }
         } catch (NumberFormatException e) {
-            player.sendMessage(NexoColor.parse("&#8b0000[!] Valor inválido. Ingresa un número válido o escribe 'cancelar'."));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.chat.valor-invalido"));
         }
     }
 }

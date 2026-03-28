@@ -2,11 +2,9 @@ package me.nexo.factories.menu;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -18,19 +16,16 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class LogicMenu implements Listener {
 
     private final NexoFactories plugin;
-    public static final String TITLE_PLAIN = "» Scripting Visual";
-    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#00f5ffScripting Visual";
-
     private final List<String> conditions = Arrays.asList("NONE", "ENERGY_>_50", "ENERGY_>_20", "STORAGE_<_100", "STORAGE_<_500");
     private final List<String> actions = Arrays.asList("NONE", "START_MACHINE", "PAUSE_MACHINE");
 
@@ -44,7 +39,6 @@ public class LogicMenu implements Listener {
 
     public void openMenu(Player player, ActiveFactory factory) {
         editingFactory.put(player.getUniqueId(), factory);
-
         int condIndex = 0;
         int actIndex = 0;
         try {
@@ -54,59 +48,43 @@ public class LogicMenu implements Listener {
                 if (json.has("action")) actIndex = actions.indexOf(json.get("action").getAsString());
             }
         } catch (Exception ignored) {}
-
         currentConditionIndex.put(player.getUniqueId(), Math.max(0, condIndex));
         currentActionIndex.put(player.getUniqueId(), Math.max(0, actIndex));
-
         renderMenu(player);
     }
 
     private void renderMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
+        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.logic.titulo")));
         UUID id = player.getUniqueId();
-
         String cond = conditions.get(currentConditionIndex.get(id));
         String act = actions.get(currentActionIndex.get(id));
 
-        // 📡 SENSOR (Condición)
         ItemStack sensor = new ItemStack(Material.COMPARATOR);
         ItemMeta sensorMeta = sensor.getItemMeta();
         if (sensorMeta != null) {
-            sensorMeta.setDisplayName(serialize("&#ff00ff<bold>1. Sensor Lógico (IF)</bold>"));
-            sensorMeta.setLore(serializeList(Arrays.asList(
-                    "&#1c0f2aSi el entorno cumple esta métrica,",
-                    "&#1c0f2ase desencadenará la operación.",
-                    " ",
-                    "&#1c0f2aParámetro Actual: &#00f5ff" + cond,
-                    " ",
-                    "&#00f5ff▶ Clic para iterar sensor"
-            )));
+            sensorMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.logic.sensor.titulo")));
+            List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.logic.sensor.lore");
+            sensorMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%condition%", cond))).collect(Collectors.toList()));
             sensor.setItemMeta(sensorMeta);
         }
         inv.setItem(11, sensor);
 
-        // ⚙️ ACCIÓN (Resultado)
         ItemStack action = new ItemStack(Material.REDSTONE_TORCH);
         ItemMeta actionMeta = action.getItemMeta();
         if (actionMeta != null) {
-            actionMeta.setDisplayName(serialize("&#ff00ff<bold>2. Operación (THEN)</bold>"));
-            actionMeta.setLore(serializeList(Arrays.asList(
-                    "&#1c0f2aEl comportamiento de la máquina.",
-                    " ",
-                    "&#1c0f2aRutina Actual: &#8b0000" + act,
-                    " ",
-                    "&#00f5ff▶ Clic para iterar rutina"
-            )));
+            actionMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.logic.operacion.titulo")));
+            List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.logic.operacion.lore");
+            actionMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%action%", act))).collect(Collectors.toList()));
             action.setItemMeta(actionMeta);
         }
         inv.setItem(15, action);
 
-        // 💾 BOTÓN GUARDAR
         ItemStack save = new ItemStack(Material.LIME_DYE);
         ItemMeta saveMeta = save.getItemMeta();
         if (saveMeta != null) {
-            saveMeta.setDisplayName(serialize("&#00f5ff<bold>[✔] Compilar e Inyectar Código</bold>"));
-            saveMeta.setLore(serializeList(Arrays.asList("&#1c0f2aSobrescribe el Script JSON y", "&#1c0f2areinicia el núcleo operativo.")));
+            saveMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.logic.guardar.titulo")));
+            List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.logic.guardar.lore");
+            saveMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
             save.setItemMeta(saveMeta);
         }
         inv.setItem(22, save);
@@ -114,23 +92,11 @@ public class LogicMenu implements Listener {
         player.openInventory(inv);
     }
 
-    private String serialize(String hex) {
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
-    }
-
-    private List<String> serializeList(List<String> hexList) {
-        List<String> out = new ArrayList<>();
-        for (String s : hexList) out.add(serialize(s));
-        return out;
-    }
-
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!plainTitle.equals(TITLE_PLAIN)) return;
+        if (!CrossplayUtils.getChatPlain((Player) event.getWhoClicked(), event.getView().title()).equals(plugin.getConfigManager().getMessage("menus.logic.titulo").replaceAll("<[^>]*>", ""))) return;
 
         event.setCancelled(true);
-
         Player player = (Player) event.getWhoClicked();
         UUID id = player.getUniqueId();
         if (!editingFactory.containsKey(id)) return;
@@ -142,14 +108,12 @@ public class LogicMenu implements Listener {
             currentConditionIndex.put(id, next);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
             renderMenu(player);
-        }
-        else if (event.getSlot() == 15) {
+        } else if (event.getSlot() == 15) {
             int next = (currentActionIndex.get(id) + 1) % actions.size();
             currentActionIndex.put(id, next);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
             renderMenu(player);
-        }
-        else if (event.getSlot() == 22) {
+        } else if (event.getSlot() == 22) {
             String cond = conditions.get(currentConditionIndex.get(id));
             String act = actions.get(currentActionIndex.get(id));
 
@@ -166,7 +130,7 @@ public class LogicMenu implements Listener {
 
             player.closeInventory();
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 2f);
-            player.sendMessage(NexoColor.parse("&#00f5ff<bold>[⚙]</bold> &#00f5ffScript compilado e inyectado en el procesador con éxito."));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.script-compilado"));
 
             editingFactory.remove(id);
             currentConditionIndex.remove(id);

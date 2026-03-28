@@ -1,11 +1,9 @@
 package me.nexo.economy.blackmarket;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
 import me.nexo.items.managers.ItemManager;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -67,10 +65,10 @@ public class BlackMarketManager {
             currentStock.add(shuffled.get(i));
         }
 
-        Bukkit.broadcast(NexoColor.parse("&#1c0f2a========================================"));
-        Bukkit.broadcast(NexoColor.parse("&#ff00ff<bold>🌑 EL MERCADER OSCURO HA LLEGADO</bold>"));
-        Bukkit.broadcast(NexoColor.parse("&#1c0f2aSe rumorea que trae mercancía prohibida y altamente valiosa..."));
-        Bukkit.broadcast(NexoColor.parse("&#1c0f2a========================================"));
+        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.divisor"));
+        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-llega"));
+        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-llega-desc"));
+        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.divisor"));
     }
 
     public void closeMarket() {
@@ -78,10 +76,10 @@ public class BlackMarketManager {
         this.isMarketOpen = false;
         this.currentStock.clear();
 
-        Bukkit.broadcast(NexoColor.parse("&#1c0f2a========================================"));
-        Bukkit.broadcast(NexoColor.parse("&#ff00ff<bold>🌑 EL MERCADER OSCURO SE HA IDO</bold>"));
-        Bukkit.broadcast(NexoColor.parse("&#1c0f2aSus huellas se han desvanecido entre las sombras."));
-        Bukkit.broadcast(NexoColor.parse("&#1c0f2a========================================"));
+        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.divisor"));
+        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-se-va"));
+        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-se-va-desc"));
+        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.divisor"));
     }
 
     public boolean isMarketOpen() { return isMarketOpen; }
@@ -91,8 +89,8 @@ public class BlackMarketManager {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hexName)));
-            meta.setLore(List.of(LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hexLore))));
+            meta.displayName(CrossplayUtils.parseCrossplay(null, hexName));
+            meta.lore(List.of(CrossplayUtils.parseCrossplay(null, hexLore)));
             item.setItemMeta(meta);
         }
         return item;

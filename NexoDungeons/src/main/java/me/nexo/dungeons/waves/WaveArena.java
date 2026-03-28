@@ -1,17 +1,16 @@
 package me.nexo.dungeons.waves;
 
 import io.lumine.mythic.bukkit.MythicBukkit;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
-import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.entity.Player;
 
-import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -23,8 +22,10 @@ public class WaveArena {
     private int currentWave;
     private final Set<UUID> activeMythicMobs;
     private boolean isActive;
+    private final NexoDungeons plugin;
 
-    public WaveArena(String arenaId, Location spawnCenter) {
+    public WaveArena(NexoDungeons plugin, String arenaId, Location spawnCenter) {
+        this.plugin = plugin;
         this.arenaId = arenaId;
         this.spawnCenter = spawnCenter;
         this.currentWave = 0;
@@ -45,27 +46,24 @@ public class WaveArena {
         if (this.currentWave > 1 && (this.currentWave - 1) % 5 == 0) {
             int checkpoint = this.currentWave - 1;
             spawnCenter.getWorld().getNearbyEntities(spawnCenter, 30, 30, 30).forEach(e -> {
-                if (e instanceof org.bukkit.entity.Player p) {
-                    p.sendMessage(NexoColor.parse("&#00f5ff<bold>¡PUNTO DE CONTROL!</bold> &#1c0f2aSimulación asegurada en la Oleada &#ff00ff" + checkpoint));
+                if (e instanceof Player p) {
+                    CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.oleadas.punto-control").replace("%checkpoint%", String.valueOf(checkpoint)));
                     p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
                 }
             });
         }
 
         spawnCenter.getWorld().getNearbyEntities(spawnCenter, 30, 30, 30).forEach(e -> {
-            if (e instanceof org.bukkit.entity.Player p) {
-                Title.Times times = Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(2500), Duration.ofMillis(500));
-                Title title = Title.title(
-                        NexoColor.parse("&#8b0000<bold>SIMULACIÓN " + currentWave + "</bold>"),
-                        NexoColor.parse("&#ff00ff¡Prepárate para el impacto!"),
-                        times
+            if (e instanceof Player p) {
+                CrossplayUtils.sendTitle(p,
+                        plugin.getConfigManager().getMessage("eventos.oleadas.titulo-oleada").replace("%wave%", String.valueOf(currentWave)),
+                        plugin.getConfigManager().getMessage("eventos.oleadas.subtitulo-oleada")
                 );
-                p.showTitle(title);
                 p.playSound(p.getLocation(), org.bukkit.Sound.EVENT_RAID_HORN, 1.0f, 1.0f);
             }
         });
 
-        Bukkit.getScheduler().runTaskLater(NexoDungeons.getPlugin(NexoDungeons.class), this::spawnMobs, 60L);
+        Bukkit.getScheduler().runTaskLater(plugin, this::spawnMobs, 60L);
     }
 
     private void spawnMobs() {
@@ -108,7 +106,7 @@ public class WaveArena {
 
         if (activeMythicMobs.remove(mobId)) {
             if (activeMythicMobs.isEmpty()) {
-                Bukkit.getScheduler().runTaskLater(NexoDungeons.getPlugin(NexoDungeons.class), this::nextWave, 40L);
+                Bukkit.getScheduler().runTaskLater(plugin, this::nextWave, 40L);
             }
         }
     }
@@ -118,7 +116,15 @@ public class WaveArena {
         this.activeMythicMobs.clear();
     }
 
-    public String getArenaId() { return arenaId; }
-    public boolean isActive() { return isActive; }
-    public int getCurrentWave() { return currentWave; }
+    public String getArenaId() {
+        return arenaId;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public int getCurrentWave() {
+        return currentWave;
+    }
 }

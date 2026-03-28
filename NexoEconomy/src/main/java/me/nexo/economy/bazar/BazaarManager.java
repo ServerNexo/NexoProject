@@ -1,7 +1,7 @@
 package me.nexo.economy.bazar;
 
 import me.nexo.core.NexoCore;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
 import org.bukkit.Bukkit;
@@ -24,22 +24,6 @@ public class BazaarManager {
     private final NexoEconomy plugin;
     private final NexoCore core;
 
-    // 🎨 PALETA VIVID VOID
-    private static final String ERR_NO_ITEMS = "&#8b0000[!] Stock insuficiente en tu inventario local para cubrir la orden.";
-    private static final String MSG_SELL_ORDER = "&#00f5ff[✓] Orden de Venta (ASK) generada: &#ff00ff%amount%x %item% &#1c0f2aa &#ff00ff🪙 %price% c/u.";
-    private static final String MSG_BUY_ORDER = "&#00f5ff[✓] Orden de Compra (BID) generada: &#ff00ff%amount%x %item% &#1c0f2a(Total: &#ff00ff🪙 %total%&#1c0f2a).";
-    private static final String ERR_NO_COINS = "&#8b0000[!] Fondos insuficientes para respaldar la orden de compra.";
-
-    private static final String BC_DIVIDER = "&#1c0f2a=======================================";
-    private static final String MSG_DELIVERY_TITLE = "&#00f5ff<bold>📦 ¡CONTRATO DE BAZAR COMPLETADO!</bold>";
-    private static final String MSG_DELIVERY_DESC = "&#1c0f2aLos activos han sido depositados. Usa &#ff00ff/bazar claim &#1c0f2apara extraerlos.";
-
-    private static final String MSG_CLAIM_SUCCESS = "&#00f5ff[✓] Extracción corporativa exitosa: &#ff00ff%amount%x %item%";
-    private static final String MSG_CLAIM_COINS = "&#00f5ff[✓] Reembolso corporativo exitoso: &#ff00ff🪙 %coins%";
-    private static final String ERR_CLAIM_EMPTY = "&#8b0000[!] Tu buzón corporativo se encuentra actualmente vacío.";
-
-    private static final String ERR_NO_COLLECTION_LEVEL = "&#8b0000[!] Transacción Denegada: &#1c0f2aDebes alcanzar el &#ff00ffNivel 1 &#1c0f2aen la colección de este material antes de poder comerciarlo.";
-
     public BazaarManager(NexoEconomy plugin) {
         this.plugin = plugin;
         this.core = NexoCore.getPlugin(NexoCore.class);
@@ -50,7 +34,6 @@ public class BazaarManager {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try (Connection conn = core.getDatabaseManager().getConnection();
                  Statement stmt = conn.createStatement()) {
-
                 stmt.execute("""
                     CREATE TABLE IF NOT EXISTS nexo_bazaar_orders (
                         order_id SERIAL PRIMARY KEY,
@@ -64,7 +47,6 @@ public class BazaarManager {
                 """);
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_bazaar_item ON nexo_bazaar_orders(item_id);");
                 stmt.execute("CREATE INDEX IF NOT EXISTS idx_bazaar_price ON nexo_bazaar_orders(price_per_unit);");
-
                 stmt.execute("""
                     CREATE TABLE IF NOT EXISTS nexo_bazaar_deliveries (
                         id UUID PRIMARY KEY,
@@ -74,7 +56,6 @@ public class BazaarManager {
                         coins DECIMAL(20,2) DEFAULT 0
                     );
                 """);
-
             } catch (Exception e) {
                 plugin.getLogger().severe("Error creando tablas del Bazar: " + e.getMessage());
             }
@@ -99,24 +80,25 @@ public class BazaarManager {
 
     public void crearOrdenVenta(Player player, String itemId, int amount, BigDecimal pricePerUnit) {
         if (!tieneNivelComercial(player, itemId)) {
-            player.sendMessage(NexoColor.parse(ERR_NO_COLLECTION_LEVEL));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.sin-nivel-coleccion"));
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             return;
         }
         Material mat = Material.matchMaterial(itemId);
         if (mat == null || !player.getInventory().contains(mat, amount)) {
-            player.sendMessage(NexoColor.parse(ERR_NO_ITEMS));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.sin-items"));
             return;
         }
         quitarItems(player, mat, amount);
         guardarOrdenYEmparejar(player.getUniqueId(), BazaarOrder.OrderType.SELL, itemId, amount, pricePerUnit);
-        player.sendMessage(NexoColor.parse(MSG_SELL_ORDER.replace("%amount%", String.valueOf(amount)).replace("%item%", mat.name()).replace("%price%", pricePerUnit.toString())));
+        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.orden-venta")
+                .replace("%amount%", String.valueOf(amount)).replace("%item%", mat.name()).replace("%price%", pricePerUnit.toString()));
         player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
     }
 
     public void crearOrdenCompra(Player player, String itemId, int amount, BigDecimal pricePerUnit) {
         if (!tieneNivelComercial(player, itemId)) {
-            player.sendMessage(NexoColor.parse(ERR_NO_COLLECTION_LEVEL));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.sin-nivel-coleccion"));
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             return;
         }
@@ -124,10 +106,11 @@ public class BazaarManager {
         plugin.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, totalCost, false).thenAccept(success -> {
             if (success) {
                 guardarOrdenYEmparejar(player.getUniqueId(), BazaarOrder.OrderType.BUY, itemId, amount, pricePerUnit);
-                player.sendMessage(NexoColor.parse(MSG_BUY_ORDER.replace("%amount%", String.valueOf(amount)).replace("%item%", itemId).replace("%total%", totalCost.toString())));
+                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.orden-compra")
+                        .replace("%amount%", String.valueOf(amount)).replace("%item%", itemId).replace("%total%", totalCost.toString()));
                 player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
             } else {
-                player.sendMessage(NexoColor.parse(ERR_NO_COINS));
+                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.sin-monedas"));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             }
         });
@@ -160,8 +143,8 @@ public class BazaarManager {
                    s.order_id AS sell_id, s.owner_id AS seller_id, s.amount AS sell_amount, s.price_per_unit AS sell_price
             FROM nexo_bazaar_orders b
             INNER JOIN nexo_bazaar_orders s ON b.item_id = s.item_id
-            WHERE b.order_type = 'BUY' AND s.order_type = 'SELL' 
-              AND b.item_id = ? 
+            WHERE b.order_type = 'BUY' AND s.order_type = 'SELL'
+              AND b.item_id = ?
               AND b.price_per_unit >= s.price_per_unit
             ORDER BY s.price_per_unit ASC, b.timestamp ASC
             LIMIT 1
@@ -221,10 +204,10 @@ public class BazaarManager {
             ps.executeUpdate();
             Player p = Bukkit.getPlayer(ownerId);
             if (p != null && amount > 0) {
-                p.sendMessage(NexoColor.parse(BC_DIVIDER));
-                p.sendMessage(NexoColor.parse(MSG_DELIVERY_TITLE));
-                p.sendMessage(NexoColor.parse(MSG_DELIVERY_DESC));
-                p.sendMessage(NexoColor.parse(BC_DIVIDER));
+                CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.bazar.manager.divisor-entrega"));
+                CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.bazar.manager.titulo-entrega"));
+                CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.bazar.manager.desc-entrega"));
+                CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.bazar.manager.divisor-entrega"));
                 p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, 1.2f);
             }
         } catch (Exception e) {
@@ -271,7 +254,7 @@ public class BazaarManager {
                     if (itemId.equals("COINS") || coins.compareTo(BigDecimal.ZERO) > 0) {
                         plugin.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, coins, true);
                         Bukkit.getScheduler().runTask(plugin, () -> {
-                            player.sendMessage(NexoColor.parse(MSG_CLAIM_COINS.replace("%coins%", coins.toString())));
+                            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.reclamar-monedas").replace("%coins%", coins.toString()));
                             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
                         });
                     } else {
@@ -284,14 +267,15 @@ public class BazaarManager {
                                 } else {
                                     player.getInventory().addItem(item);
                                 }
-                                player.sendMessage(NexoColor.parse(MSG_CLAIM_SUCCESS.replace("%amount%", String.valueOf(amount)).replace("%item%", mat.name())));
+                                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.reclamar-exito")
+                                        .replace("%amount%", String.valueOf(amount)).replace("%item%", mat.name()));
                                 player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1.0f, 1.0f);
                             }
                         });
                     }
                 }
                 if (!tieneCosas) {
-                    Bukkit.getScheduler().runTask(plugin, () -> player.sendMessage(NexoColor.parse(ERR_CLAIM_EMPTY)));
+                    Bukkit.getScheduler().runTask(plugin, () -> CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.buzon-vacio")));
                 }
             } catch (Exception e) {
                 plugin.getLogger().severe("Error reclamando buzón: " + e.getMessage());
@@ -306,7 +290,9 @@ public class BazaarManager {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next() && rs.getBigDecimal(1) != null) return rs.getBigDecimal(1);
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return BigDecimal.ZERO;
     }
 
@@ -317,7 +303,9 @@ public class BazaarManager {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next() && rs.getBigDecimal(1) != null) return rs.getBigDecimal(1);
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return BigDecimal.ZERO;
     }
 
@@ -329,14 +317,25 @@ public class BazaarManager {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return rs.getInt(1);
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return 0;
     }
 
     public static class ActiveOrderDTO {
-        public int id; public String itemId; public int amount; public BigDecimal price; public String type;
+        public int id;
+        public String itemId;
+        public int amount;
+        public BigDecimal price;
+        public String type;
+
         public ActiveOrderDTO(int id, String itemId, int amount, BigDecimal price, String type) {
-            this.id = id; this.itemId = itemId; this.amount = amount; this.price = price; this.type = type;
+            this.id = id;
+            this.itemId = itemId;
+            this.amount = amount;
+            this.price = price;
+            this.type = type;
         }
     }
 
@@ -353,7 +352,9 @@ public class BazaarManager {
                     ));
                 }
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return orders;
     }
 
@@ -379,13 +380,15 @@ public class BazaarManager {
                         enviarABuzon(player.getUniqueId(), "COINS", 0, totalCoins);
                     }
                     Bukkit.getScheduler().runTask(plugin, () -> {
-                        player.sendMessage(NexoColor.parse("&#00f5ff[✓] Orden cancelada. Activos devueltos a tu Buzón de Entregas."));
+                        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.orden-cancelada"));
                         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 1f);
                     });
                 } else {
-                    Bukkit.getScheduler().runTask(plugin, () -> player.sendMessage(NexoColor.parse("&#8b0000[!] Esta orden ya no existe o se completó totalmente.")));
+                    Bukkit.getScheduler().runTask(plugin, () -> CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.manager.orden-no-existe")));
                 }
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         });
     }
 }

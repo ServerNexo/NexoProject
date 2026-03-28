@@ -1,6 +1,6 @@
 package me.nexo.factories.commands;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.StructureTemplate;
 import org.bukkit.Material;
@@ -13,12 +13,6 @@ public class ComandoFactory implements CommandExecutor {
 
     private final NexoFactories plugin;
 
-    // 🎨 PALETA VIVID VOID
-    private static final String ERR_NOT_PLAYER = "&#8b0000[!] Acceso denegado: El terminal requiere un operario humano.";
-    private static final String MSG_CANCEL = "&#8b0000[✓] Proyección holográfica cancelada. Plano borrado de la memoria.";
-    private static final String MSG_HELP_TEST = "&#ff00ff/factory test &#1c0f2a- Proyecta un plano de prueba (Forja T1).";
-    private static final String MSG_HELP_CANCEL = "&#ff00ff/factory cancel &#1c0f2a- Borra los hologramas activos.";
-
     public ComandoFactory(NexoFactories plugin) {
         this.plugin = plugin;
     }
@@ -26,7 +20,7 @@ public class ComandoFactory implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(NexoColor.parse(ERR_NOT_PLAYER));
+            CrossplayUtils.sendMessage(null, plugin.getConfigManager().getMessage("comandos.factory.no-jugador"));
             return true;
         }
 
@@ -40,12 +34,12 @@ public class ComandoFactory implements CommandExecutor {
 
         if (args.length > 0 && args[0].equalsIgnoreCase("cancel")) {
             plugin.getBlueprintManager().clearBlueprint(player);
-            player.sendMessage(NexoColor.parse(MSG_CANCEL));
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.factory.cancelar"));
             return true;
         }
 
-        player.sendMessage(NexoColor.parse(MSG_HELP_TEST));
-        player.sendMessage(NexoColor.parse(MSG_HELP_CANCEL));
+        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.factory.ayuda-test"));
+        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.factory.ayuda-cancelar"));
         return true;
     }
 }

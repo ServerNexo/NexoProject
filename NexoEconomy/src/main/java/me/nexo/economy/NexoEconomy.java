@@ -1,14 +1,18 @@
 package me.nexo.economy;
 
-import me.nexo.core.NexoCore;
+import me.nexo.economy.bazar.BazaarChatListener;
 import me.nexo.economy.bazar.BazaarManager;
+import me.nexo.economy.bazar.BazaarMenuListener;
+import me.nexo.economy.blackmarket.BlackMarketListener;
 import me.nexo.economy.blackmarket.BlackMarketManager;
 import me.nexo.economy.commands.ComandoBazar;
 import me.nexo.economy.commands.ComandoEco;
+import me.nexo.economy.commands.ComandoMercadoNegro;
 import me.nexo.economy.commands.ComandoTrade;
-import me.nexo.economy.commands.ComandoMercadoNegro; // 🌑 NUEVO IMPORT
+import me.nexo.economy.config.ConfigManager;
 import me.nexo.economy.core.EconomyManager;
 import me.nexo.economy.listeners.EconomyListener;
+import me.nexo.economy.listeners.TradeListener;
 import me.nexo.economy.trade.TradeManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -18,51 +22,33 @@ public class NexoEconomy extends JavaPlugin {
     private TradeManager tradeManager;
     private BazaarManager bazaarManager;
     private BlackMarketManager blackMarketManager;
+    private ConfigManager configManager;
 
     @Override
     public void onEnable() {
-        getLogger().info("========================================");
-        getLogger().info("🪙 Iniciando NexoEconomy...");
-
-        if (getServer().getPluginManager().getPlugin("NexoCore") == null) {
-            getLogger().severe("❌ NexoCore no detectado. Apagando...");
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
-
-        // 🌟 INICIALIZAMOS LOS MOTORES EN ORDEN
+        this.configManager = new ConfigManager(this);
         this.economyManager = new EconomyManager(this);
         this.tradeManager = new TradeManager(this);
         this.bazaarManager = new BazaarManager(this);
         this.blackMarketManager = new BlackMarketManager(this);
 
-        // Registramos Listeners
         getServer().getPluginManager().registerEvents(new EconomyListener(this), this);
-        getServer().getPluginManager().registerEvents(new me.nexo.economy.listeners.TradeListener(this), this);
-        getServer().getPluginManager().registerEvents(new me.nexo.economy.blackmarket.BlackMarketListener(this), this); // 🌑 LISTENER MERCADO NEGRO
-        getServer().getPluginManager().registerEvents(new me.nexo.economy.bazar.BazaarMenuListener(this), this);
-        getServer().getPluginManager().registerEvents(new me.nexo.economy.bazar.BazaarChatListener(this), this);
+        getServer().getPluginManager().registerEvents(new TradeListener(this), this);
+        getServer().getPluginManager().registerEvents(new BazaarChatListener(this), this);
+        getServer().getPluginManager().registerEvents(new BazaarMenuListener(this), this);
+        getServer().getPluginManager().registerEvents(new BlackMarketListener(this), this);
 
-        // Registramos Comandos
-        if (getCommand("eco") != null) {
-            getCommand("eco").setExecutor(new ComandoEco(this));
-        }
+        if (getCommand("eco") != null) getCommand("eco").setExecutor(new ComandoEco(this));
+        if (getCommand("trade") != null) getCommand("trade").setExecutor(new ComandoTrade(this));
+        if (getCommand("bazar") != null) getCommand("bazar").setExecutor(new ComandoBazar(this));
+        if (getCommand("mercadonegro") != null) getCommand("mercadonegro").setExecutor(new ComandoMercadoNegro(this));
 
-        if (getCommand("trade") != null) {
-            getCommand("trade").setExecutor(new ComandoTrade(this));
-        }
+        getLogger().info("NexoEconomy ha sido habilitado.");
+    }
 
-        if (getCommand("bazar") != null) {
-            getCommand("bazar").setExecutor(new ComandoBazar(this));
-        }
-
-        // 🌑 COMANDO MERCADO NEGRO
-        if (getCommand("mercadonegro") != null) {
-            getCommand("mercadonegro").setExecutor(new ComandoMercadoNegro(this));
-        }
-
-        getLogger().info("✅ ¡NexoEconomy cargado y operativo!");
-        getLogger().info("========================================");
+    @Override
+    public void onDisable() {
+        getLogger().info("NexoEconomy ha sido deshabilitado.");
     }
 
     public EconomyManager getEconomyManager() {
@@ -79,5 +65,9 @@ public class NexoEconomy extends JavaPlugin {
 
     public BlackMarketManager getBlackMarketManager() {
         return blackMarketManager;
+    }
+
+    public ConfigManager getConfigManager() {
+        return configManager;
     }
 }
