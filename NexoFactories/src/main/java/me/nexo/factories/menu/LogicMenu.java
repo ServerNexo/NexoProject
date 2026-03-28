@@ -29,7 +29,7 @@ public class LogicMenu implements Listener {
 
     private final NexoFactories plugin;
     public static final String TITLE_PLAIN = "» Scripting Visual";
-    public static final String MENU_TITLE = "&#434343<bold>»</bold> &#00fbffScripting Visual";
+    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#00f5ffScripting Visual";
 
     private final List<String> conditions = Arrays.asList("NONE", "ENERGY_>_50", "ENERGY_>_20", "STORAGE_<_100", "STORAGE_<_500");
     private final List<String> actions = Arrays.asList("NONE", "START_MACHINE", "PAUSE_MACHINE");
@@ -72,14 +72,14 @@ public class LogicMenu implements Listener {
         ItemStack sensor = new ItemStack(Material.COMPARATOR);
         ItemMeta sensorMeta = sensor.getItemMeta();
         if (sensorMeta != null) {
-            sensorMeta.setDisplayName(serialize("&#fbd72b<bold>1. Sensor Lógico (IF)</bold>"));
+            sensorMeta.setDisplayName(serialize("&#ff00ff<bold>1. Sensor Lógico (IF)</bold>"));
             sensorMeta.setLore(serializeList(Arrays.asList(
-                    "&#434343Si el entorno cumple esta métrica,",
-                    "&#434343se desencadenará la operación.",
+                    "&#1c0f2aSi el entorno cumple esta métrica,",
+                    "&#1c0f2ase desencadenará la operación.",
                     " ",
-                    "&#434343Parámetro Actual: &#00fbff" + cond,
+                    "&#1c0f2aParámetro Actual: &#00f5ff" + cond,
                     " ",
-                    "&#fbd72b▶ Clic para iterar sensor"
+                    "&#00f5ff▶ Clic para iterar sensor"
             )));
             sensor.setItemMeta(sensorMeta);
         }
@@ -89,13 +89,13 @@ public class LogicMenu implements Listener {
         ItemStack action = new ItemStack(Material.REDSTONE_TORCH);
         ItemMeta actionMeta = action.getItemMeta();
         if (actionMeta != null) {
-            actionMeta.setDisplayName(serialize("&#ff4b2b<bold>2. Operación (THEN)</bold>"));
+            actionMeta.setDisplayName(serialize("&#ff00ff<bold>2. Operación (THEN)</bold>"));
             actionMeta.setLore(serializeList(Arrays.asList(
-                    "&#434343El comportamiento de la máquina.",
+                    "&#1c0f2aEl comportamiento de la máquina.",
                     " ",
-                    "&#434343Rutina Actual: &#ff4b2b" + act,
+                    "&#1c0f2aRutina Actual: &#8b0000" + act,
                     " ",
-                    "&#fbd72b▶ Clic para iterar rutina"
+                    "&#00f5ff▶ Clic para iterar rutina"
             )));
             action.setItemMeta(actionMeta);
         }
@@ -105,8 +105,8 @@ public class LogicMenu implements Listener {
         ItemStack save = new ItemStack(Material.LIME_DYE);
         ItemMeta saveMeta = save.getItemMeta();
         if (saveMeta != null) {
-            saveMeta.setDisplayName(serialize("&#a8ff78<bold>[✔] Compilar e Inyectar Código</bold>"));
-            saveMeta.setLore(serializeList(Arrays.asList("&#434343Sobrescribe el Script JSON y", "&#434343reinicia el núcleo operativo.")));
+            saveMeta.setDisplayName(serialize("&#00f5ff<bold>[✔] Compilar e Inyectar Código</bold>"));
+            saveMeta.setLore(serializeList(Arrays.asList("&#1c0f2aSobrescribe el Script JSON y", "&#1c0f2areinicia el núcleo operativo.")));
             save.setItemMeta(saveMeta);
         }
         inv.setItem(22, save);
@@ -166,7 +166,7 @@ public class LogicMenu implements Listener {
 
             player.closeInventory();
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 2f);
-            player.sendMessage(NexoColor.parse("&#a8ff78<bold>[⚙]</bold> &#00fbffScript compilado e inyectado en el procesador con éxito."));
+            player.sendMessage(NexoColor.parse("&#00f5ff<bold>[⚙]</bold> &#00f5ffScript compilado e inyectado en el procesador con éxito."));
 
             editingFactory.remove(id);
             currentConditionIndex.remove(id);

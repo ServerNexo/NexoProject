@@ -14,11 +14,14 @@ public class ActiveFactory {
     private int storedOutput;
     private final Location coreLocation;
 
-    // 🌟 NUEVAS VARIABLES DE AUTOMATIZACIÓN (Logic Engine)
+    // 🌟 AUTOMATIZACIÓN (Logic Engine)
     private String catalystItem;
     private String jsonLogic;
 
-    public ActiveFactory(UUID id, UUID stoneId, UUID ownerId, String factoryType, int level, String currentStatus, int storedOutput, Location coreLocation, String catalystItem, String jsonLogic) {
+    // ⏳ NEXO ARCHITECT V3: Control de Tiempo (Timestamp Diff)
+    private long lastEvaluationTime;
+
+    public ActiveFactory(UUID id, UUID stoneId, UUID ownerId, String factoryType, int level, String currentStatus, int storedOutput, Location coreLocation, String catalystItem, String jsonLogic, long lastEvaluationTime) {
         this.id = id;
         this.stoneId = stoneId;
         this.ownerId = ownerId;
@@ -27,8 +30,9 @@ public class ActiveFactory {
         this.currentStatus = currentStatus;
         this.storedOutput = storedOutput;
         this.coreLocation = coreLocation;
-        this.catalystItem = catalystItem; // 🌟 Inicializado
-        this.jsonLogic = jsonLogic;       // 🌟 Inicializado
+        this.catalystItem = catalystItem;
+        this.jsonLogic = jsonLogic;
+        this.lastEvaluationTime = lastEvaluationTime; // 🌟 Inicializado
     }
 
     public synchronized void addOutput(int amount) { this.storedOutput += amount; }
@@ -45,9 +49,12 @@ public class ActiveFactory {
     public int getStoredOutput() { return storedOutput; }
     public Location getCoreLocation() { return coreLocation; }
 
-    // 🌟 GETTERS Y SETTERS LÓGICOS
     public String getCatalystItem() { return catalystItem; }
     public void setCatalystItem(String catalystItem) { this.catalystItem = catalystItem; }
     public String getJsonLogic() { return jsonLogic; }
     public void setJsonLogic(String jsonLogic) { this.jsonLogic = jsonLogic; }
+
+    // ⏳ Getters y Setters de Tiempo
+    public long getLastEvaluationTime() { return lastEvaluationTime; }
+    public void setLastEvaluationTime(long time) { this.lastEvaluationTime = time; }
 }

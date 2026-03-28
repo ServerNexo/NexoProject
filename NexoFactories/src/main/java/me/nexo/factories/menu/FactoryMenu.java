@@ -28,7 +28,7 @@ public class FactoryMenu implements Listener {
 
     private final NexoFactories plugin;
     public static final String TITLE_PLAIN = "» Panel de Control";
-    public static final String MENU_TITLE = "&#434343<bold>»</bold> &#00fbffPanel de Control";
+    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#00f5ffPanel de Control";
 
     public FactoryMenu(NexoFactories plugin) {
         this.plugin = plugin;
@@ -38,19 +38,19 @@ public class FactoryMenu implements Listener {
         Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
 
         ProtectionStone stone = NexoProtections.getClaimManager().getStoneById(factory.getStoneId());
-        String energyStatus = (stone != null) ? "&#a8ff78" + stone.getCurrentEnergy() + " ⚡" : "&#ff4b2bDesconectada";
+        String energyStatus = (stone != null) ? "&#00f5ff" + stone.getCurrentEnergy() + " ⚡" : "&#8b0000Desconectada";
 
         // 📊 PANEL DE INFORMACIÓN (Slot 11)
         ItemStack info = new ItemStack(Material.REPEATER);
         ItemMeta infoMeta = info.getItemMeta();
         if (infoMeta != null) {
-            infoMeta.setDisplayName(serialize("&#fbd72b<bold>" + factory.getFactoryType() + "</bold>"));
+            infoMeta.setDisplayName(serialize("&#ff00ff<bold>" + factory.getFactoryType() + "</bold>"));
             infoMeta.setLore(serializeList(Arrays.asList(
-                    "&#434343Nivel de Estructura: &#00fbff" + factory.getLevel(),
-                    "&#434343Estado: " + getStatusColor(factory.getCurrentStatus()),
-                    "&#434343Red Eléctrica: " + energyStatus,
+                    "&#1c0f2aNivel de Estructura: &#00f5ff" + factory.getLevel(),
+                    "&#1c0f2aEstado: " + getStatusColor(factory.getCurrentStatus()),
+                    "&#1c0f2aRed Eléctrica: " + energyStatus,
                     " ",
-                    "&#434343Autoridad: &#e0e0e0" + Bukkit.getOfflinePlayer(factory.getOwnerId()).getName()
+                    "&#1c0f2aAutoridad: &#1c0f2a" + Bukkit.getOfflinePlayer(factory.getOwnerId()).getName()
             )));
             info.setItemMeta(infoMeta);
         }
@@ -60,15 +60,15 @@ public class FactoryMenu implements Listener {
         ItemStack catalyst = new ItemStack(Material.LODESTONE);
         ItemMeta catMeta = catalyst.getItemMeta();
         if (catMeta != null) {
-            catMeta.setDisplayName(serialize("&#00fbff<bold>Módulo de Mejora</bold>"));
-            String catName = factory.getCatalystItem().equals("NONE") ? "&#ff4b2bVacante" : "&#a8ff78" + factory.getCatalystItem();
+            catMeta.setDisplayName(serialize("&#00f5ff<bold>Módulo de Mejora</bold>"));
+            String catName = factory.getCatalystItem().equals("NONE") ? "&#8b0000Vacante" : "&#00f5ff" + factory.getCatalystItem();
             catMeta.setLore(serializeList(Arrays.asList(
-                    "&#434343Inserta una Tarjeta Lógica para",
-                    "&#434343aumentar el rendimiento base.",
+                    "&#1c0f2aInserta una Tarjeta Lógica para",
+                    "&#1c0f2aaumentar el rendimiento base.",
                     " ",
-                    "&#434343Instalado: " + catName,
+                    "&#1c0f2aInstalado: " + catName,
                     " ",
-                    "&#fbd72b(Próximamente: Inserción de módulos)"
+                    "&#ff00ff(Próximamente: Inserción de módulos)"
             )));
             catalyst.setItemMeta(catMeta);
         }
@@ -78,11 +78,11 @@ public class FactoryMenu implements Listener {
         ItemStack output = new ItemStack(Material.CHEST);
         ItemMeta outputMeta = output.getItemMeta();
         if (outputMeta != null) {
-            outputMeta.setDisplayName(serialize("&#fbd72b<bold>Producción Almacenada</bold>"));
+            outputMeta.setDisplayName(serialize("&#ff00ff<bold>Producción Almacenada</bold>"));
             outputMeta.setLore(serializeList(Arrays.asList(
-                    "&#434343Activos listos para extraer: &#a8ff78" + factory.getStoredOutput(),
+                    "&#1c0f2aActivos listos para extraer: &#00f5ff" + factory.getStoredOutput(),
                     " ",
-                    factory.getStoredOutput() > 0 ? "&#fbd72b▶ Haz clic para recolectar" : "&#ff4b2bBandeja de salida vacía."
+                    factory.getStoredOutput() > 0 ? "&#00f5ff▶ Haz clic para recolectar" : "&#8b0000Bandeja de salida vacía."
             )));
             output.setItemMeta(outputMeta);
         }
@@ -92,12 +92,12 @@ public class FactoryMenu implements Listener {
         ItemStack logicBtn = new ItemStack(Material.COMMAND_BLOCK);
         ItemMeta logicMeta = logicBtn.getItemMeta();
         if (logicMeta != null) {
-            logicMeta.setDisplayName(serialize("&#8b008b<bold>Terminal de Lógica</bold>"));
+            logicMeta.setDisplayName(serialize("&#ff00ff<bold>Terminal de Lógica</bold>"));
             logicMeta.setLore(serializeList(Arrays.asList(
-                    "&#434343Automatiza la operativa mediante",
-                    "&#434343condiciones y scripts visuales.",
+                    "&#1c0f2aAutomatiza la operativa mediante",
+                    "&#1c0f2acondiciones y scripts visuales.",
                     " ",
-                    "&#00fbff▶ Clic para programar rutinas"
+                    "&#00f5ff▶ Clic para programar rutinas"
             )));
             logicBtn.setItemMeta(logicMeta);
         }
@@ -108,10 +108,10 @@ public class FactoryMenu implements Listener {
 
     private String getStatusColor(String status) {
         return switch (status) {
-            case "ACTIVE" -> "&#a8ff78<bold>PRODUCIENDO</bold>";
-            case "NO_ENERGY" -> "&#ff4b2b<bold>SIN ENERGÍA</bold>";
-            case "SCRIPT_PAUSED" -> "&#fbd72b<bold>EN ESPERA (SCRIPT)</bold>";
-            default -> "&#434343<bold>SISTEMA APAGADO</bold>";
+            case "ACTIVE" -> "&#00f5ff<bold>PRODUCIENDO</bold>";
+            case "NO_ENERGY" -> "&#8b0000<bold>SIN ENERGÍA</bold>";
+            case "SCRIPT_PAUSED" -> "&#ff00ff<bold>EN ESPERA (SCRIPT)</bold>";
+            default -> "&#1c0f2a<bold>SISTEMA APAGADO</bold>";
         };
     }
 
@@ -172,7 +172,7 @@ public class FactoryMenu implements Listener {
             }
 
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
-            player.sendMessage(NexoColor.parse("&#a8ff78<bold>¡EXTRACCIÓN EXITOSA!</bold> &#434343Has obtenido &#fbd72b" + amount + " activos&#434343."));
+            player.sendMessage(NexoColor.parse("&#00f5ff<bold>¡EXTRACCIÓN EXITOSA!</bold> &#1c0f2aHas obtenido &#ff00ff" + amount + " activos&#1c0f2a."));
             player.closeInventory();
         }
 

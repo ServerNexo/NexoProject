@@ -11,6 +11,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 public class DatabaseManager {
@@ -75,7 +78,7 @@ public class DatabaseManager {
     private void crearTabla() {
         if (dataSource == null) return; // Si falló la conexión, no intentamos crear tablas
 
-        // 🟢 Clean Code: Text Blocks para evitar el "+" infinito en SQL + CLANES AÑADIDOS
+        // 🟢 Clean Code: Text Blocks para evitar el "+" infinito en SQL + CLANES + BENDICIONES
         String sqlJugadores = """
                 CREATE TABLE IF NOT EXISTS jugadores (
                     uuid VARCHAR(36) PRIMARY KEY, nombre VARCHAR(16) NOT NULL,
@@ -83,7 +86,8 @@ public class DatabaseManager {
                     combate_nivel INT DEFAULT 1, combate_xp INT DEFAULT 0,
                     mineria_nivel INT DEFAULT 1, mineria_xp INT DEFAULT 0,
                     agricultura_nivel INT DEFAULT 1, agricultura_xp INT DEFAULT 0,
-                    clan_id UUID DEFAULT NULL, clan_role VARCHAR(15) DEFAULT 'NONE'
+                    clan_id UUID DEFAULT NULL, clan_role VARCHAR(15) DEFAULT 'NONE',
+                    blessings TEXT DEFAULT ''
                 );""";
 
         String sqlMochilas = """
@@ -113,12 +117,17 @@ public class DatabaseManager {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             try (Connection conn = getConnection();
                  java.sql.Statement stmt = conn.createStatement()) {
+
                 // Ejecutamos las creaciones al arrancar el servidor
                 stmt.execute(sqlJugadores);
+
+                // 🌟 MÓDULO 5: Inyección Silenciosa de la columna Blessings por si la tabla ya existía previamente
+                try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS blessings TEXT DEFAULT '';"); } catch (Exception ignored) {}
+
                 stmt.execute(sqlMochilas);
                 stmt.execute(sqlGuardarropa);
                 stmt.execute(sqlStorage);
-                stmt.execute(sqlColecciones); // Ejecutamos la tabla de colecciones
+                stmt.execute(sqlColecciones);
             } catch (SQLException e) {
                 plugin.getLogger().severe("Error al crear tablas: " + e.getMessage());
             }
@@ -148,6 +157,9 @@ public class DatabaseManager {
                         UUID clanId = (clanIdStr != null && !clanIdStr.isEmpty()) ? UUID.fromString(clanIdStr) : null;
                         String clanRole = rs.getString("clan_role");
 
+                        // 🌟 LECTURA DE BENDICIONES
+                        String blessingsRaw = rs.getString("blessings");
+
                         // 🟢 ARQUITECTURA: Creamos el objeto NexoUser con los datos de la DB
                         NexoUser user = new NexoUser(
                                 uuid, name,
@@ -157,6 +169,12 @@ public class DatabaseManager {
                                 rs.getInt("agricultura_nivel"), rs.getInt("agricultura_xp"),
                                 clanId, clanRole
                         );
+
+                        // Inyectar bendiciones al caché
+                        if (blessingsRaw != null && !blessingsRaw.isEmpty()) {
+                            Set<String> blessSet = new HashSet<>(Arrays.asList(blessingsRaw.split(",")));
+                            user.setBlessings(blessSet);
+                        }
 
                         // 🔴 VOLVEMOS AL MAIN THREAD para meterlo en la caché de forma segura
                         Bukkit.getScheduler().runTask(plugin, () -> {
@@ -196,11 +214,12 @@ public class DatabaseManager {
         NexoUser user = plugin.getUserManager().getUserOrNull(uuid);
         if (user == null) return; // Si no está en caché, no hay nada que guardar
 
-        // 🟢 Actualizado para guardar Clan ID y Rol
+        // 🟢 Actualizado para guardar Clan ID, Rol y Bendiciones
         String updateSQL = """
                 UPDATE jugadores SET nexo_nivel = ?, nexo_xp = ?, nombre = ?, 
                 combate_nivel = ?, combate_xp = ?, mineria_nivel = ?, mineria_xp = ?, 
-                agricultura_nivel = ?, agricultura_xp = ?, clan_id = CAST(? AS UUID), clan_role = ? 
+                agricultura_nivel = ?, agricultura_xp = ?, clan_id = CAST(? AS UUID), clan_role = ?,
+                blessings = ?
                 WHERE uuid = ?
                 """;
 
@@ -220,7 +239,8 @@ public class DatabaseManager {
                 }
 
                 ps.setString(11, user.getClanRole());
-                ps.setString(12, uuid.toString());
+                ps.setString(12, String.join(",", user.getActiveBlessings())); // 🌟 Serializar Bendiciones
+                ps.setString(13, uuid.toString());
 
                 ps.executeUpdate();
 
@@ -245,11 +265,12 @@ public class DatabaseManager {
         NexoUser user = plugin.getUserManager().getUserOrNull(uuid);
         if (user == null) return;
 
-        // 🟢 Actualizado para guardar Clan ID y Rol síncronamente
+        // 🟢 Actualizado para guardar Clan ID, Rol y Bendiciones síncronamente
         String updateSQL = """
                 UPDATE jugadores SET nexo_nivel = ?, nexo_xp = ?, nombre = ?, 
                 combate_nivel = ?, combate_xp = ?, mineria_nivel = ?, mineria_xp = ?, 
-                agricultura_nivel = ?, agricultura_xp = ?, clan_id = CAST(? AS UUID), clan_role = ? 
+                agricultura_nivel = ?, agricultura_xp = ?, clan_id = CAST(? AS UUID), clan_role = ?,
+                blessings = ?
                 WHERE uuid = ?
                 """;
 
@@ -267,11 +288,31 @@ public class DatabaseManager {
             }
 
             ps.setString(11, user.getClanRole());
-            ps.setString(12, uuid.toString());
+            ps.setString(12, String.join(",", user.getActiveBlessings())); // 🌟 Serializar Bendiciones
+            ps.setString(13, uuid.toString());
 
             ps.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().severe("Error en guardado síncrono de " + player.getName() + ": " + e.getMessage());
         }
+    }
+
+    // ==========================================
+    // ⚡ TAREA ZERO-MAIN-THREAD: GUARDADO RÁPIDO DE BENDICIONES
+    // ==========================================
+    public void saveUserBlessings(NexoUser user) {
+        if (dataSource == null || user == null) return;
+        String updateSQL = "UPDATE jugadores SET blessings = ? WHERE uuid = ?";
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try (Connection conn = getConnection();
+                 PreparedStatement ps = conn.prepareStatement(updateSQL)) {
+                ps.setString(1, String.join(",", user.getActiveBlessings()));
+                ps.setString(2, user.getUuid().toString());
+                ps.executeUpdate();
+            } catch (SQLException e) {
+                plugin.getLogger().severe("Error actualizando bendición de " + user.getNombre() + ": " + e.getMessage());
+            }
+        });
     }
 }

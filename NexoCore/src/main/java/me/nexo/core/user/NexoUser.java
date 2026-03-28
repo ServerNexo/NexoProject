@@ -1,6 +1,8 @@
 package me.nexo.core.user;
 
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class NexoUser {
@@ -27,6 +29,9 @@ public class NexoUser {
     private final AtomicInteger energiaExtraAccesorios;
     private String claseJugador; // Guardará el nombre de su clase RPG si tiene
 
+    // 🩸 MODIFICACIÓN (Nexo Architect V3.0): Caché de Bendiciones Thread-Safe
+    private final Set<String> activeBlessings;
+
     public NexoUser(UUID uuid, String nombre, int nNivel, int nXp, int cNivel, int cXp, int mNivel, int mXp, int aNivel, int aXp, UUID clanId, String clanRole) {
         this.uuid = uuid;
         this.nombre = nombre;
@@ -48,6 +53,9 @@ public class NexoUser {
         this.energiaMineria = new AtomicInteger(100 + ((nNivel - 1) * 20));
         this.energiaExtraAccesorios = new AtomicInteger(0);
         this.claseJugador = "Ninguna";
+
+        // Inicializar el caché de bendiciones (Concurrente para evitar lag spikes)
+        this.activeBlessings = ConcurrentHashMap.newKeySet();
     }
 
     // 🏛️ GETTERS Y SETTERS DE CLAN
@@ -134,5 +142,33 @@ public class NexoUser {
 
     public void setGems(int amount) {
         this.gems.set(amount);
+    }
+
+    // =====================================
+    // 🩸 MÓDULO 5: SISTEMA DE BENDICIONES (Anti-Lag)
+    // =====================================
+    public boolean hasActiveBlessing(String blessingId) {
+        return this.activeBlessings.contains(blessingId.toUpperCase());
+    }
+
+    public void addBlessing(String blessingId) {
+        this.activeBlessings.add(blessingId.toUpperCase());
+    }
+
+    public void removeBlessing(String blessingId) {
+        this.activeBlessings.remove(blessingId.toUpperCase());
+    }
+
+    public Set<String> getActiveBlessings() {
+        return this.activeBlessings;
+    }
+
+    public void setBlessings(Set<String> blessings) {
+        this.activeBlessings.clear();
+        if (blessings != null) {
+            for (String b : blessings) {
+                this.activeBlessings.add(b.toUpperCase());
+            }
+        }
     }
 }

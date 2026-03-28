@@ -6,7 +6,6 @@ import me.nexo.factories.managers.BlueprintManager;
 import me.nexo.factories.managers.FactoryManager;
 import me.nexo.factories.menu.FactoryMenu;
 import me.nexo.factories.menu.LogicMenu; // 🌟 IMPORT AÑADIDO
-import me.nexo.factories.tasks.ProductionCycleTask;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoFactories extends JavaPlugin {
@@ -47,9 +46,7 @@ public class NexoFactories extends JavaPlugin {
             getCommand("factory").setExecutor(new ComandoFactory(this));
         }
 
-        // 🌟 ENCENDEMOS EL MOTOR DE PRODUCCIÓN (El Nexo-Grid)
-        // Se ejecutará cada 1200 ticks (60 segundos)
-        new ProductionCycleTask(this).runTaskTimer(this, 1200L, 1200L);
+
 
         getLogger().info("✅ ¡NexoFactories cargado! Nexo-Grid en línea y produciendo.");
         getLogger().info("========================================");

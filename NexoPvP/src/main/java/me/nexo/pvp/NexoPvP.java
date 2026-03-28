@@ -10,6 +10,9 @@ import me.nexo.pvp.pvp.ComandoPvP;
 import me.nexo.pvp.pasivas.PasivasManager;
 import me.nexo.pvp.pasivas.PasivasListener;
 
+// 🩸 Módulo de Mecánicas Hardcore (Nexo Architect V3.0)
+import me.nexo.pvp.mechanics.DeathPenaltyListener;
+
 public class NexoPvP extends JavaPlugin {
 
     private PvPManager pvpManager;
@@ -35,8 +38,19 @@ public class NexoPvP extends JavaPlugin {
         // 🟢 Registramos el Listener de las pasivas
         getServer().getPluginManager().registerEvents(new PasivasListener(this, this.pasivasManager), this);
 
+        // 🩸 Registramos la Penalización de Muerte Hardcore (Filosofía Tibia)
+        getServer().getPluginManager().registerEvents(new DeathPenaltyListener(), this);
+
         if (getCommand("pvp") != null) {
             getCommand("pvp").setExecutor(new ComandoPvP(this.pvpManager));
+        }
+
+        // Registrar el Listener del Menú
+        getServer().getPluginManager().registerEvents(new me.nexo.pvp.menus.BlessingMenuListener(), this);
+
+        // Registrar el comando /templo
+        if (getCommand("templo") != null) {
+            getCommand("templo").setExecutor(new me.nexo.pvp.commands.ComandoTemplo());
         }
 
         getLogger().info("========================================");
