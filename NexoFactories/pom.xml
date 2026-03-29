@@ -10,6 +10,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>NexoFactories</artifactId>
+    <name>NexoFactories</name>
+
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
