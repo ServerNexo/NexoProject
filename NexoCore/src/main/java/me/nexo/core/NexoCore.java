@@ -6,9 +6,10 @@ import me.nexo.core.commands.ComandoNexoTabCompleter;
 import me.nexo.core.commands.WebCommand;
 import me.nexo.core.config.ConfigManager;
 import me.nexo.core.hub.NexoMenuListener;
+import me.nexo.core.listeners.VoidEssenceListener;
+import me.nexo.core.menus.MenuGlobalListener;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.UserManager;
-import me.nexo.core.listeners.VoidEssenceListener;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -48,6 +49,7 @@ public class NexoCore extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new VoidEssenceListener(this), this);
         getServer().getPluginManager().registerEvents(new NexoMenuListener(this), this);
         getServer().getPluginManager().registerEvents(new me.nexo.core.menus.VoidBlessingMenuListener(), this);
+        getServer().getPluginManager().registerEvents(new MenuGlobalListener(), this);
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new NexoExpansion(this).register();

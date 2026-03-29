@@ -16,8 +16,6 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- ⚙️ NUEVA PROPIEDAD: Directorio de salida para todos los JARs -->
-        <project.build.directory>${basedir}/build</project.build.directory>
     </properties>
 
     <modules>
@@ -54,8 +52,8 @@
                     <artifactId>maven-jar-plugin</artifactId>
                     <version>3.2.0</version>
                     <configuration>
-                        <!-- ⚙️ NUEVA CONFIGURACIÓN: Nombre del JAR final -->
                         <finalName>${project.name}</finalName>
+                        <outputDirectory>${maven.multiModuleProjectDirectory}/!Compilados_Nexo</outputDirectory>
                     </configuration>
                 </plugin>
             </plugins>
