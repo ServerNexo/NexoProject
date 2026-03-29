@@ -1,44 +1,42 @@
 package me.nexo.colecciones.colecciones;
 
 import com.google.gson.Gson;
-import com.zaxxer.hikari.HikariDataSource;
 import me.nexo.colecciones.NexoColecciones;
+import me.nexo.core.NexoCore;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 
 public class FlushTask extends BukkitRunnable {
-    private final HikariDataSource hikari;
+
+    private final NexoColecciones plugin;
     private final Gson gson = new Gson();
 
-    public FlushTask(HikariDataSource hikari) {
-        this.hikari = hikari;
+    // 🌟 AHORA SÍ: El constructor acepta tu plugin perfectamente
+    public FlushTask(NexoColecciones plugin) {
+        this.plugin = plugin;
     }
 
     @Override
     public void run() {
-        // 🌟 NUEVO SQL: Inyectamos 'claimed_tiers' a la base de datos de Supabase
         String sql = "INSERT INTO nexo_collections (uuid, collections_data, claimed_tiers) VALUES (?, ?::jsonb, ?::jsonb) " +
                 "ON CONFLICT (uuid) DO UPDATE SET collections_data = EXCLUDED.collections_data, claimed_tiers = EXCLUDED.claimed_tiers";
 
-        try (Connection conn = hikari.getConnection();
+        // 🌟 MAGIA: Pedimos la conexión prestada directamente a NexoCore
+        try (Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             conn.setAutoCommit(false);
             int batchCount = 0;
-
-            NexoColecciones plugin = NexoColecciones.getPlugin(NexoColecciones.class);
 
             // Toma los perfiles directo del Cerebro
             for (CollectionProfile profile : plugin.getCollectionManager().getPerfiles().values()) {
                 if (profile.isNeedsFlush()) {
                     ps.setString(1, profile.getPlayerUUID().toString());
 
-                    // 🌟 Empaquetamos en JSON el progreso base
+                    // Empaquetamos en JSON el progreso base y los tiers reclamados
                     ps.setString(2, gson.toJson(profile.getProgressMap()));
-
-                    // 🌟 Empaquetamos en JSON la nueva memoria de recompensas reclamadas
                     ps.setString(3, gson.toJson(profile.getClaimedTiersMap()));
 
                     ps.addBatch();
@@ -53,6 +51,7 @@ public class FlushTask extends BukkitRunnable {
                 conn.commit();
             }
         } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error al guardar datos de colecciones en Supabase.");
             e.printStackTrace();
         }
     }

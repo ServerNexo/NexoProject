@@ -120,7 +120,6 @@ public class ActiveMinion {
     private void actualizarHolograma(int maxStorage) {
         if (holograma == null || holograma.isDead()) return;
 
-        // 🌟 GÓTICO DEL VACÍO: Textos oscuros
         if (storedItems >= maxStorage && !tieneMejoraPorTipo("STORAGE_LINK")) {
             holograma.text(NexoColor.parse("&#FF3366<bold>¡ENTIDAD SACIADA!</bold>\n&#E6CCFFMateria: &#CC66FF" + storedItems + " / " + maxStorage));
         } else {
@@ -140,17 +139,14 @@ public class ActiveMinion {
         }
 
         if (!guardadoEnCofre) {
-            // 🌟 NUEVO MOTOR HYPIXEL: LÓGICA DE AUTO-SELL
             ConfigurationSection autoSellData = getMejoraActiva("AUTO_SELL");
             if (autoSellData != null) {
                 double precio = autoSellData.getDouble("precio_por_unidad", 1.0);
 
                 Player owner = Bukkit.getPlayer(ownerId);
                 if (owner != null && owner.isOnline()) {
-                    // 🌟 SOLUCIÓN SEGURA: Ejecutar el comando por consola
                     org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), "eco give " + owner.getName() + " " + precio);
 
-                    // Sumamos progreso a colecciones (si tienes NexoColecciones)
                     if (Bukkit.getPluginManager().isPluginEnabled("NexoColecciones")) {
                         NexoColecciones.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, type.getTargetMaterial().name(), 1);
                     }
@@ -158,7 +154,7 @@ public class ActiveMinion {
 
                 this.trabajosRealizados++;
                 consumirCombustibles();
-                return; // 🛑 Terminamos aquí, no se guarda el ítem físicamente
+                return;
             }
 
             if (this.storedItems < getRealMaxStorage()) {
@@ -170,7 +166,6 @@ public class ActiveMinion {
         this.trabajosRealizados++;
         consumirCombustibles();
 
-        // Progresión de colecciones normal (si no tiene auto-sell)
         Player owner = Bukkit.getPlayer(ownerId);
         if (owner != null && owner.isOnline() && !tieneMejoraActiva("AUTO_SELL")) {
             if (Bukkit.getPluginManager().isPluginEnabled("NexoColecciones")) {
@@ -193,7 +188,7 @@ public class ActiveMinion {
                 multiplicador -= datos.getDouble("multiplier", 0.0);
             }
         }
-        return Math.max(multiplicador, 0.1); // Máximo 90% de reducción de tiempo
+        return Math.max(multiplicador, 0.1);
     }
 
     private void consumirCombustibles() {
@@ -202,7 +197,7 @@ public class ActiveMinion {
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
 
             if (datos != null && "FUEL".equals(datos.getString("category", ""))) {
-                if (datos.getBoolean("unbreakable", false)) continue; // Si es infinito, no se gasta
+                if (datos.getBoolean("unbreakable", false)) continue;
 
                 int duracionSegundos = datos.getInt("duration", 600);
                 if (duracionSegundos <= 0) continue;
@@ -310,4 +305,25 @@ public class ActiveMinion {
     public int getTier() { return tier; }
     public int getStoredItems() { return storedItems; }
     public void setStoredItems(int storedItems) { this.storedItems = storedItems; }
+
+    /**
+     * 💾 PROTOCOLO DE APAGADO DE EMERGENCIA:
+     * Guarda toda la RAM del Minion en la entidad física antes de que el servidor se apague.
+     */
+    public void saveData() {
+        if (entity == null || !entity.isValid()) return;
+        var pdc = entity.getPersistentDataContainer();
+        
+        pdc.set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
+        pdc.set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, this.nextActionTime);
+        pdc.set(MinionKeys.TIER, PersistentDataType.INTEGER, this.tier);
+        
+        for (int i = 0; i < 4; i++) {
+            if (upgrades[i] != null && !upgrades[i].getType().isAir()) {
+                pdc.set(MinionKeys.UPGRADES[i], PersistentDataType.BYTE_ARRAY, upgrades[i].serializeAsBytes());
+            } else {
+                pdc.remove(MinionKeys.UPGRADES[i]);
+            }
+        }
+    }
 }

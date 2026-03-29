@@ -35,7 +35,8 @@ public class ClanMenu {
         ItemStack monolith = new ItemStack(Material.BEACON);
         ItemMeta monoMeta = monolith.getItemMeta();
         if (monoMeta != null) {
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.principal.lore-monolito");
+            // 🌟 CORRECCIÓN 1: Llamamos a getConfig() en lugar de getMessages()
+            List<String> loreConfig = core.getConfigManager().getConfig("clans_messages.yml").getStringList("menus.principal.lore-monolito");
             List<net.kyori.adventure.text.Component> monoLore = loreConfig.stream()
                     .map(line -> CrossplayUtils.parseCrossplay(player, line
                             .replace("%clan_name%", clan.getName())
@@ -55,7 +56,8 @@ public class ClanMenu {
         ItemMeta bankMeta = bank.getItemMeta();
         if (bankMeta != null) {
             bankMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("clans_messages.yml", "menus.principal.item-banco")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.principal.lore-banco");
+            // 🌟 CORRECCIÓN 2
+            List<String> loreConfig = core.getConfigManager().getConfig("clans_messages.yml").getStringList("menus.principal.lore-banco");
             List<net.kyori.adventure.text.Component> bankLore = loreConfig.stream()
                     .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%balance%", clan.getBankBalance().toString())))
                     .collect(Collectors.toList());
@@ -70,7 +72,8 @@ public class ClanMenu {
         ItemMeta swordMeta = sword.getItemMeta();
         if (swordMeta != null) {
             swordMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("clans_messages.yml", "menus.principal.item-ff")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.principal.lore-ff");
+            // 🌟 CORRECCIÓN 3
+            List<String> loreConfig = core.getConfigManager().getConfig("clans_messages.yml").getStringList("menus.principal.lore-ff");
             String status = clan.isFriendlyFire() ? "&#8b0000<bold>ACTIVADO</bold>" : "&#00f5ff<bold>APAGADO</bold>";
             List<net.kyori.adventure.text.Component> swordLore = loreConfig.stream()
                     .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%status%", status)))
@@ -86,7 +89,8 @@ public class ClanMenu {
         ItemMeta headsMeta = heads.getItemMeta();
         if (headsMeta != null) {
             headsMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("clans_messages.yml", "menus.principal.item-miembros")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.principal.lore-miembros");
+            // 🌟 CORRECCIÓN 4
+            List<String> loreConfig = core.getConfigManager().getConfig("clans_messages.yml").getStringList("menus.principal.lore-miembros");
             List<net.kyori.adventure.text.Component> headsLore = loreConfig.stream()
                     .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%role%", user.getClanRole())))
                     .collect(Collectors.toList());

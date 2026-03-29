@@ -6,6 +6,7 @@ import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -44,6 +45,11 @@ public class LogicMenu implements Listener {
         return core.getConfigManager().getMessage("factories_messages.yml", path);
     }
 
+    // 🌟 CORRECCIÓN 1: Método ayudante para obtener listas correctamente
+    private List<String> getMessageList(String path) {
+        return core.getConfigManager().getConfig("factories_messages.yml").getStringList(path);
+    }
+
     public void openMenu(Player player, ActiveFactory factory) {
         editingFactory.put(player.getUniqueId(), factory);
         int condIndex = 0;
@@ -70,7 +76,7 @@ public class LogicMenu implements Listener {
         ItemMeta sensorMeta = sensor.getItemMeta();
         if (sensorMeta != null) {
             sensorMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.logic.sensor.titulo")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.logic.sensor.lore");
+            List<String> loreConfig = getMessageList("menus.logic.sensor.lore");
             sensorMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%condition%", cond))).collect(Collectors.toList()));
             sensor.setItemMeta(sensorMeta);
         }
@@ -80,7 +86,7 @@ public class LogicMenu implements Listener {
         ItemMeta actionMeta = action.getItemMeta();
         if (actionMeta != null) {
             actionMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.logic.operacion.titulo")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.logic.operacion.lore");
+            List<String> loreConfig = getMessageList("menus.logic.operacion.lore");
             actionMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%action%", act))).collect(Collectors.toList()));
             action.setItemMeta(actionMeta);
         }
@@ -90,7 +96,7 @@ public class LogicMenu implements Listener {
         ItemMeta saveMeta = save.getItemMeta();
         if (saveMeta != null) {
             saveMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.logic.guardar.titulo")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.logic.guardar.lore");
+            List<String> loreConfig = getMessageList("menus.logic.guardar.lore");
             saveMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
             save.setItemMeta(saveMeta);
         }
@@ -101,10 +107,17 @@ public class LogicMenu implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!CrossplayUtils.getChatPlain((Player) event.getWhoClicked(), event.getView().title()).equals(getMessage("menus.logic.titulo").replaceAll("<[^>]*>", ""))) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+
+        // 🌟 CORRECCIÓN 2: Validación de título moderna usando componentes Kyori
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        String expectedTitle = PlainTextComponentSerializer.plainText().serialize(
+                CrossplayUtils.parseCrossplay(player, getMessage("menus.logic.titulo"))
+        );
+
+        if (!plainTitle.equals(expectedTitle)) return;
 
         event.setCancelled(true);
-        Player player = (Player) event.getWhoClicked();
         UUID id = player.getUniqueId();
         if (!editingFactory.containsKey(id)) return;
 

@@ -3,6 +3,7 @@ package me.nexo.items.estaciones;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.skill.Skills;
 import dev.aurelium.auraskills.api.user.SkillsUser;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.items.NexoItems;
 import me.nexo.items.managers.ItemManager;
@@ -27,10 +28,16 @@ public class UpgradeListener implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!plainTitle.equals(UpgradeMenu.TITLE_PLAIN)) return;
-
         Player player = (Player) event.getWhoClicked();
+
+        // 🌟 CORRECCIÓN: Obtenemos el título plano dinámicamente desde la config y el Crossplay
+        String expectedTitle = PlainTextComponentSerializer.plainText().serialize(
+                CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.upgrade.titulo"))
+        );
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+
+        if (!plainTitle.equals(expectedTitle)) return;
+
         int slot = event.getSlot();
 
         if (event.getClickedInventory() == event.getView().getTopInventory() && slot != 13) {
@@ -96,12 +103,7 @@ public class UpgradeListener implements Listener {
             // ===============================================
             int costo = targetNivel * 10;
             String divisaRequerida = isWeapon ? "Fragmentos de Nexo" : "Esencias de Vida";
-            // Aquí iría tu validador de economía (PersistentDataContainer del jugador o plugin de economía)
-            // if (!hasCurrency(player, isWeapon ? "FRAGMENTO" : "ESENCIA", costo)) {
-            //      player.sendMessage(NexoColor.parse("&#FF5555[!] Fondos insuficientes. Necesitas " + costo + " " + divisaRequerida + "."));
-            //      return;
-            // }
-            // descontarCurrency(player, ...);
+            // Aquí iría tu validador de economía
 
             // Realizamos la mejora
             meta.getPersistentDataContainer().set(ItemManager.llaveNivelEvolucion, PersistentDataType.INTEGER, targetNivel);
@@ -116,11 +118,18 @@ public class UpgradeListener implements Listener {
 
     @EventHandler
     public void onClose(InventoryCloseEvent event) {
+        Player player = (Player) event.getPlayer();
+
+        // 🌟 CORRECCIÓN: Validación dinámica también al cerrar el inventario
+        String expectedTitle = PlainTextComponentSerializer.plainText().serialize(
+                CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.upgrade.titulo"))
+        );
         String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (plainTitle.equals(UpgradeMenu.TITLE_PLAIN)) {
+
+        if (plainTitle.equals(expectedTitle)) {
             ItemStack item = event.getView().getTopInventory().getItem(13);
-            if (item != null) {
-                event.getPlayer().getInventory().addItem(item);
+            if (item != null && item.getType() != org.bukkit.Material.AIR) {
+                player.getInventory().addItem(item);
             }
         }
     }

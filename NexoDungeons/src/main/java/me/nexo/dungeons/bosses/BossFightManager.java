@@ -68,9 +68,14 @@ public class BossFightManager implements Listener {
         Map<UUID, Double> damageMap = activeBosses.remove(entityId);
 
         if (damageMap != null && !damageMap.isEmpty()) {
+
+            // 🌟 Extraemos y guardamos el nombre de forma segura (síncrona)
+            final String bossName = event.getMobType().getInternalName();
+
             // 🚀 Mandamos a calcular el botín asíncronamente para no congelar el servidor
             org.bukkit.Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                LootDistributor.distributeLoot(event.getMobType().getInternalName(), damageMap);
+                // 🌟 CORRECCIÓN APLICADA: Entregamos el plugin como primer argumento para que la clase de Loot pueda operar.
+                LootDistributor.distributeLoot(plugin, bossName, damageMap);
             });
         }
     }

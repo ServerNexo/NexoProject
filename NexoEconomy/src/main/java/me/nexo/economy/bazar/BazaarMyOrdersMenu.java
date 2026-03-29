@@ -2,6 +2,7 @@ package me.nexo.economy.bazar;
 
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.economy.NexoEconomy;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -43,7 +44,9 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
             List<BazaarManager.ActiveOrderDTO> orders = plugin.getBazaarManager().getMisOrdenes(player.getUniqueId());
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!CrossplayUtils.getChatPlain(player, player.getOpenInventory().title()).contains("Mis Órdenes")) return;
+                // 🌟 CORRECCIÓN: Leemos el componente del título usando el serializador nativo de Kyori
+                String tituloPlano = PlainTextComponentSerializer.plainText().serialize(player.getOpenInventory().title());
+                if (!tituloPlano.contains("Mis Órdenes")) return;
 
                 inventory.setItem(22, new ItemStack(Material.AIR));
 

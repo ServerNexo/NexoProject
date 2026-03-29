@@ -6,6 +6,7 @@ import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.core.ProtectionStone;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -36,6 +37,11 @@ public class FactoryMenu implements Listener {
         return core.getConfigManager().getMessage("factories_messages.yml", path);
     }
 
+    // 🌟 CORRECCIÓN 1: Método ayudante para extraer las listas correctamente
+    private List<String> getMessageList(String path) {
+        return core.getConfigManager().getConfig("factories_messages.yml").getStringList(path);
+    }
+
     public void openMenu(Player player, ActiveFactory factory) {
         Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, getMessage("menus.factory.titulo")));
 
@@ -63,7 +69,7 @@ public class FactoryMenu implements Listener {
         if (catMeta != null) {
             catMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.factory.mejora.titulo")));
             String catName = factory.getCatalystItem().equals("NONE") ? "&#8b0000Vacante" : "&#00f5ff" + factory.getCatalystItem();
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.factory.mejora.lore");
+            List<String> loreConfig = getMessageList("menus.factory.mejora.lore");
             catMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%catalyst_name%", catName))).collect(Collectors.toList()));
             catalyst.setItemMeta(catMeta);
         }
@@ -73,7 +79,7 @@ public class FactoryMenu implements Listener {
         ItemMeta outputMeta = output.getItemMeta();
         if (outputMeta != null) {
             outputMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.factory.produccion.titulo")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.factory.produccion.lore");
+            List<String> loreConfig = getMessageList("menus.factory.produccion.lore");
             String action = factory.getStoredOutput() > 0 ? getMessage("menus.factory.produccion.accion-recolectar") : getMessage("menus.factory.produccion.bandeja-vacia");
             loreConfig.add(action);
             outputMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%stored_output%", String.valueOf(factory.getStoredOutput())))).collect(Collectors.toList()));
@@ -85,7 +91,7 @@ public class FactoryMenu implements Listener {
         ItemMeta logicMeta = logicBtn.getItemMeta();
         if (logicMeta != null) {
             logicMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.factory.terminal.titulo")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.factory.terminal.lore");
+            List<String> loreConfig = getMessageList("menus.factory.terminal.lore");
             logicMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
             logicBtn.setItemMeta(logicMeta);
         }
@@ -105,10 +111,17 @@ public class FactoryMenu implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!CrossplayUtils.getChatPlain((Player) event.getWhoClicked(), event.getView().title()).equals(getMessage("menus.factory.titulo").replaceAll("<[^>]*>", ""))) return;
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+
+        // 🌟 CORRECCIÓN 2: Validación segura y moderna del título de la interfaz
+        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        String expectedTitle = PlainTextComponentSerializer.plainText().serialize(
+                CrossplayUtils.parseCrossplay(player, getMessage("menus.factory.titulo"))
+        );
+
+        if (!plainTitle.equals(expectedTitle)) return;
 
         event.setCancelled(true);
-        Player player = (Player) event.getWhoClicked();
 
         if (event.getSlot() == 15) {
             Block target = player.getTargetBlockExact(5);

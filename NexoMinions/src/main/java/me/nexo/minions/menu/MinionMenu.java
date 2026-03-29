@@ -4,6 +4,7 @@ import me.nexo.minions.NexoMinions;
 import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -42,6 +43,10 @@ public class MinionMenu implements InventoryHolder {
 
     private String getMessage(String path) {
         return core.getConfigManager().getMessage("minions_messages.yml", path);
+    }
+
+    private List<String> getMessageList(String path) {
+        return core.getConfigManager().getConfig("minions_messages.yml").getStringList(path);
     }
 
     private void configurarMenu(int tamano) {
@@ -93,7 +98,7 @@ public class MinionMenu implements InventoryHolder {
                 metaEvo.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menu.evolucion.max-nivel")));
             } else {
                 metaEvo.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menu.evolucion.titulo").replace("%level%", String.valueOf(sigNivel))));
-                List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menu.evolucion.lore");
+                List<String> loreConfig = getMessageList("menu.evolucion.lore");
                 List<net.kyori.adventure.text.Component> loreEvo = loreConfig.stream()
                         .map(line -> CrossplayUtils.parseCrossplay(player, line))
                         .collect(Collectors.toList());
@@ -114,26 +119,33 @@ public class MinionMenu implements InventoryHolder {
 
         String tipoMinion = minion.getType().name();
         int xpAcumulada = minion.getStoredItems() * 2;
-        String tipoSkill = "";
+
+        // 🌟 CORRECCIÓN APLICADA: Declaración FINAL de la variable para que el Lambda no crashee.
+        final String tipoSkillFinal;
         if (tipoMinion.contains("WHEAT") || tipoMinion.contains("CARROT") || tipoMinion.contains("POTATO") || tipoMinion.contains("MELON") || tipoMinion.contains("PUMPKIN") || tipoMinion.contains("SUGAR_CANE")) {
-            tipoSkill = "Agricultura";
+            tipoSkillFinal = "Agricultura";
         } else if (tipoMinion.contains("ORE") || tipoMinion.contains("COBBLESTONE") || tipoMinion.contains("STONE") || tipoMinion.contains("OBSIDIAN")) {
-            tipoSkill = "Minería";
+            tipoSkillFinal = "Minería";
+        } else {
+            tipoSkillFinal = "";
         }
 
         ItemStack extraer = new ItemStack(Material.HOPPER);
         ItemMeta metaExtraer = extraer.getItemMeta();
         if (metaExtraer != null) {
             metaExtraer.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menu.cosechar.titulo")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menu.cosechar.lore");
+            List<String> loreConfig = getMessageList("menu.cosechar.lore");
+
+            // Usamos la variable 'tipoSkillFinal' que ya es segura para el Lambda
             List<net.kyori.adventure.text.Component> loreExtraer = loreConfig.stream()
                     .map(line -> CrossplayUtils.parseCrossplay(player, line
                             .replace("%items%", String.valueOf(minion.getStoredItems()))
-                            .replace("%skill%", tipoSkill)
+                            .replace("%skill%", tipoSkillFinal)
                             .replace("%xp%", String.valueOf(xpAcumulada))))
                     .collect(Collectors.toList());
-            if (tipoSkill.isEmpty() || minion.getStoredItems() == 0) {
-                loreExtraer.removeIf(line -> CrossplayUtils.getChatPlain(player, line).contains("Conocimiento Arcano"));
+
+            if (tipoSkillFinal.isEmpty() || minion.getStoredItems() == 0) {
+                loreExtraer.removeIf(line -> PlainTextComponentSerializer.plainText().serialize(line).contains("Conocimiento Arcano"));
             }
             metaExtraer.lore(loreExtraer);
             extraer.setItemMeta(metaExtraer);
@@ -154,7 +166,7 @@ public class MinionMenu implements InventoryHolder {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menu.iconos-guia." + key + ".titulo")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menu.iconos-guia." + key + ".lore");
+            List<String> loreConfig = getMessageList("menu.iconos-guia." + key + ".lore");
             List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
                     .map(line -> CrossplayUtils.parseCrossplay(player, "&#1c0f2a" + line))
                     .collect(Collectors.toList());

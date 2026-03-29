@@ -27,7 +27,8 @@ public class WaveManager implements Listener {
             return;
         }
 
-        WaveArena arena = new WaveArena(arenaId, center);
+        // 🌟 CORRECCIÓN: Le entregamos la instancia del plugin a la Arena para que pueda ejecutar tareas
+        WaveArena arena = new WaveArena(plugin, arenaId, center);
         activeArenas.put(arenaId, arena);
         arena.start();
     }

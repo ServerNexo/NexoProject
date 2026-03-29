@@ -1,5 +1,6 @@
 package me.nexo.mechanics.minigames;
 
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.mechanics.NexoMechanics;
@@ -61,15 +62,18 @@ public class FarmingMinigameManager implements Listener {
             plaga.getEquipment().setHelmet(new ItemStack(Material.WEEPING_VINES));
         }
 
-        plaga.customName(CrossplayUtils.parseCrossplay(p, plugin.getConfigManager().getMessage("eventos.farming.plaga-biologica")));
+        // 🌟 CORRECCIÓN APLICADA: Obtenemos el ConfigManager directamente desde tu NexoCore
+        NexoCore core = NexoCore.getPlugin(NexoCore.class);
+
+        plaga.customName(CrossplayUtils.parseCrossplay(p, core.getConfigManager().getMessage("eventos.farming.plaga-biologica")));
         plaga.setCustomNameVisible(true);
 
         plagasActivas.put(plaga.getUniqueId(), 0);
         p.playSound(loc, Sound.ENTITY_SILVERFISH_AMBIENT, 1f, 0.5f);
 
         CrossplayUtils.sendTitle(p,
-                plugin.getConfigManager().getMessage("eventos.farming.anomalia-biologica.titulo"),
-                plugin.getConfigManager().getMessage("eventos.farming.anomalia-biologica.subtitulo")
+                core.getConfigManager().getMessage("eventos.farming.anomalia-biologica.titulo"),
+                core.getConfigManager().getMessage("eventos.farming.anomalia-biologica.subtitulo")
         );
 
         new BukkitRunnable() {
@@ -112,7 +116,10 @@ public class FarmingMinigameManager implements Listener {
                     plaga.getWorld().spawnParticle(Particle.EXPLOSION, plaga.getLocation(), 1);
 
                     plaga.getWorld().dropItemNaturally(plaga.getLocation(), new ItemStack(Material.PITCHER_POD, 3));
-                    CrossplayUtils.sendActionBar(p, plugin.getConfigManager().getMessage("eventos.farming.amenaza-erradicada"));
+
+                    // 🌟 CORRECCIÓN APLICADA AQUÍ TAMBIÉN
+                    NexoCore core = NexoCore.getPlugin(NexoCore.class);
+                    CrossplayUtils.sendActionBar(p, core.getConfigManager().getMessage("eventos.farming.amenaza-erradicada"));
                 } else {
                     plagasActivas.put(plaga.getUniqueId(), golpes);
                 }

@@ -2,6 +2,7 @@ package me.nexo.economy.bazar;
 
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.economy.NexoEconomy;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -108,7 +109,10 @@ public class BazaarMenu implements InventoryHolder {
                 items.add(buildBazaarItem(Material.SUGAR_CANE));
             }
             Bukkit.getScheduler().runTask(plugin, () -> {
-                if (!CrossplayUtils.getChatPlain(player, player.getOpenInventory().title()).contains(category)) return;
+                // 🌟 CORRECCIÓN: Leemos el componente de la UI usando el serializador nativo
+                String tituloPlano = PlainTextComponentSerializer.plainText().serialize(player.getOpenInventory().title());
+                if (!tituloPlano.contains(category)) return;
+
                 inventory.setItem(22, new ItemStack(Material.AIR));
                 int slot = 10;
                 for (ItemStack it : items) {

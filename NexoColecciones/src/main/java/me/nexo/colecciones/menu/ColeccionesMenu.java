@@ -48,6 +48,11 @@ public class ColeccionesMenu implements InventoryHolder {
         return core.getConfigManager().getMessage("colecciones_messages.yml", path);
     }
 
+    // 🌟 CORRECCIÓN: Método ayudante para obtener listas de strings correctamente
+    private List<String> getMessageList(String path) {
+        return core.getConfigManager().getConfig("colecciones_messages.yml").getStringList(path);
+    }
+
     public void openMain() {
         this.inventory = Bukkit.createInventory(this, 27, CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.titulo")));
         for (CollectionCategory cat : plugin.getCollectionManager().getCategorias().values()) {
@@ -55,7 +60,7 @@ public class ColeccionesMenu implements InventoryHolder {
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
                 meta.displayName(CrossplayUtils.parseCrossplay(player, cat.getNombre()));
-                List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.colecciones.categoria-lore");
+                List<String> loreConfig = getMessageList("menus.colecciones.categoria-lore");
                 List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
                         .map(line -> CrossplayUtils.parseCrossplay(player, line))
                         .collect(Collectors.toList());
@@ -90,7 +95,7 @@ public class ColeccionesMenu implements InventoryHolder {
                 meta = item.getItemMeta();
                 if (meta != null) {
                     meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.item-desconocido.titulo")));
-                    List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.colecciones.item-desconocido.lore");
+                    List<String> loreConfig = getMessageList("menus.colecciones.item-desconocido.lore");
                     List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
                             .map(line -> CrossplayUtils.parseCrossplay(player, line))
                             .collect(Collectors.toList());
@@ -101,7 +106,7 @@ public class ColeccionesMenu implements InventoryHolder {
                 meta = item.getItemMeta();
                 if (meta != null) {
                     meta.displayName(CrossplayUtils.parseCrossplay(player, cItem.getNombre()));
-                    List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.colecciones.item-descubierto.lore");
+                    List<String> loreConfig = getMessageList("menus.colecciones.item-descubierto.lore");
                     List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
                             .map(line -> CrossplayUtils.parseCrossplay(player, line
                                     .replace("%level%", String.valueOf(nivelActual))
@@ -150,7 +155,7 @@ public class ColeccionesMenu implements InventoryHolder {
                 item = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
                 meta = item.getItemMeta();
                 meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.tiers.reclamado.titulo").replace("%level%", String.valueOf(nivel))));
-                List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.colecciones.tiers.reclamado.lore");
+                List<String> loreConfig = getMessageList("menus.colecciones.tiers.reclamado.lore");
                 List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
                         .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%required%", String.valueOf(tier.getRequerido()))))
                         .collect(Collectors.toList());
@@ -161,10 +166,10 @@ public class ColeccionesMenu implements InventoryHolder {
                 meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.tiers.listo-reclamar.titulo").replace("%level%", String.valueOf(nivel))));
                 meta.addEnchant(org.bukkit.enchantments.Enchantment.LURE, 1, true);
                 List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                core.getConfigManager().getMessages().getStringList("menus.colecciones.tiers.listo-reclamar.lore-base").forEach(line ->
+                getMessageList("menus.colecciones.tiers.listo-reclamar.lore-base").forEach(line ->
                         lore.add(CrossplayUtils.parseCrossplay(player, line.replace("%required%", String.valueOf(tier.getRequerido())))));
                 tier.getLoreRecompensa().forEach(line -> lore.add(CrossplayUtils.parseCrossplay(player, line)));
-                core.getConfigManager().getMessages().getStringList("menus.colecciones.tiers.listo-reclamar.lore-accion").forEach(line ->
+                getMessageList("menus.colecciones.tiers.listo-reclamar.lore-accion").forEach(line ->
                         lore.add(CrossplayUtils.parseCrossplay(player, line)));
                 meta.lore(lore);
                 meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "claim_tier");
@@ -173,7 +178,7 @@ public class ColeccionesMenu implements InventoryHolder {
                 item = new ItemStack(Material.RED_STAINED_GLASS_PANE);
                 meta = item.getItemMeta();
                 meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.tiers.bloqueado.titulo").replace("%level%", String.valueOf(nivel))));
-                List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.colecciones.tiers.bloqueado.lore");
+                List<String> loreConfig = getMessageList("menus.colecciones.tiers.bloqueado.lore");
                 List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
                         .map(line -> CrossplayUtils.parseCrossplay(player, line
                                 .replace("%progress%", String.valueOf(progreso))
@@ -192,7 +197,7 @@ public class ColeccionesMenu implements InventoryHolder {
         ItemStack info = new ItemStack(Material.NETHER_STAR);
         ItemMeta iMeta = info.getItemMeta();
         iMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.tiers.stats-globales.titulo")));
-        List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.colecciones.tiers.stats-globales.lore");
+        List<String> loreConfig = getMessageList("menus.colecciones.tiers.stats-globales.lore");
         List<net.kyori.adventure.text.Component> iLore = loreConfig.stream()
                 .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%progress%", String.valueOf(progreso))))
                 .collect(Collectors.toList());

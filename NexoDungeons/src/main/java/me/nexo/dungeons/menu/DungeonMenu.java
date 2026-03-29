@@ -23,7 +23,9 @@ public class DungeonMenu {
         ItemMeta instancedMeta = instanced.getItemMeta();
         if (instancedMeta != null) {
             instancedMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("dungeons_messages.yml", "menus.principal.instanciadas.titulo")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.principal.instanciadas.lore");
+
+            // 🌟 CORRECCIÓN: Usamos getConfig("archivo.yml") en lugar del método fantasma
+            List<String> loreConfig = core.getConfigManager().getConfig("dungeons_messages.yml").getStringList("menus.principal.instanciadas.lore");
             instancedMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
             instanced.setItemMeta(instancedMeta);
         }
@@ -33,7 +35,9 @@ public class DungeonMenu {
         ItemMeta wavesMeta = waves.getItemMeta();
         if (wavesMeta != null) {
             wavesMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("dungeons_messages.yml", "menus.principal.supervivencia.titulo")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.principal.supervivencia.lore");
+
+            // 🌟 CORRECCIÓN APLICADA AQUÍ TAMBIÉN
+            List<String> loreConfig = core.getConfigManager().getConfig("dungeons_messages.yml").getStringList("menus.principal.supervivencia.lore");
             wavesMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
             waves.setItemMeta(wavesMeta);
         }
@@ -43,7 +47,9 @@ public class DungeonMenu {
         ItemMeta bossMeta = worldBoss.getItemMeta();
         if (bossMeta != null) {
             bossMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("dungeons_messages.yml", "menus.principal.amenazas-globales.titulo")));
-            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.principal.amenazas-globales.lore");
+
+            // 🌟 CORRECCIÓN APLICADA AQUÍ TAMBIÉN
+            List<String> loreConfig = core.getConfigManager().getConfig("dungeons_messages.yml").getStringList("menus.principal.amenazas-globales.lore");
             bossMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
             worldBoss.setItemMeta(bossMeta);
         }

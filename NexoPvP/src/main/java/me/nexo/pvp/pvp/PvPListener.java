@@ -28,13 +28,19 @@ public class PvPListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onDañoJugadores(EntityDamageByEntityEvent event) {
-        Player atacante = null;
-        if (event.getDamager() instanceof Player p) atacante = p;
-        else if (event.getDamager() instanceof Projectile proj && proj.getShooter() instanceof Player p) atacante = p;
+
+        // 🌟 CORRECCIÓN: Usamos una variable temporal para determinar quién hizo el daño
+        Player tempAtacante = null;
+        if (event.getDamager() instanceof Player p) tempAtacante = p;
+        else if (event.getDamager() instanceof Projectile proj && proj.getShooter() instanceof Player p) tempAtacante = p;
+
+        // 🌟 CORRECCIÓN: Creamos al Atacante final (Esta es la llave para que el Lambda no crashee)
+        final Player atacante = tempAtacante;
 
         if (atacante != null && event.getEntity() instanceof Player victima) {
             if (atacante.equals(victima)) return;
 
+            // Ahora 'atacante' es seguro para usarse dentro de este bloque Lambda
             NexoAPI.getServices().get(ClaimManager.class).ifPresent(claimManager -> {
                 me.nexo.protections.core.ProtectionStone stone = claimManager.getStoneAt(victima.getLocation());
                 if (stone != null && !stone.getFlag("pvp")) {

@@ -1,6 +1,6 @@
 package me.nexo.mechanics.minigames;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.mechanics.NexoMechanics;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -60,11 +60,7 @@ public class AlchemyMinigameManager implements Listener {
 
             for (Player p : b.getWorld().getPlayers()) {
                 if (p.getLocation().distance(b.getLocation()) <= 5) {
-                    p.sendTitle(
-                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#8b0000<bold>! PELIGRO !</bold>")),
-                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#ff00ffMezcla Inestable. Agáchate (Shift) x3 para estabilizar.")),
-                            5, 40, 5
-                    );
+                    CrossplayUtils.sendTitle(p, "&#8b0000<bold>! PELIGRO !</bold>", "&#ff00ffMezcla Inestable. Agáchate (Shift) x3 para estabilizar.");
                 }
             }
         }
@@ -89,7 +85,7 @@ public class AlchemyMinigameManager implements Listener {
 
                 if (mezcla.bombeos >= 3) {
                     p.playSound(locSoporte, Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
-                    p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>MEZCLA ESTABILIZADA:</bold> &#1c0f2aLa pureza de los químicos ha sido potenciada."));
+                    CrossplayUtils.sendMessage(p, "&#00f5ff[✓] <bold>MEZCLA ESTABILIZADA:</bold> &#1c0f2aLa pureza de los químicos ha sido potenciada.");
 
                     aplicarPremio(locSoporte, mezcla.pocionesOriginales);
                     mezclas.remove(locSoporte);

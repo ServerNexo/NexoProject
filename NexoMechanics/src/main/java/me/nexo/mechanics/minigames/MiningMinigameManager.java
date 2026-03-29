@@ -1,5 +1,6 @@
 package me.nexo.mechanics.minigames;
 
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.economy.core.EconomyManager;
@@ -70,7 +71,8 @@ public class MiningMinigameManager implements Listener {
                 NexoAPI.getServices().get(EconomyManager.class).ifPresent(eco ->
                         eco.updateBalanceAsync(p.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, recompensaMonedas, true));
 
-                CrossplayUtils.sendActionBar(p, plugin.getConfigManager().getMessage("eventos.mineria.extraccion-rentable").replace("%amount%", String.valueOf(monedasRandom)));
+                // 🌟 CORRECCIÓN: Llamamos a NexoCore para obtener el ConfigManager
+                CrossplayUtils.sendActionBar(p, NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("eventos.mineria.extraccion-rentable").replace("%amount%", String.valueOf(monedasRandom)));
 
                 generarVetaContigua(p, b);
                 return;
@@ -92,7 +94,9 @@ public class MiningMinigameManager implements Listener {
                 p.sendBlockChange(contiguo.getLocation(), Bukkit.createBlockData(Material.RAW_GOLD_BLOCK));
                 p.playSound(contiguo.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1.5f);
                 p.getWorld().spawnParticle(Particle.WAX_ON, contiguo.getLocation().add(0.5, 0.5, 0.5), 10);
-                CrossplayUtils.sendActionBar(p, plugin.getConfigManager().getMessage("eventos.mineria.anomalia-geologica"));
+
+                // 🌟 CORRECCIÓN: Llamamos a NexoCore para obtener el ConfigManager
+                CrossplayUtils.sendActionBar(p, NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("eventos.mineria.anomalia-geologica"));
                 vetasActivas.put(p.getUniqueId(), new VetaActiva(contiguo.getLocation(), System.currentTimeMillis() + 4000L, contiguo.getType()));
                 break;
             }
@@ -108,7 +112,9 @@ public class MiningMinigameManager implements Listener {
                     if (p != null) {
                         p.sendBlockChange(entry.getValue().loc(), Bukkit.createBlockData(entry.getValue().tipoOriginal()));
                         p.playSound(p.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 0.5f, 1f);
-                        CrossplayUtils.sendActionBar(p, plugin.getConfigManager().getMessage("eventos.mineria.anomalia-estabilizada"));
+
+                        // 🌟 CORRECCIÓN: Llamamos a NexoCore para obtener el ConfigManager
+                        CrossplayUtils.sendActionBar(p, NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("eventos.mineria.anomalia-estabilizada"));
                     }
                     vetasActivas.remove(entry.getKey());
                 }

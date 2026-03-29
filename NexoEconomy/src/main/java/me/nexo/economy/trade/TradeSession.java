@@ -12,7 +12,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class TradeSession {
 
@@ -69,7 +68,7 @@ public class TradeSession {
             for (String l : lore) {
                 loreList.add(CrossplayUtils.parseCrossplay(player1, l));
             }
-            meta.setLore(loreList);
+            meta.lore(loreList);
             item.setItemMeta(meta);
         }
         inventory.setItem(slot, item);
@@ -77,26 +76,30 @@ public class TradeSession {
 
     public void updateReadyButtons() {
         String p1Color = p1Ready ? plugin.getConfigManager().getMessage("menus.trade.estado.autorizado") : plugin.getConfigManager().getMessage("menus.trade.estado.esperando");
+
+        // 🌟 CORRECCIÓN: Usamos getMessages() en lugar de getConfig()
         List<String> p1LoreConfig = plugin.getConfigManager().getMessages().getStringList("menus.trade.estado.lore");
-        List<net.kyori.adventure.text.Component> p1Lore = p1LoreConfig.stream()
-                .map(line -> CrossplayUtils.parseCrossplay(player1, line
+        String[] p1LoreArray = p1LoreConfig.stream()
+                .map(line -> line
                         .replace("%player%", player1.getName())
                         .replace("%coins%", p1Coins.toString())
                         .replace("%gems%", p1Gems.toString())
-                        .replace("%mana%", p1Mana.toString())))
-                .collect(Collectors.toList());
-        setItem(45, p1Ready ? Material.LIME_DYE : Material.RED_DYE, p1Color, p1Lore.stream().map(c -> "").toArray(String[]::new));
+                        .replace("%mana%", p1Mana.toString()))
+                .toArray(String[]::new);
+        setItem(45, p1Ready ? Material.LIME_DYE : Material.RED_DYE, p1Color, p1LoreArray);
 
         String p2Color = p2Ready ? plugin.getConfigManager().getMessage("menus.trade.estado.autorizado") : plugin.getConfigManager().getMessage("menus.trade.estado.esperando");
+
+        // 🌟 CORRECCIÓN: Usamos getMessages() en lugar de getConfig()
         List<String> p2LoreConfig = plugin.getConfigManager().getMessages().getStringList("menus.trade.estado.lore");
-        List<net.kyori.adventure.text.Component> p2Lore = p2LoreConfig.stream()
-                .map(line -> CrossplayUtils.parseCrossplay(player2, line
+        String[] p2LoreArray = p2LoreConfig.stream()
+                .map(line -> line
                         .replace("%player%", player2.getName())
                         .replace("%coins%", p2Coins.toString())
                         .replace("%gems%", p2Gems.toString())
-                        .replace("%mana%", p2Mana.toString())))
-                .collect(Collectors.toList());
-        setItem(53, p2Ready ? Material.LIME_DYE : Material.RED_DYE, p2Color, p2Lore.stream().map(c -> "").toArray(String[]::new));
+                        .replace("%mana%", p2Mana.toString()))
+                .toArray(String[]::new);
+        setItem(53, p2Ready ? Material.LIME_DYE : Material.RED_DYE, p2Color, p2LoreArray);
     }
 
     public void addCurrency(Player p, NexoAccount.Currency currency, BigDecimal amount) {

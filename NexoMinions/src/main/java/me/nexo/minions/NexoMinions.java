@@ -29,7 +29,9 @@ public class NexoMinions extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new MinionInteractListener(this), this);
         getServer().getPluginManager().registerEvents(new MinionLoadListener(this), this);
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
-        getServer().getPluginManager().registerEvents(new ExplosionListener(), this);
+
+        // 🌟 CORRECCIÓN: Le pasamos 'this' al ExplosionListener
+        getServer().getPluginManager().registerEvents(new ExplosionListener(this), this);
 
         if (getCommand("minion") != null) {
             getCommand("minion").setExecutor(new ComandoMinion(this));

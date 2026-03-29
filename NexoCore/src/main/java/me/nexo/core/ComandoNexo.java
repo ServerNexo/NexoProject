@@ -1,7 +1,6 @@
 package me.nexo.core;
 
 import me.nexo.core.crossplay.CrossplayUtils;
-import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
@@ -22,23 +21,25 @@ public class ComandoNexo implements CommandExecutor {
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
 
         if (!sender.hasPermission("nexo.admin")) {
-            CrossplayUtils.sendMessage(sender instanceof Player ? (Player) sender : null, plugin.getConfigManager().getMessage("comandos.nexocore.errores.sin-permiso"));
+            enviarMensaje(sender, plugin.getConfigManager().getMessage("comandos.nexocore.errores.sin-permiso"));
             return true;
         }
 
         if (args.length == 3) {
             Player objetivo = Bukkit.getPlayer(args[1]);
             if (objetivo == null) {
-                CrossplayUtils.sendMessage(sender instanceof Player ? (Player) sender : null, plugin.getConfigManager().getMessage("comandos.nexocore.errores.offline"));
+                enviarMensaje(sender, plugin.getConfigManager().getMessage("comandos.nexocore.errores.offline"));
                 return true;
             }
 
             try {
                 int cantidad = Integer.parseInt(args[2]);
-                NexoUser user = NexoAPI.getInstance().getUserLocal(objetivo.getUniqueId());
+
+                // 🛡️ CORRECCIÓN 1: Usamos la instancia inyectada del plugin (Seguridad absoluta contra NullPointers)
+                NexoUser user = plugin.getUserManager().getUserOrNull(objetivo.getUniqueId());
 
                 if (user == null) {
-                    CrossplayUtils.sendMessage(sender instanceof Player ? (Player) sender : null, plugin.getConfigManager().getMessage("comandos.nexocore.errores.cargando"));
+                    enviarMensaje(sender, plugin.getConfigManager().getMessage("comandos.nexocore.errores.cargando"));
                     return true;
                 }
 
@@ -58,9 +59,10 @@ public class ComandoNexo implements CommandExecutor {
                     user.setNexoNivel(nivelActual);
                     user.setNexoXp(xpActual);
 
-                    if (sender instanceof Player) {
-                        CrossplayUtils.sendMessage((Player) sender, plugin.getConfigManager().getMessage("comandos.nexocore.exito.dar-xp").replace("%amount%", String.valueOf(cantidad)).replace("%target%", objetivo.getName()));
-                    }
+                    enviarMensaje(sender, plugin.getConfigManager().getMessage("comandos.nexocore.exito.dar-xp")
+                            .replace("%amount%", String.valueOf(cantidad))
+                            .replace("%target%", objetivo.getName()));
+
                 } else if (args[0].equalsIgnoreCase("darcombatexp")) {
                     int nivelActual = user.getCombateNivel();
                     int xpActual = user.getCombateXp() + cantidad;
@@ -82,18 +84,28 @@ public class ComandoNexo implements CommandExecutor {
                             .replace("%xp%", String.valueOf(xpActual))
                             .replace("%xpreq%", String.valueOf(nivelActual * 100)));
 
-                    if (sender instanceof Player) {
-                        CrossplayUtils.sendMessage((Player) sender, plugin.getConfigManager().getMessage("comandos.nexocore.exito.dar-combate-xp").replace("%amount%", String.valueOf(cantidad)).replace("%target%", objetivo.getName()));
-                    }
+                    enviarMensaje(sender, plugin.getConfigManager().getMessage("comandos.nexocore.exito.dar-combate-xp")
+                            .replace("%amount%", String.valueOf(cantidad))
+                            .replace("%target%", objetivo.getName()));
                 }
 
             } catch (NumberFormatException e) {
-                CrossplayUtils.sendMessage(sender instanceof Player ? (Player) sender : null, plugin.getConfigManager().getMessage("comandos.nexocore.errores.formato-invalido"));
+                enviarMensaje(sender, plugin.getConfigManager().getMessage("comandos.nexocore.errores.formato-invalido"));
             }
             return true;
         }
 
-        CrossplayUtils.sendMessage(sender instanceof Player ? (Player) sender : null, plugin.getConfigManager().getMessage("comandos.nexocore.uso"));
+        enviarMensaje(sender, plugin.getConfigManager().getMessage("comandos.nexocore.uso"));
         return true;
+    }
+
+    // 🛡️ CORRECCIÓN 2: Método modular para soportar envíos desde la Consola sin crashear
+    private void enviarMensaje(CommandSender sender, String mensaje) {
+        if (sender instanceof Player) {
+            CrossplayUtils.sendMessage((Player) sender, mensaje);
+        } else {
+            // Si es la consola quien envía el comando, se imprime sin usar utilidades gráficas
+            sender.sendMessage(mensaje);
+        }
     }
 }

@@ -1,5 +1,6 @@
 package me.nexo.economy.listeners;
 
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
@@ -31,8 +32,13 @@ public class TradeListener implements Listener {
         TradeSession session = plugin.getTradeManager().getSession(player);
         if (session == null) return;
 
+        // 🌟 CORRECCIÓN: Validación dinámica del título del menú usando la configuración real
+        String expectedTitle = PlainTextComponentSerializer.plainText().serialize(
+                CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.trade.titulo"))
+        );
         String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!plainTitle.equals(TradeSession.TITLE_PLAIN)) return;
+
+        if (!plainTitle.equals(expectedTitle)) return;
 
         if (event.getClickedInventory() != session.getInventory()) {
             session.unready();

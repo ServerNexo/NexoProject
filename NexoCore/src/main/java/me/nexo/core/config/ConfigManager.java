@@ -3,11 +3,8 @@ package me.nexo.core.config;
 import me.nexo.core.NexoCore;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -18,6 +15,10 @@ public class ConfigManager {
 
     public ConfigManager(NexoCore plugin) {
         this.plugin = plugin;
+
+        // ⚙️ Opcional pero recomendado: Cargar los archivos base al iniciar
+        getConfig("config.yml");
+        getConfig("messages.yml");
     }
 
     public FileConfiguration getConfig(String configName) {
@@ -37,7 +38,14 @@ public class ConfigManager {
         configs.put(configName, YamlConfiguration.loadConfiguration(configFile));
     }
 
+    // 🛡️ MÉTODO ORIGINAL (Para cuando quieres leer un archivo específico)
     public String getMessage(String configName, String path) {
-        return getConfig(configName).getString(path, "&cMessage not found: " + path);
+        return getConfig(configName).getString(path, "§cMensaje no encontrado: " + path);
+    }
+
+    // 🌟 NUEVO MÉTODO MÁGICO (Sobrecarga)
+    // Cuando CommandNexo llama a getMessage("ruta"), entra aquí y busca por defecto en messages.yml
+    public String getMessage(String path) {
+        return getMessage("messages.yml", path);
     }
 }
