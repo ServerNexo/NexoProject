@@ -1,9 +1,8 @@
 package me.nexo.items.estaciones;
 
-import me.nexo.core.utils.NexoColor;
-import me.nexo.items.managers.ItemManager;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import me.nexo.items.managers.ItemManager;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -18,31 +17,24 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.Arrays;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 public class DesguaceListener implements Listener {
 
     private final NexoItems plugin;
 
-    public static final String TITLE_PLAIN = "» Desguace del Nexo";
-    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#8b0000Desguace del Nexo";
-
     public DesguaceListener(NexoItems plugin) {
         this.plugin = plugin;
     }
 
-    private String serialize(String hex) {
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
-    }
-
     public void abrirMenu(Player jugador) {
-        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
+        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(jugador, plugin.getConfigManager().getMessage("menus.desguace.titulo")));
 
         ItemStack cristal = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta metaCristal = cristal.getItemMeta();
         if (metaCristal != null) {
-            metaCristal.setDisplayName(serialize(" "));
+            metaCristal.displayName(CrossplayUtils.parseCrossplay(jugador, " "));
             cristal.setItemMeta(metaCristal);
         }
 
@@ -52,20 +44,16 @@ public class DesguaceListener implements Listener {
 
         inv.setItem(11, new ItemStack(Material.AIR));
 
-        ItemStack trituradora = new ItemStack(Material.BLAST_FURNACE);
-        ItemMeta metaTrituradora = trituradora.getItemMeta();
-        if (metaTrituradora != null) {
-            metaTrituradora.setDisplayName(serialize("&#8b0000<bold>DESTRUIR ACTIVO</bold>"));
-            metaTrituradora.setLore(Arrays.asList(
-                    serialize("&#1c0f2aHaz clic aquí para destruir el"),
-                    serialize("&#1c0f2aactivo de la izquierda y reciclarlo"),
-                    serialize("&#1c0f2aen &#ff00ffPolvo Estelar&#1c0f2a."),
-                    serialize(" "),
-                    serialize("&#8b0000<bold>⚠ ESTA ACCIÓN ES IRREVERSIBLE ⚠</bold>")
-            ));
-            trituradora.setItemMeta(metaTrituradora);
+        ItemStack btn = new ItemStack(Material.LAVA_BUCKET);
+        ItemMeta btnMeta = btn.getItemMeta();
+        if (btnMeta != null) {
+            btnMeta.displayName(CrossplayUtils.parseCrossplay(jugador, plugin.getConfigManager().getMessage("menus.desguace.boton.titulo")));
+            btnMeta.lore(plugin.getConfigManager().getMessages().getStringList("menus.desguace.boton.lore").stream()
+                    .map(line -> CrossplayUtils.parseCrossplay(jugador, line))
+                    .collect(Collectors.toList()));
+            btn.setItemMeta(btnMeta);
         }
-        inv.setItem(15, trituradora);
+        inv.setItem(15, btn);
 
         jugador.openInventory(inv);
     }
@@ -73,7 +61,7 @@ public class DesguaceListener implements Listener {
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
         String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!tituloLimpio.equals(TITLE_PLAIN)) return;
+        if (!tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.desguace.titulo").replaceAll("<[^>]*>", ""))) return;
 
         Player jugador = (Player) event.getWhoClicked();
         int slot = event.getRawSlot();
@@ -91,13 +79,13 @@ public class DesguaceListener implements Listener {
             ItemStack arma = inv.getItem(11);
 
             if (arma == null || arma.getType() == Material.AIR) {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Inserta un activo en la bahía de desguace (izquierda)."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.desguace.inserta-activo"));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             if (!arma.hasItemMeta() || !arma.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER)) {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Activo incompatible. No posee la firma mágica del Nexo requerida para reciclar."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.desguace.activo-incompatible"));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -115,7 +103,7 @@ public class DesguaceListener implements Listener {
                 jugador.getWorld().dropItemNaturally(jugador.getLocation(), sobrante.get(0));
             }
 
-            jugador.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>¡RECICLAJE EXITOSO!</bold> Materia recuperada: &#ff00ff" + cantidadPolvo + "x Polvo Estelar."));
+            CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.desguace.reciclaje-exitoso").replace("%amount%", String.valueOf(cantidadPolvo)));
             jugador.playSound(jugador.getLocation(), Sound.BLOCK_GRINDSTONE_USE, 1f, 1f);
         }
     }
@@ -123,7 +111,7 @@ public class DesguaceListener implements Listener {
     @EventHandler
     public void alCerrar(InventoryCloseEvent event) {
         String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!tituloLimpio.equals(TITLE_PLAIN)) return;
+        if (!tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.desguace.titulo").replaceAll("<[^>]*>", ""))) return;
 
         Player jugador = (Player) event.getPlayer();
         ItemStack arma = event.getInventory().getItem(11);

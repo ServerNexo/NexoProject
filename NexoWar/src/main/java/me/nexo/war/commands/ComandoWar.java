@@ -1,8 +1,9 @@
 package me.nexo.war.commands;
 
-import me.nexo.clans.NexoClans;
+import me.nexo.clans.core.ClanManager;
 import me.nexo.clans.core.NexoClan;
 import me.nexo.core.NexoCore;
+import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.war.NexoWar;
@@ -37,7 +38,7 @@ public class ComandoWar implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) return true;
 
-        NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
+        NexoUser user = NexoAPI.getInstance().getUserLocal(player.getUniqueId());
 
         if (user == null || !user.hasClan()) {
             player.sendMessage(NexoColor.parse("&#8b0000[!] Acceso Denegado: &#1c0f2aDebes pertenecer a un sindicato para participar en Conflictos Corporativos."));
@@ -57,7 +58,12 @@ public class ComandoWar implements CommandExecutor {
         }
 
         String sub = args[0].toLowerCase();
-        NexoClans clansPlugin = NexoClans.getPlugin(NexoClans.class);
+        Optional<ClanManager> clanManagerOpt = NexoAPI.getServices().get(ClanManager.class);
+        if (clanManagerOpt.isEmpty()) {
+            player.sendMessage(NexoColor.parse("&#8b0000[!] Error Crítico: El servicio de Clanes no está disponible."));
+            return true;
+        }
+        ClanManager clanManager = clanManagerOpt.get();
 
         if (sub.equals("challenge")) {
             if (args.length < 3) {
@@ -75,7 +81,7 @@ public class ComandoWar implements CommandExecutor {
                 return true;
             }
 
-            Optional<NexoClan> atacanteOpt = clansPlugin.getClanManager().getClanFromCache(user.getClanId());
+            Optional<NexoClan> atacanteOpt = clanManager.getClanFromCache(user.getClanId());
             if (atacanteOpt.isEmpty()) return true;
             NexoClan atacante = atacanteOpt.get();
 
@@ -99,7 +105,7 @@ public class ComandoWar implements CommandExecutor {
                             return;
                         }
 
-                        clansPlugin.getClanManager().loadClanAsync(targetId, defensor -> {
+                        clanManager.loadClanAsync(targetId, defensor -> {
                             if (defensor == null) return;
                             if (defensor.getBankBalance().compareTo(apuesta) < 0) {
                                 player.sendMessage(NexoColor.parse("&#8b0000[!] Auditoría Fallida: &#1c0f2aEl objetivo no posee liquidez para cubrir la cuota de &#ff00ff🪙 " + apuesta));
@@ -139,8 +145,8 @@ public class ComandoWar implements CommandExecutor {
             }
 
             player.sendMessage(NexoColor.parse("&#1c0f2a[⟳] Procesando firmas e iniciando despliegue táctico..."));
-            clansPlugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(defensor -> {
-                clansPlugin.getClanManager().loadClanAsync(desafio.clanAtacanteId(), atacante -> {
+            clanManager.getClanFromCache(user.getClanId()).ifPresent(defensor -> {
+                clanManager.loadClanAsync(desafio.clanAtacanteId(), atacante -> {
                     if (atacante != null) {
                         plugin.getWarManager().iniciarDesafio(player, atacante, defensor, desafio.apuesta());
                     }

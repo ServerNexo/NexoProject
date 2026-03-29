@@ -1,5 +1,6 @@
 package me.nexo.dungeons.menu;
 
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
 import org.bukkit.Bukkit;
@@ -15,13 +16,14 @@ import java.util.stream.Collectors;
 public class DungeonMenu {
 
     public static void openMainMenu(Player player, NexoDungeons plugin) {
-        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.principal.titulo")));
+        NexoCore core = NexoCore.getPlugin(NexoCore.class);
+        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("dungeons_messages.yml", "menus.principal.titulo")));
 
         ItemStack instanced = new ItemStack(Material.IRON_DOOR);
         ItemMeta instancedMeta = instanced.getItemMeta();
         if (instancedMeta != null) {
-            instancedMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.principal.instanciadas.titulo")));
-            List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.principal.instanciadas.lore");
+            instancedMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("dungeons_messages.yml", "menus.principal.instanciadas.titulo")));
+            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.principal.instanciadas.lore");
             instancedMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
             instanced.setItemMeta(instancedMeta);
         }
@@ -30,8 +32,8 @@ public class DungeonMenu {
         ItemStack waves = new ItemStack(Material.IRON_SWORD);
         ItemMeta wavesMeta = waves.getItemMeta();
         if (wavesMeta != null) {
-            wavesMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.principal.supervivencia.titulo")));
-            List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.principal.supervivencia.lore");
+            wavesMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("dungeons_messages.yml", "menus.principal.supervivencia.titulo")));
+            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.principal.supervivencia.lore");
             wavesMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
             waves.setItemMeta(wavesMeta);
         }
@@ -40,8 +42,8 @@ public class DungeonMenu {
         ItemStack worldBoss = new ItemStack(Material.DRAGON_HEAD);
         ItemMeta bossMeta = worldBoss.getItemMeta();
         if (bossMeta != null) {
-            bossMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.principal.amenazas-globales.titulo")));
-            List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.principal.amenazas-globales.lore");
+            bossMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("dungeons_messages.yml", "menus.principal.amenazas-globales.titulo")));
+            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.principal.amenazas-globales.lore");
             bossMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
             worldBoss.setItemMeta(bossMeta);
         }

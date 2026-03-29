@@ -1,5 +1,6 @@
 package me.nexo.dungeons.matchmaking;
 
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
 import org.bukkit.Bukkit;
@@ -16,11 +17,13 @@ import java.util.UUID;
 public class QueueManager {
 
     private final NexoDungeons plugin;
+    private final NexoCore core;
     private final LinkedList<UUID> waveQueue = new LinkedList<>();
     private final Map<String, Location> configuredArenas;
 
     public QueueManager(NexoDungeons plugin) {
         this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
         this.configuredArenas = Map.of(
                 "Sector_Coliseo", new Location(Bukkit.getWorlds().get(0), 1000, 64, 1000),
                 "Sector_Infernal", new Location(Bukkit.getWorlds().get(0), -1000, 64, -1000)
@@ -28,14 +31,18 @@ public class QueueManager {
         iniciarMotorDeEmparejamiento();
     }
 
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("dungeons_messages.yml", path);
+    }
+
     public void addPlayerToWaves(Player p) {
         if (waveQueue.contains(p.getUniqueId())) {
-            CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.queue.ya-en-cola"));
+            CrossplayUtils.sendMessage(p, getMessage("eventos.queue.ya-en-cola"));
             return;
         }
         waveQueue.add(p.getUniqueId());
-        CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.queue.unido-cola"));
-        CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.queue.posicion-cola").replace("%pos%", String.valueOf(waveQueue.size())));
+        CrossplayUtils.sendMessage(p, getMessage("eventos.queue.unido-cola"));
+        CrossplayUtils.sendMessage(p, getMessage("eventos.queue.posicion-cola").replace("%pos%", String.valueOf(waveQueue.size())));
     }
 
     public void removePlayer(Player p) {
@@ -67,8 +74,8 @@ public class QueueManager {
                     for (Player p : escuadron) {
                         p.teleport(entry.getValue());
                         p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                        CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.queue.emparejamiento-exitoso").replace("%arena%", arenaId));
-                        CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.queue.tamano-escuadron").replace("%size%", String.valueOf(escuadron.size())));
+                        CrossplayUtils.sendMessage(p, getMessage("eventos.queue.emparejamiento-exitoso").replace("%arena%", arenaId));
+                        CrossplayUtils.sendMessage(p, getMessage("eventos.queue.tamano-escuadron").replace("%size%", String.valueOf(escuadron.size())));
                     }
 
                     plugin.getWaveManager().startArena(arenaId, entry.getValue());

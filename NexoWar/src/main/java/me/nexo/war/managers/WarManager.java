@@ -1,8 +1,9 @@
 package me.nexo.war.managers;
 
-import me.nexo.clans.NexoClans;
+import me.nexo.clans.core.ClanManager;
 import me.nexo.clans.core.NexoClan;
 import me.nexo.core.NexoCore;
+import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.war.NexoWar;
@@ -70,10 +71,12 @@ public class WarManager {
             }
         }
 
-        atacante.withdrawMoney(apuesta.doubleValue());
-        defensor.withdrawMoney(apuesta.doubleValue());
-        NexoClans.getPlugin(NexoClans.class).getClanManager().saveBankAsync(atacante);
-        NexoClans.getPlugin(NexoClans.class).getClanManager().saveBankAsync(defensor);
+        NexoAPI.getServices().get(ClanManager.class).ifPresent(clanManager -> {
+            atacante.withdrawMoney(apuesta.doubleValue());
+            defensor.withdrawMoney(apuesta.doubleValue());
+            clanManager.saveBankAsync(atacante);
+            clanManager.saveBankAsync(defensor);
+        });
 
         UUID warId = UUID.randomUUID();
         WarContract contrato = new WarContract(
@@ -122,8 +125,8 @@ public class WarManager {
     }
 
     public boolean estanEnGuerraActiva(UUID player1, UUID player2) {
-        NexoUser u1 = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player1);
-        NexoUser u2 = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player2);
+        NexoUser u1 = NexoAPI.getInstance().getUserLocal(player1);
+        NexoUser u2 = NexoAPI.getInstance().getUserLocal(player2);
         if (u1 == null || !u1.hasClan() || u2 == null || !u2.hasClan()) return false;
 
         Optional<WarContract> guerra = getGuerraEntre(u1.getClanId(), u2.getClanId());
@@ -155,16 +158,17 @@ public class WarManager {
         guerrasActivas.remove(guerraFinalizada.warId());
         actualizarGuerraEnBD(guerraFinalizada);
 
-        NexoClans clansPlugin = NexoClans.getPlugin(NexoClans.class);
-        clansPlugin.getClanManager().loadClanAsync(clanGanador, clan -> {
-            if (clan != null) {
-                BigDecimal premio = guerraFinalizada.apuestaMonedas().multiply(BigDecimal.valueOf(2));
-                clan.depositMoney(premio.doubleValue());
-                clansPlugin.getClanManager().saveBankAsync(clan);
+        NexoAPI.getServices().get(ClanManager.class).ifPresent(clanManager -> {
+            clanManager.loadClanAsync(clanGanador, clan -> {
+                if (clan != null) {
+                    BigDecimal premio = guerraFinalizada.apuestaMonedas().multiply(BigDecimal.valueOf(2));
+                    clan.depositMoney(premio.doubleValue());
+                    clanManager.saveBankAsync(clan);
 
-                Bukkit.broadcast(NexoColor.parse("&#00f5ff<bold>🏆 AUDITORÍA FINALIZADA:</bold>"));
-                Bukkit.broadcast(NexoColor.parse("&#1c0f2aEl sindicato &#ff00ff" + clan.getName() + " &#1c0f2aha masacrado a sus objetivos y asegura los fondos congelados de &#00f5ff🪙 " + premio + "&#1c0f2a."));
-            }
+                    Bukkit.broadcast(NexoColor.parse("&#00f5ff<bold>🏆 AUDITORÍA FINALIZADA:</bold>"));
+                    Bukkit.broadcast(NexoColor.parse("&#1c0f2aEl sindicato &#ff00ff" + clan.getName() + " &#1c0f2aha masacrado a sus objetivos y asegura los fondos congelados de &#00f5ff🪙 " + premio + "&#1c0f2a."));
+                }
+            });
         });
     }
 

@@ -9,7 +9,6 @@
 comandos:
   nexocore:
     errores:
-      sin-permiso: "&#8b0000[!] Acceso denegado: Autorización de Administrador requerida."
       offline: "&#8b0000[!] Error: El operario objetivo no está en línea."
       cargando: "&#8b0000[!] Sincronizando datos con la red. Intente de nuevo en unos segundos..."
       formato-invalido: "&#8b0000[!] Error de formato: La cantidad debe ser numérica."

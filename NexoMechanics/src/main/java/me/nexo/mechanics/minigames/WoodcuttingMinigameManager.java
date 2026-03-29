@@ -1,9 +1,10 @@
 package me.nexo.mechanics.minigames;
 
-import me.nexo.core.utils.NexoColor;
-import me.nexo.mechanics.NexoMechanics;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
+import me.nexo.mechanics.NexoMechanics;
+import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -15,6 +16,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
 import java.util.Map;
 import java.util.UUID;
@@ -38,33 +41,31 @@ public class WoodcuttingMinigameManager implements Listener {
         Block b = event.getBlock();
         UUID id = p.getUniqueId();
 
-        if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
-            me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(b.getLocation());
+        NexoAPI.getServices().get(ClaimManager.class).ifPresent(claimManager -> {
+            me.nexo.protections.core.ProtectionStone stone = claimManager.getStoneAt(b.getLocation());
             if (stone != null && !stone.hasPermission(id, me.nexo.protections.core.ClaimAction.BREAK)) {
-                return;
+                event.setCancelled(true);
             }
-        }
+        });
+
+        if (event.isCancelled()) return;
 
         if (nucleos.containsKey(id)) {
             NucleoActivo nucleo = nucleos.get(id);
             if (b.getLocation().equals(nucleo.bloque().getLocation())) {
                 p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
                 p.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, b.getLocation().add(0.5, 0.5, 0.5), 20);
-
                 talarArbol(b);
-
                 b.getWorld().dropItemNaturally(b.getLocation(), new ItemStack(Material.HONEYCOMB, 2));
-
                 NexoUser user = NexoAPI.getInstance().getUserLocal(id);
                 if (user != null) {
                     int maxEnergia = 100 + ((user.getNexoNivel() - 1) * 20) + user.getEnergiaExtraAccesorios();
                     int nuevaEnergia = Math.min(user.getEnergiaMineria() + 10, maxEnergia);
                     user.setEnergiaMineria(nuevaEnergia);
-                    p.sendActionBar(NexoColor.parse("&#ff00ff[✓] <bold>NÚCLEO ORGÁNICO DESTRUIDO:</bold> &#1c0f2aRecarga del traje &#00f5ff(+10⚡)"));
+                    CrossplayUtils.sendActionBar(p, plugin.getConfigManager().getMessage("eventos.tala.nucleo-destruido-energia"));
                 } else {
-                    p.sendActionBar(NexoColor.parse("&#ff00ff[✓] <bold>NÚCLEO ORGÁNICO DESTRUIDO</bold>"));
+                    CrossplayUtils.sendActionBar(p, plugin.getConfigManager().getMessage("eventos.tala.nucleo-destruido"));
                 }
-
                 p.sendBlockChange(b.getLocation(), Bukkit.createBlockData(Material.AIR));
                 nucleos.remove(id);
                 return;
@@ -83,12 +84,11 @@ public class WoodcuttingMinigameManager implements Listener {
         if (!objetivo.getType().toString().contains("LOG")) {
             objetivo = origen.getRelative(BlockFace.DOWN);
         }
-
         if (objetivo.getType().toString().contains("LOG")) {
             p.sendBlockChange(objetivo.getLocation(), Bukkit.createBlockData(Material.CRIMSON_STEM));
             p.playSound(objetivo.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1.5f);
             p.getWorld().spawnParticle(Particle.WAX_ON, objetivo.getLocation().add(0.5, 0.5, 0.5), 15);
-            p.sendActionBar(NexoColor.parse("&#8b0000✨ <bold>¡ANOMALÍA BOTÁNICA!</bold> &#1c0f2aGolpea el núcleo inestable rápido."));
+            CrossplayUtils.sendActionBar(p, plugin.getConfigManager().getMessage("eventos.tala.anomalia-botanica"));
             nucleos.put(p.getUniqueId(), new NucleoActivo(objetivo, System.currentTimeMillis() + 3000L, objetivo.getType()));
         }
     }
@@ -110,7 +110,7 @@ public class WoodcuttingMinigameManager implements Listener {
                     if (p != null) {
                         p.sendBlockChange(entry.getValue().bloque().getLocation(), Bukkit.createBlockData(entry.getValue().tipoOriginal()));
                         p.playSound(p.getLocation(), Sound.BLOCK_CANDLE_EXTINGUISH, 0.5f, 1f);
-                        p.sendActionBar(NexoColor.parse("&#1c0f2a[!] La biomasa se ha endurecido. Oportunidad perdida."));
+                        CrossplayUtils.sendActionBar(p, plugin.getConfigManager().getMessage("eventos.tala.biomasa-endurecida"));
                     }
                     nucleos.remove(entry.getKey());
                 }

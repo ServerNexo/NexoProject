@@ -1,10 +1,9 @@
 package me.nexo.items.accesorios;
 
 import me.nexo.core.NexoCore;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.core.utils.Base64Util;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -18,6 +17,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class AccesoriosManager {
 
@@ -63,15 +63,11 @@ public class AccesoriosManager {
         registro.put("corazon_nexo", new AccessoryDTO("corazon_nexo", AccessoryDTO.Familia.CAZAJEFES, AccessoryDTO.Rareza.COSMICO, AccessoryDTO.StatType.VIDA, 100, "Te revive una vez cada hora al recibir daño letal."));
     }
 
-    private String serialize(String hex) {
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
-    }
-
     public void abrirBolsa(Player p) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
             if (nexoCore == null || nexoCore.getDatabaseManager() == null) {
-                p.sendMessage(NexoColor.parse("&#8b0000[!] Error crítico: Enlace caído con la Base de Datos Central."));
+                CrossplayUtils.sendMessage(p, "&#8b0000[!] Error crítico: Enlace caído con la Base de Datos Central.");
                 return;
             }
             String sql = "SELECT contenido FROM nexo_storage WHERE uuid = ? AND tipo = 'accesorios'";
@@ -81,22 +77,22 @@ public class AccesoriosManager {
                 ps.setString(1, p.getUniqueId().toString());
                 ResultSet rs = ps.executeQuery();
                 if (rs.next()) base64Data = rs.getString("contenido");
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             String finalData = base64Data;
             Bukkit.getScheduler().runTask(plugin, () -> {
                 int slotsDesbloqueados = getSlotsDesbloqueados(p);
                 int filas = Math.max(1, (int) Math.ceil(slotsDesbloqueados / 9.0));
-                Inventory inv = Bukkit.createInventory(null, filas * 9, serialize("&#1c0f2a<bold>»</bold> &#ff00ffBolsa de Accesorios"));
+                Inventory inv = Bukkit.createInventory(null, filas * 9, CrossplayUtils.parseCrossplay(p, plugin.getConfigManager().getMessage("menus.accesorios.titulo")));
                 if (finalData != null && !finalData.isEmpty()) {
                     inv.setContents(Base64Util.itemStackArrayFromBase64(finalData));
                 }
                 ItemStack cristalBloqueado = new ItemStack(Material.RED_STAINED_GLASS_PANE);
                 ItemMeta meta = cristalBloqueado.getItemMeta();
-                meta.setDisplayName(serialize("&#8b0000<bold>🔒 Slot Bloqueado</bold>"));
-                meta.setLore(Arrays.asList(
-                        serialize("&#1c0f2aAumenta tu Nivel de Colección"),
-                        serialize("&#1c0f2apara desbloquear este espacio.")
-                ));
+                meta.displayName(CrossplayUtils.parseCrossplay(p, plugin.getConfigManager().getMessage("menus.accesorios.slot-bloqueado.titulo")));
+                List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.accesorios.slot-bloqueado.lore");
+                meta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(p, line)).collect(Collectors.toList()));
                 cristalBloqueado.setItemMeta(meta);
                 for (int i = slotsDesbloqueados; i < inv.getSize(); i++) {
                     inv.setItem(i, cristalBloqueado);
@@ -127,7 +123,9 @@ public class AccesoriosManager {
                 ps.setString(1, p.getUniqueId().toString());
                 ps.setString(2, base64Data);
                 ps.executeUpdate();
-            } catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         });
 
         Map<AccessoryDTO.Familia, AccessoryDTO> accesoriosActivos = new EnumMap<>(AccessoryDTO.Familia.class);
@@ -171,16 +169,17 @@ public class AccesoriosManager {
         ItemStack item = new ItemStack(Material.PAPER);
         ItemMeta meta = item.getItemMeta();
 
-        meta.setDisplayName(serialize("&#ff00ff<bold>💍 " + dto.id().toUpperCase().replace("_", " ") + "</bold>"));
-        meta.setLore(Arrays.asList(
-                serialize("&#1c0f2aFamilia: &#00f5ff" + dto.family().name()),
-                serialize("&#1c0f2aRareza: &#00f5ff" + dto.rarity().name()),
-                serialize(" "),
-                serialize("&#1c0f2aBono: &#ff00ff+" + dto.statValue() + " " + dto.statType().name()),
-                serialize("&#1c0f2aAtributo Único: &#00f5ff" + dto.abilityDescription())
+        meta.displayName(CrossplayUtils.parseCrossplay(null, "&#ff00ff<bold>💍 " + dto.id().toUpperCase().replace("_", " ") + "</bold>"));
+        meta.lore(Arrays.asList(
+                CrossplayUtils.parseCrossplay(null, "&#1c0f2aFamilia: &#00f5ff" + dto.family().name()),
+                CrossplayUtils.parseCrossplay(null, "&#1c0f2aRareza: &#00f5ff" + dto.rarity().name()),
+                CrossplayUtils.parseCrossplay(null, " "),
+                CrossplayUtils.parseCrossplay(null, "&#1c0f2aBono: &#ff00ff+" + dto.statValue() + " " + dto.statType().name()),
+                CrossplayUtils.parseCrossplay(null, "&#1c0f2aAtributo Único: &#00f5ff" + dto.abilityDescription())
         ));
 
         meta.getPersistentDataContainer().set(llaveAccesorio, PersistentDataType.STRING, dto.id());
+
         item.setItemMeta(meta);
         return item;
     }

@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class CollectionManager {
 
     private final NexoColecciones plugin;
+    private final NexoCore core;
 
     private Map<String, CollectionCategory> categoriasRegistradas = new HashMap<>();
     private final Map<UUID, CollectionProfile> perfilesJugadores = new ConcurrentHashMap<>();
@@ -29,6 +30,11 @@ public class CollectionManager {
 
     public CollectionManager(NexoColecciones plugin) {
         this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
+    }
+
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("colecciones_messages.yml", path);
     }
 
     public void cargarDesdeConfig() {
@@ -74,19 +80,19 @@ public class CollectionManager {
 
         if (nivelNuevo > nivelViejo) {
             CrossplayUtils.sendTitle(player,
-                    plugin.getConfigManager().getMessage("eventos.subida-nivel.titulo-pantalla").replace("%level%", String.valueOf(nivelNuevo)),
-                    plugin.getConfigManager().getMessage("eventos.subida-nivel.subtitulo-pantalla").replace("%item_name%", item.getNombre()));
+                    getMessage("eventos.subida-nivel.titulo-pantalla").replace("%level%", String.valueOf(nivelNuevo)),
+                    getMessage("eventos.subida-nivel.subtitulo-pantalla").replace("%item_name%", item.getNombre()));
 
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-divisor"));
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.subida-nivel.titulo"));
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.subida-nivel.descripcion")
+            CrossplayUtils.sendMessage(player, getMessage("comandos.colecciones.top-divisor"));
+            CrossplayUtils.sendMessage(player, getMessage("eventos.subida-nivel.titulo"));
+            CrossplayUtils.sendMessage(player, getMessage("eventos.subida-nivel.descripcion")
                     .replace("%level%", String.valueOf(nivelNuevo)).replace("%item%", item.getNombre()));
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-divisor"));
+            CrossplayUtils.sendMessage(player, getMessage("comandos.colecciones.top-divisor"));
             player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
 
             if (nivelNuevo == item.getMaxTier()) {
                 CrossplayUtils.broadcastMessage(" ");
-                CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.max-nivel")
+                CrossplayUtils.broadcastMessage(getMessage("eventos.max-nivel")
                         .replace("%player%", player.getName()).replace("%item%", item.getNombre()));
                 CrossplayUtils.broadcastMessage(" ");
             }
@@ -121,7 +127,7 @@ public class CollectionManager {
         ejecutarRecompensas(player, tier.getRecompensas());
         profile.markTierAsClaimed(itemId, targetTier);
 
-        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.recompensa-reclamada"));
+        CrossplayUtils.sendMessage(player, getMessage("eventos.recompensa-reclamada"));
         player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
         player.getWorld().spawnParticle(org.bukkit.Particle.TOTEM_OF_UNDYING, player.getLocation().add(0, 1, 0), 100, 0.5, 0.5, 0.5, 0.1);
     }
@@ -142,7 +148,7 @@ public class CollectionManager {
     public void calcularTopAsync(Player player, String itemId) {
         CollectionItem cItem = getItemGlobal(itemId);
         if (cItem == null) {
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-error"));
+            CrossplayUtils.sendMessage(player, getMessage("comandos.colecciones.top-error"));
             return;
         }
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -151,7 +157,7 @@ public class CollectionManager {
                     "JOIN jugadores j ON c.uuid = j.uuid " +
                     "WHERE c.collections_data ? ? " +
                     "ORDER BY amount DESC LIMIT 5";
-            try (Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
+            try (Connection conn = core.getDatabaseManager().getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, cItem.getId());
                 ps.setString(2, cItem.getId());
@@ -161,23 +167,23 @@ public class CollectionManager {
                 while (rs.next()) {
                     String pName = rs.getString("name");
                     int amt = rs.getInt("amount");
-                    lineasTop.add(plugin.getConfigManager().getMessage("comandos.colecciones.top-linea")
+                    lineasTop.add(getMessage("comandos.colecciones.top-linea")
                             .replace("%rank%", String.valueOf(rank))
                             .replace("%player%", pName)
                             .replace("%amount%", String.valueOf(amt)));
                     rank++;
                 }
                 Bukkit.getScheduler().runTask(plugin, () -> {
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-divisor"));
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-titulo").replace("%collection_name%", cItem.getNombre()));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.colecciones.top-divisor"));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.colecciones.top-titulo").replace("%collection_name%", cItem.getNombre()));
                     if (lineasTop.isEmpty()) {
-                        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-vacio"));
+                        CrossplayUtils.sendMessage(player, getMessage("comandos.colecciones.top-vacio"));
                     } else {
                         for (String l : lineasTop) {
                             CrossplayUtils.sendMessage(player, l);
                         }
                     }
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.top-divisor"));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.colecciones.top-divisor"));
                 });
             } catch (Exception e) {
                 Bukkit.getScheduler().runTask(plugin, () -> CrossplayUtils.sendMessage(player, "&#8b0000[!] Error crítico de red al contactar con la base de datos."));

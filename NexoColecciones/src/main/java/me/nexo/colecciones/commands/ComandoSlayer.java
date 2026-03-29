@@ -3,6 +3,7 @@ package me.nexo.colecciones.commands;
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.menu.SlayerMenu;
 import me.nexo.colecciones.slayers.ActiveSlayer;
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -16,10 +17,14 @@ public class ComandoSlayer implements CommandExecutor {
         this.plugin = plugin;
     }
 
+    private String getMessage(String path) {
+        return NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("colecciones_messages.yml", path);
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            CrossplayUtils.sendMessage(null, plugin.getConfigManager().getMessage("comandos.slayer.no-jugador"));
+            CrossplayUtils.sendMessage(null, getMessage("comandos.slayer.no-jugador"));
             return true;
         }
 
@@ -28,9 +33,9 @@ public class ComandoSlayer implements CommandExecutor {
             if (activo != null) {
                 if (activo.getBossBar() != null) activo.getBossBar().removeAll();
                 plugin.getSlayerManager().removeActiveSlayer(player.getUniqueId());
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.slayer.cancelado"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.cancelado"));
             } else {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.slayer.no-activo"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.no-activo"));
             }
             return true;
         }
@@ -40,7 +45,7 @@ public class ComandoSlayer implements CommandExecutor {
             return true;
         }
 
-        SlayerMenu.abrirMenu(player, plugin.getSlayerManager());
+        SlayerMenu.abrirMenu(player, plugin);
         return true;
     }
 }

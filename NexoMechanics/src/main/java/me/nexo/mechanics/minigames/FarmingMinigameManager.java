@@ -1,9 +1,9 @@
 package me.nexo.mechanics.minigames;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.user.NexoAPI;
 import me.nexo.mechanics.NexoMechanics;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
+import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -26,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class FarmingMinigameManager implements Listener {
 
     private final NexoMechanics plugin;
-
     private final Map<UUID, Integer> plagasActivas = new ConcurrentHashMap<>();
 
     public FarmingMinigameManager(NexoMechanics plugin) {
@@ -37,12 +36,14 @@ public class FarmingMinigameManager implements Listener {
     public void alCosechar(BlockBreakEvent event) {
         Player p = event.getPlayer();
 
-        if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
-            me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(event.getBlock().getLocation());
+        NexoAPI.getServices().get(ClaimManager.class).ifPresent(claimManager -> {
+            me.nexo.protections.core.ProtectionStone stone = claimManager.getStoneAt(event.getBlock().getLocation());
             if (stone != null && !stone.hasPermission(p.getUniqueId(), me.nexo.protections.core.ClaimAction.BREAK)) {
-                return;
+                event.setCancelled(true);
             }
-        }
+        });
+
+        if (event.isCancelled()) return;
 
         if (event.getBlock().getBlockData() instanceof Ageable cultivo) {
             if (cultivo.getAge() == cultivo.getMaximumAge() && Math.random() <= 0.01) {
@@ -60,16 +61,15 @@ public class FarmingMinigameManager implements Listener {
             plaga.getEquipment().setHelmet(new ItemStack(Material.WEEPING_VINES));
         }
 
-        plaga.customName(NexoColor.parse("&#8b0000<bold>Plaga Biológica</bold>"));
+        plaga.customName(CrossplayUtils.parseCrossplay(p, plugin.getConfigManager().getMessage("eventos.farming.plaga-biologica")));
         plaga.setCustomNameVisible(true);
 
         plagasActivas.put(plaga.getUniqueId(), 0);
         p.playSound(loc, Sound.ENTITY_SILVERFISH_AMBIENT, 1f, 0.5f);
 
-        p.sendTitle(
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#8b0000<bold>¡ANOMALÍA BIOLÓGICA!</bold>")),
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#ff00ffErradica la plaga antes de que escape.")),
-                5, 40, 5
+        CrossplayUtils.sendTitle(p,
+                plugin.getConfigManager().getMessage("eventos.farming.anomalia-biologica.titulo"),
+                plugin.getConfigManager().getMessage("eventos.farming.anomalia-biologica.subtitulo")
         );
 
         new BukkitRunnable() {
@@ -85,11 +85,9 @@ public class FarmingMinigameManager implements Listener {
                     cancel();
                     return;
                 }
-
                 Vector salto = new Vector((Math.random() - 0.5) * 1.5, 0.6, (Math.random() - 0.5) * 1.5);
                 plaga.setVelocity(salto);
                 plaga.getWorld().spawnParticle(Particle.SPORE_BLOSSOM_AIR, plaga.getLocation(), 5);
-
                 tiempoVida--;
             }
         }.runTaskTimer(plugin, 0L, 10L);
@@ -114,7 +112,7 @@ public class FarmingMinigameManager implements Listener {
                     plaga.getWorld().spawnParticle(Particle.EXPLOSION, plaga.getLocation(), 1);
 
                     plaga.getWorld().dropItemNaturally(plaga.getLocation(), new ItemStack(Material.PITCHER_POD, 3));
-                    p.sendActionBar(NexoColor.parse("&#00f5ff[✓] <bold>AMENAZA ERRADICADA:</bold> &#1c0f2aLa biomasa ha sido purgada."));
+                    CrossplayUtils.sendActionBar(p, plugin.getConfigManager().getMessage("eventos.farming.amenaza-erradicada"));
                 } else {
                     plagasActivas.put(plaga.getUniqueId(), golpes);
                 }

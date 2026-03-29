@@ -20,7 +20,6 @@ comandos:
       cantidad-cero: "&#8b0000[!] La cantidad y el precio de cotización deben ser mayores a 0."
       datos-invalidos: "&#8b0000[!] Datos financieros inválidos. Verifica los parámetros."
   eco:
-    no-jugador: "&#8b0000[!] Acceso denegado: El terminal requiere un operario humano."
     estado-cuenta:
       divisor: "&#1c0f2a========================================"
       titulo: "&#ff00ff<bold>Estado de Cuenta: %player%</bold>"
@@ -40,7 +39,6 @@ comandos:
     ayuda: "&#1c0f2aMódulos disponibles: &#ff00ffgive (Requiere Admin)"
   trade:
     errores:
-      no-jugador: "&#8b0000[!] Acceso denegado: El terminal requiere un operario humano."
       uso-principal: "&#8b0000[!] Uso: &#ff00ff/trade <operario> &#1c0f2ao &#ff00ff/trade accept <operario>"
       uso-accept: "&#8b0000[!] Uso: &#ff00ff/trade accept <operario>"
       offline: "&#8b0000[!] Operario no localizado en la red."

@@ -1,6 +1,7 @@
 package me.nexo.colecciones.slayers;
 
 import me.nexo.colecciones.NexoColecciones;
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -15,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SlayerManager {
 
     private final NexoColecciones plugin;
+    private final NexoCore core;
 
     public record SlayerTemplate(String id, String name, String targetMob, int requiredKills, String bossName, String bossType) {}
 
@@ -23,6 +25,11 @@ public class SlayerManager {
 
     public SlayerManager(NexoColecciones plugin) {
         this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
+    }
+
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("colecciones_messages.yml", path);
     }
 
     public void cargarSlayers() {
@@ -50,12 +57,12 @@ public class SlayerManager {
         slayerId = slayerId.toUpperCase();
 
         if (!templates.containsKey(slayerId)) {
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.slayer.no-encontrado"));
+            CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.no-encontrado"));
             return;
         }
 
         if (activeSlayers.containsKey(player.getUniqueId())) {
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.slayer.ya-activo"));
+            CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.ya-activo"));
             return;
         }
 
@@ -63,8 +70,8 @@ public class SlayerManager {
         ActiveSlayer activo = new ActiveSlayer(player, template);
         activeSlayers.put(player.getUniqueId(), activo);
 
-        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.slayer.inicio-caceria"));
-        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.slayer.contrato-aceptado").replace("%name%", template.name()));
-        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.slayer.descripcion-caceria").replace("%kills%", String.valueOf(template.requiredKills())).replace("%mob%", template.targetMob()));
+        CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.inicio-caceria"));
+        CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.contrato-aceptado").replace("%name%", template.name()));
+        CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.descripcion-caceria").replace("%kills%", String.valueOf(template.requiredKills())).replace("%mob%", template.targetMob()));
     }
 }

@@ -1,6 +1,9 @@
 package me.nexo.core;
 
 import me.nexo.core.api.NexoWebServer;
+import me.nexo.core.commands.ComandoNexo;
+import me.nexo.core.commands.ComandoNexoTabCompleter;
+import me.nexo.core.commands.WebCommand;
 import me.nexo.core.config.ConfigManager;
 import me.nexo.core.hub.NexoMenuListener;
 import me.nexo.core.user.NexoAPI;
@@ -32,7 +35,11 @@ public class NexoCore extends JavaPlugin {
         this.webServer = new NexoWebServer(this);
         this.webServer.start();
 
-        if (getCommand("nexocore") != null) getCommand("nexocore").setExecutor(new ComandoNexo(this));
+        getCommand("web").setExecutor(new WebCommand(this));
+        if (getCommand("nexocore") != null) {
+            getCommand("nexocore").setExecutor(new ComandoNexo(this));
+            getCommand("nexocore").setTabCompleter(new ComandoNexoTabCompleter());
+        }
         if (getCommand("void") != null) {
             getCommand("void").setExecutor(new me.nexo.core.commands.ComandoVoid(this));
         }

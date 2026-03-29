@@ -320,4 +320,37 @@ public class DatabaseManager {
             }
         });
     }
+
+    // ==========================================
+    // 🌐 MÓDULO WEB: GUARDADO DE CLAVE DEL VACÍO
+    // ==========================================
+    public void actualizarClaveWeb(Player player, String hashedPassword) {
+        if (dataSource == null) {
+            player.sendMessage("§c❌ La conexión con el Vacío (Base de Datos) está inactiva.");
+            return;
+        }
+
+        String updateSQL = "UPDATE jugadores SET web_password = ? WHERE uuid = ?";
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            try (Connection conn = getConnection();
+                 PreparedStatement ps = conn.prepareStatement(updateSQL)) {
+
+                ps.setString(1, hashedPassword);
+                ps.setString(2, player.getUniqueId().toString());
+                int rowsAffected = ps.executeUpdate();
+
+                if (rowsAffected > 0) {
+                    player.sendMessage("§d§l[Nexo Web] §a¡Tu Clave del Vacío ha sido registrada con éxito!");
+                    player.sendMessage("§7Ya puedes iniciar sesión en el panel web.");
+                } else {
+                    player.sendMessage("§c❌ Error: No se encontró tu perfil en la base de datos. ¡Vuelve a entrar al servidor!");
+                }
+
+            } catch (SQLException e) {
+                player.sendMessage("§c❌ Ocurrió un error al registrar tu clave. Reporta esto a un administrador.");
+                plugin.getLogger().severe("Error SQL al guardar clave web de " + player.getName() + ": " + e.getMessage());
+            }
+        });
+    }
 }

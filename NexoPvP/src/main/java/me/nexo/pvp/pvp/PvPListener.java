@@ -1,6 +1,8 @@
 package me.nexo.pvp.pvp;
 
+import me.nexo.core.user.NexoAPI;
 import me.nexo.core.utils.NexoColor;
+import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -33,22 +35,21 @@ public class PvPListener implements Listener {
         if (atacante != null && event.getEntity() instanceof Player victima) {
             if (atacante.equals(victima)) return;
 
-            if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
-                me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(victima.getLocation());
-
+            NexoAPI.getServices().get(ClaimManager.class).ifPresent(claimManager -> {
+                me.nexo.protections.core.ProtectionStone stone = claimManager.getStoneAt(victima.getLocation());
                 if (stone != null && !stone.getFlag("pvp")) {
                     boolean ignorarProteccion = false;
                     if (Bukkit.getPluginManager().isPluginEnabled("NexoWar")) {
                         ignorarProteccion = me.nexo.war.NexoWar.getPlugin(me.nexo.war.NexoWar.class).getWarManager().estanEnGuerraActiva(atacante.getUniqueId(), victima.getUniqueId());
                     }
-
                     if (!ignorarProteccion) {
                         atacante.sendMessage(NexoColor.parse("&#8b0000[!] Bloqueo de Armamento: &#1c0f2aEl objetivo se encuentra en una zona neutral."));
                         event.setCancelled(true);
-                        return;
                     }
                 }
-            }
+            });
+
+            if (event.isCancelled()) return;
 
             if (!manager.tienePvP(atacante) || !manager.tienePvP(victima)) {
                 event.setCancelled(true);

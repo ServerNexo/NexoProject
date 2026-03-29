@@ -39,6 +39,10 @@ public class ClanManager {
         crearTablaClanes();
     }
 
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("clans_messages.yml", path);
+    }
+
     private void crearTablaClanes() {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             String sql = """
@@ -77,7 +81,7 @@ public class ClanManager {
                 ps.executeUpdate();
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     clan.setPublicHome(locStr);
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.exito.home-establecido"));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.exito.home-establecido"));
                 });
             } catch (Exception e) {
                 plugin.getLogger().severe("Error guardando Base: " + e.getMessage());
@@ -96,7 +100,7 @@ public class ClanManager {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     clan.setFriendlyFire(newValue);
                     String colorStatus = newValue ? "&#8b0000<bold>RIESGO ACTIVO</bold>" : "&#00f5ff<bold>APAGADO</bold>";
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.feedback.ff-toggle").replace("%status%", colorStatus));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.feedback.ff-toggle").replace("%status%", colorStatus));
                 });
             } catch (Exception e) {
             }
@@ -133,7 +137,7 @@ public class ClanManager {
                 psCheck.setString(1, tag);
                 psCheck.setString(2, nombre);
                 if (psCheck.executeQuery().next()) {
-                    Bukkit.getScheduler().runTask(plugin, () -> CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.nombre-tomado")));
+                    Bukkit.getScheduler().runTask(plugin, () -> CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.nombre-tomado")));
                     return;
                 }
                 UUID nuevoClanId = UUID.randomUUID();
@@ -155,7 +159,7 @@ public class ClanManager {
                     clanCache.put(nuevoClanId, nuevoClan);
                     user.setClanId(nuevoClanId);
                     user.setClanRole("LIDER");
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.exito.clan-creado").replace("%name%", nombre).replace("%tag%", tag));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.exito.clan-creado").replace("%name%", nombre).replace("%tag%", tag));
                 });
             } catch (Exception e) {
                 plugin.getLogger().severe("Error creando clan: " + e.getMessage());
@@ -195,8 +199,8 @@ public class ClanManager {
 
     public void invitarJugador(Player lider, Player invitado, NexoClan clan) {
         invitaciones.put(invitado.getUniqueId(), clan.getId());
-        CrossplayUtils.sendMessage(invitado, plugin.getConfigManager().getMessage("comandos.clan.feedback.invitacion-recibida").replace("%clan%", clan.getName()));
-        CrossplayUtils.sendMessage(lider, plugin.getConfigManager().getMessage("comandos.clan.exito.invitacion-enviada").replace("%player%", invitado.getName()));
+        CrossplayUtils.sendMessage(invitado, getMessage("comandos.clan.feedback.invitacion-recibida").replace("%clan%", clan.getName()));
+        CrossplayUtils.sendMessage(lider, getMessage("comandos.clan.exito.invitacion-enviada").replace("%player%", invitado.getName()));
     }
 
     public UUID getInvitacionPendiente(Player player) {
@@ -215,7 +219,7 @@ public class ClanManager {
                     user.setClanId(clan.getId());
                     user.setClanRole("MIEMBRO");
                     invitaciones.invalidate(player.getUniqueId());
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.exito.unido").replace("%clan%", clan.getName()));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.exito.unido").replace("%clan%", clan.getName()));
                 });
             } catch (Exception e) {
             }
@@ -232,7 +236,7 @@ public class ClanManager {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     user.setClanId(null);
                     user.setClanRole("NONE");
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.exito.abandonado"));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.exito.abandonado"));
                 });
             } catch (Exception e) {
             }
@@ -249,8 +253,8 @@ public class ClanManager {
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     targetUser.setClanId(null);
                     targetUser.setClanRole("NONE");
-                    CrossplayUtils.sendMessage(target, plugin.getConfigManager().getMessage("comandos.clan.feedback.expulsado-feedback").replace("%ejector%", ejector.getName()));
-                    CrossplayUtils.sendMessage(ejector, plugin.getConfigManager().getMessage("comandos.clan.exito.expulsado").replace("%target%", target.getName()));
+                    CrossplayUtils.sendMessage(target, getMessage("comandos.clan.feedback.expulsado-feedback").replace("%ejector%", ejector.getName()));
+                    CrossplayUtils.sendMessage(ejector, getMessage("comandos.clan.exito.expulsado").replace("%target%", target.getName()));
                 });
             } catch (Exception e) {
             }
@@ -277,7 +281,7 @@ public class ClanManager {
                         if (u != null && u.hasClan() && u.getClanId().equals(clanId)) {
                             u.setClanId(null);
                             u.setClanRole("NONE");
-                            CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("comandos.clan.feedback.disuelto"));
+                            CrossplayUtils.sendMessage(p, getMessage("comandos.clan.feedback.disuelto"));
                         }
                     }
                 });
@@ -302,5 +306,24 @@ public class ClanManager {
                 plugin.getLogger().severe("Error guardando el banco del clan: " + e.getMessage());
             }
         });
+    }
+
+    public void saveAllClansSync() {
+        String sql = "UPDATE nexo_clans SET monolith_exp = ?, monolith_level = ?, bank_balance = ?, public_home = ?, friendly_fire = ? WHERE id = CAST(? AS UUID)";
+        try (Connection conn = core.getDatabaseManager().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            for (NexoClan clan : clanCache.asMap().values()) {
+                ps.setLong(1, clan.getMonolithExp());
+                ps.setInt(2, clan.getMonolithLevel());
+                ps.setBigDecimal(3, clan.getBankBalance());
+                ps.setString(4, clan.getPublicHome());
+                ps.setBoolean(5, clan.isFriendlyFire());
+                ps.setString(6, clan.getId().toString());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+        } catch (Exception e) {
+            plugin.getLogger().severe("Error en el guardado síncrono de clanes: " + e.getMessage());
+        }
     }
 }

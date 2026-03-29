@@ -6,11 +6,12 @@ import me.nexo.colecciones.colecciones.ColeccionesListener;
 import me.nexo.colecciones.colecciones.CollectionManager;
 import me.nexo.colecciones.colecciones.FlushTask;
 import me.nexo.colecciones.commands.ComandoColecciones;
+import me.nexo.colecciones.commands.ComandoColeccionesTabCompleter;
 import me.nexo.colecciones.commands.ComandoSlayer;
-import me.nexo.colecciones.config.ConfigManager;
 import me.nexo.colecciones.menu.MenuListener;
 import me.nexo.colecciones.slayers.SlayerListener;
 import me.nexo.colecciones.slayers.SlayerManager;
+import me.nexo.core.user.NexoAPI;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoColecciones extends JavaPlugin {
@@ -18,14 +19,15 @@ public class NexoColecciones extends JavaPlugin {
     private CollectionManager collectionManager;
     private ColeccionesConfig coleccionesConfig;
     private SlayerManager slayerManager;
-    private ConfigManager configManager;
 
     @Override
     public void onEnable() {
-        this.configManager = new ConfigManager(this);
         this.coleccionesConfig = new ColeccionesConfig(this);
         this.collectionManager = new CollectionManager(this);
         this.slayerManager = new SlayerManager(this);
+
+        NexoAPI.getServices().register(CollectionManager.class, this.collectionManager);
+        NexoAPI.getServices().register(SlayerManager.class, this.slayerManager);
 
         coleccionesConfig.recargarConfig();
         collectionManager.cargarDesdeConfig();
@@ -35,7 +37,10 @@ public class NexoColecciones extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new SlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new MenuListener(this), this);
 
-        if (getCommand("colecciones") != null) getCommand("colecciones").setExecutor(new ComandoColecciones(this));
+        if (getCommand("colecciones") != null) {
+            getCommand("colecciones").setExecutor(new ComandoColecciones(this));
+            getCommand("colecciones").setTabCompleter(new ComandoColeccionesTabCompleter());
+        }
         if (getCommand("slayer") != null) getCommand("slayer").setExecutor(new ComandoSlayer(this));
 
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -50,6 +55,8 @@ public class NexoColecciones extends JavaPlugin {
     @Override
     public void onDisable() {
         new FlushTask(this).run();
+        NexoAPI.getServices().unregister(CollectionManager.class);
+        NexoAPI.getServices().unregister(SlayerManager.class);
         getLogger().info("NexoColecciones ha sido deshabilitado.");
     }
 
@@ -63,9 +70,5 @@ public class NexoColecciones extends JavaPlugin {
 
     public SlayerManager getSlayerManager() {
         return slayerManager;
-    }
-
-    public ConfigManager getConfigManager() {
-        return configManager;
     }
 }

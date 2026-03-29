@@ -10,3 +10,4 @@ commands:
   nexo:
     description: "Comando principal de protecciones y factorías."
     permission: nexo.admin
+    permission-message: "No tienes permiso para usar este comando."

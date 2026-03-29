@@ -4,12 +4,16 @@ main: me.nexo.colecciones.NexoColecciones
 api-version: '1.21'
 author: 'TuNombre'
 description: 'Sistema de Slayers y farmeo progresivo.'
-depend: [NexoCore, NexoEconomy]
-softdepend: [PlaceholderAPI]
+depend: [NexoCore]
+softdepend: [PlaceholderAPI, NexoEconomy]
 commands:
   colecciones:
     description: "Abre el menú de tus colecciones"
     aliases: [col, coleccion]
+    permission: nexocolecciones.user
+    permission-message: "No tienes permiso para usar este comando."
   slayer:
     description: "Abre el menú de misiones de cacería"
     aliases: [slayers, caceria]
+    permission: nexocolecciones.user
+    permission-message: "No tienes permiso para usar este comando."

@@ -5,7 +5,6 @@
 comandos:
   colecciones:
     recarga-exito: "&#00f5ff[✓] Sistemas de Colecciones y Slayers sincronizados y en línea."
-    sin-permiso: "&#8b0000Acceso Denegado. Se requiere autorización de administrador."
     top-error: "&#8b0000[!] Error: Esa colección no existe en la base de datos."
     top-titulo: "&#ff00ff<bold>🏆 TOP 5 GLOBAL: </bold>%collection_name%"
     top-vacio: "&#1c0f2aNadie ha farmeado este recurso todavía..."

@@ -1,9 +1,8 @@
 package me.nexo.items.estaciones;
 
-import me.nexo.core.utils.NexoColor;
-import me.nexo.items.managers.ItemManager;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import me.nexo.items.managers.ItemManager;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -18,32 +17,25 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.Arrays;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 public class HerreriaListener implements Listener {
 
     private final NexoItems plugin;
     private final Random random = new Random();
 
-    public static final String TITLE_PLAIN = "» Herrería del Nexo";
-    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#ff00ffHerrería del Nexo";
-
     public HerreriaListener(NexoItems plugin) {
         this.plugin = plugin;
     }
 
-    private String serialize(String hex) {
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
-    }
-
     public void abrirMenu(Player jugador) {
-        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
+        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(jugador, plugin.getConfigManager().getMessage("menus.herreria.titulo")));
 
         ItemStack cristal = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta metaCristal = cristal.getItemMeta();
         if (metaCristal != null) {
-            metaCristal.setDisplayName(serialize(" "));
+            metaCristal.displayName(CrossplayUtils.parseCrossplay(jugador, " "));
             cristal.setItemMeta(metaCristal);
         }
 
@@ -57,11 +49,10 @@ public class HerreriaListener implements Listener {
         ItemStack yunque = new ItemStack(Material.ANVIL);
         ItemMeta metaYunque = yunque.getItemMeta();
         if (metaYunque != null) {
-            metaYunque.setDisplayName(serialize("&#00f5ff<bold>FORJAR MEJORA</bold>"));
-            metaYunque.setLore(Arrays.asList(
-                    serialize("&#1c0f2aHaz clic para intentar mejorar tu activo."),
-                    serialize("&#ff00ffRequiere: &#1c0f2a1x Polvo Estelar")
-            ));
+            metaYunque.displayName(CrossplayUtils.parseCrossplay(jugador, plugin.getConfigManager().getMessage("menus.herreria.boton.titulo")));
+            metaYunque.lore(plugin.getConfigManager().getMessages().getStringList("menus.herreria.boton.lore").stream()
+                    .map(line -> CrossplayUtils.parseCrossplay(jugador, line))
+                    .collect(Collectors.toList()));
             yunque.setItemMeta(metaYunque);
         }
         inv.setItem(13, yunque);
@@ -72,7 +63,7 @@ public class HerreriaListener implements Listener {
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
         String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!tituloLimpio.equals(TITLE_PLAIN)) return;
+        if (!tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.herreria.titulo").replaceAll("<[^>]*>", ""))) return;
 
         Player jugador = (Player) event.getWhoClicked();
         int slot = event.getRawSlot();
@@ -91,28 +82,28 @@ public class HerreriaListener implements Listener {
             ItemStack material = inv.getItem(15);
 
             if (arma == null || arma.getType() == Material.AIR) {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Inserta un activo en la bahía izquierda."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.inserta-activo"));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             if (material == null || !material.hasItemMeta() ||
                     !material.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveMaterialMejora, PersistentDataType.BYTE)) {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Necesitas &#ff00ffPolvo Estelar &#8b0000en la bahía derecha."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.necesitas-polvo"));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             ItemMeta metaArma = arma.getItemMeta();
             if (!metaArma.getPersistentDataContainer().has(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER)) {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Este activo no soporta mejoras de herrería estelar."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.no-soporta-mejoras"));
                 return;
             }
 
             int nivelActual = metaArma.getPersistentDataContainer().getOrDefault(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, 0);
 
             if (nivelActual >= 10) {
-                jugador.sendMessage(NexoColor.parse("&#ff00ff[!] ¡El activo ya ha alcanzado la mejora máxima (+10)!"));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.mejora-maxima"));
                 return;
             }
 
@@ -125,16 +116,16 @@ public class HerreriaListener implements Listener {
                 nivelActual++;
                 metaArma.getPersistentDataContainer().set(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, nivelActual);
 
-                String nombreViejo = metaArma.getDisplayName();
+                String nombreViejo = PlainTextComponentSerializer.plainText().serialize(metaArma.displayName());
                 String nombreNuevo = nombreViejo.replaceAll("\\[\\+\\d+\\]", "[+" + nivelActual + "]");
-                metaArma.setDisplayName(nombreNuevo);
+                metaArma.displayName(CrossplayUtils.parseCrossplay(jugador, nombreNuevo));
 
                 arma.setItemMeta(metaArma);
 
-                jugador.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>¡FORJA EXITOSA!</bold> El activo ascendió a Nivel +" + nivelActual));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.forja-exitosa").replace("%level%", String.valueOf(nivelActual)));
                 jugador.playSound(jugador.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1f);
             } else {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] <bold>¡FORJA FALLIDA!</bold> La integridad del polvo estelar colapsó."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.forja-fallida"));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_ITEM_BREAK, 1f, 1f);
             }
         }
@@ -143,7 +134,7 @@ public class HerreriaListener implements Listener {
     @EventHandler
     public void alCerrar(InventoryCloseEvent event) {
         String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!tituloLimpio.equals(TITLE_PLAIN)) return;
+        if (!tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.herreria.titulo").replaceAll("<[^>]*>", ""))) return;
 
         Player jugador = (Player) event.getPlayer();
         Inventory inv = event.getInventory();

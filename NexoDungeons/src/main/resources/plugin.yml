@@ -9,3 +9,5 @@ commands:
   dungeons:
     description: "Abre el menú principal de Nexo Dungeons."
     aliases: [dungeon, mazmorras]
+    permission: nexodungeons.user
+    permission-message: "No tienes permiso para usar este comando."

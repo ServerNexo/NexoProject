@@ -4,7 +4,6 @@
 
 comandos:
   factory:
-    no-jugador: "&#8b0000[!] Acceso denegado: El terminal requiere un operario humano."
     cancelar: "&#8b0000[✓] Proyección holográfica cancelada. Plano borrado de la memoria."
     ayuda-test: "&#ff00ff/factory test &#1c0f2a- Proyecta un plano de prueba (Forja T1)."
     ayuda-cancelar: "&#ff00ff/factory cancel &#1c0f2a- Borra los hologramas activos."

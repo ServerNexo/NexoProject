@@ -16,24 +16,30 @@ import java.util.Optional;
 public class ComandoChatClan implements CommandExecutor {
 
     private final NexoClans plugin;
+    private final NexoCore core;
 
     public ComandoChatClan(NexoClans plugin) {
         this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
+    }
+
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("clans_messages.yml", path);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) return true;
 
-        NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
+        NexoUser user = core.getUserManager().getUserOrNull(player.getUniqueId());
 
         if (user == null || !user.hasClan()) {
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.chat.errores.sin-clan"));
+            CrossplayUtils.sendMessage(player, getMessage("comandos.chat.errores.sin-clan"));
             return true;
         }
 
         if (args.length == 0) {
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.chat.errores.uso"));
+            CrossplayUtils.sendMessage(player, getMessage("comandos.chat.errores.uso"));
             return true;
         }
 
@@ -41,19 +47,19 @@ public class ComandoChatClan implements CommandExecutor {
 
         Optional<NexoClan> clanOpt = plugin.getClanManager().getClanFromCache(user.getClanId());
         if (clanOpt.isEmpty()) {
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.chat.errores.sin-clan"));
+            CrossplayUtils.sendMessage(player, getMessage("comandos.chat.errores.sin-clan"));
             return true;
         }
 
         NexoClan clan = clanOpt.get();
 
-        String formato = plugin.getConfigManager().getMessage("comandos.chat.formato")
+        String formato = getMessage("comandos.chat.formato")
                 .replace("%clan_name%", clan.getName())
                 .replace("%player%", player.getName())
                 .replace("%message%", mensaje);
 
         for (Player p : Bukkit.getOnlinePlayers()) {
-            NexoUser tUser = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(p.getUniqueId());
+            NexoUser tUser = core.getUserManager().getUserOrNull(p.getUniqueId());
             if (tUser != null && tUser.hasClan() && tUser.getClanId().equals(user.getClanId())) {
                 CrossplayUtils.sendMessage(p, formato);
             }

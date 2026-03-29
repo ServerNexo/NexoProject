@@ -1,6 +1,7 @@
 package me.nexo.economy.blackmarket;
 
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.user.NexoAPI;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
 import me.nexo.items.managers.ItemManager;
@@ -26,25 +27,27 @@ public class BlackMarketManager {
     }
 
     private void cargarLootPool() {
-        possibleLootPool.add(new BlackMarketItem("hoja_vacio", ItemManager.crearHojaVacio(), new BigDecimal("1500"), NexoAccount.Currency.MANA));
+        NexoAPI.getServices().get(ItemManager.class).ifPresent(itemManager -> {
+            possibleLootPool.add(new BlackMarketItem("hoja_vacio", itemManager.crearHojaVacio(), new BigDecimal("1500"), NexoAccount.Currency.MANA));
 
-        ItemStack polvos = ItemManager.crearPolvoEstelar();
-        polvos.setAmount(16);
-        possibleLootPool.add(new BlackMarketItem("polvo_estelar_x16", polvos, new BigDecimal("400"), NexoAccount.Currency.GEMS));
+            ItemStack polvos = itemManager.crearPolvoEstelar();
+            polvos.setAmount(16);
+            possibleLootPool.add(new BlackMarketItem("polvo_estelar_x16", polvos, new BigDecimal("400"), NexoAccount.Currency.GEMS));
 
-        try {
-            ItemStack libroMagico = ItemManager.generarLibroEncantamiento("vampirismo", 3);
-            if (libroMagico != null && libroMagico.getType() != Material.BOOK) {
-                possibleLootPool.add(new BlackMarketItem("libro_vampirismo", libroMagico, new BigDecimal("800"), NexoAccount.Currency.GEMS));
-            }
-        } catch (Exception ignored) {}
+            try {
+                ItemStack libroMagico = itemManager.generarLibroEncantamiento("vampirismo", 3);
+                if (libroMagico != null && libroMagico.getType() != Material.BOOK) {
+                    possibleLootPool.add(new BlackMarketItem("libro_vampirismo", libroMagico, new BigDecimal("800"), NexoAccount.Currency.GEMS));
+                }
+            } catch (Exception ignored) {}
 
-        try {
-            ItemStack armaProhibida = ItemManager.generarArmaRPG("guadana_oscura");
-            if (armaProhibida != null && armaProhibida.getType() != Material.WOODEN_SWORD) {
-                possibleLootPool.add(new BlackMarketItem("arma_rpg_oculta", armaProhibida, new BigDecimal("2500"), NexoAccount.Currency.MANA));
-            }
-        } catch (Exception ignored) {}
+            try {
+                ItemStack armaProhibida = itemManager.generarArmaRPG("guadana_oscura");
+                if (armaProhibida != null && armaProhibida.getType() != Material.WOODEN_SWORD) {
+                    possibleLootPool.add(new BlackMarketItem("arma_rpg_oculta", armaProhibida, new BigDecimal("2500"), NexoAccount.Currency.MANA));
+                }
+            } catch (Exception ignored) {}
+        });
 
         possibleLootPool.add(new BlackMarketItem(
                 "forbidden_apple",

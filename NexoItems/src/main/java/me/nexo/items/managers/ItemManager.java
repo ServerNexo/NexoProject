@@ -1,8 +1,8 @@
 package me.nexo.items.managers;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.*;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.attribute.Attribute;
@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 public class ItemManager {
 
@@ -24,9 +25,10 @@ public class ItemManager {
     public static NamespacedKey llaveArmaduraId, llaveWeaponId, llaveWeaponPrestige, llaveHerramientaId, llaveBloquesRotos, llaveReforja, llaveEnchantId, llaveEnchantNivel;
     public static NamespacedKey llaveNivelEvolucion, llaveEsencia, llaveFragmento;
     public static NamespacedKey llaveArmaClase, llaveArmaReqCombate, llaveArmaDanioBase, llaveArmaMitica;
-    public static me.nexo.items.NexoItems pluginMemoria;
 
-    public static void init(me.nexo.items.NexoItems plugin) {
+    public static NexoItems pluginMemoria;
+
+    public static void init(NexoItems plugin) {
         pluginMemoria = plugin;
         llaveNivelMejora = new NamespacedKey(plugin, "nexo_upgrade");
         llaveMaterialMejora = new NamespacedKey(plugin, "nexo_material_polvo");
@@ -58,10 +60,6 @@ public class ItemManager {
         llaveArmaMitica = new NamespacedKey(plugin, "nexo_arma_mitica");
     }
 
-    private static String serialize(String hexString) {
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hexString));
-    }
-
     public static void sincronizarItemAsync(ItemStack item) {
         if (item == null || !item.hasItemMeta()) return;
         CompletableFuture.runAsync(() -> {
@@ -86,15 +84,15 @@ public class ItemManager {
         ItemMeta meta = item.getItemMeta();
         String prefijoReforja = reforja.isEmpty() ? "" : "&#ff00ff" + reforja + " ";
         String nombreFinal = prefijoReforja + nombreBase + " &#1c0f2a[Nv. " + nivel + "]";
-        meta.setDisplayName(serialize(nombreFinal));
+        meta.displayName(CrossplayUtils.parseCrossplay(null, nombreFinal));
         if (danioBase > 0) {
             meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE);
             org.bukkit.attribute.AttributeModifier mod = new org.bukkit.attribute.AttributeModifier(llaveWeaponId, danioBase, Operation.ADD_NUMBER, EquipmentSlotGroup.MAINHAND);
             meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, mod);
         }
         List<String> nuevoLore = new ArrayList<>();
-        nuevoLore.add(serialize("&#1c0f2aEstadísticas de Evolución:"));
-        nuevoLore.add(serialize("&#1c0f2aNivel Cénit: &#ff00ff" + nivel + "&#1c0f2a/60"));
+        nuevoLore.add(CrossplayUtils.getChat(null, "&#1c0f2aEstadísticas de Evolución:"));
+        nuevoLore.add(CrossplayUtils.getChat(null, "&#1c0f2aNivel Cénit: &#ff00ff" + nivel + "&#1c0f2a/60"));
         if (meta.hasLore()) {
             for (String linea : meta.getLore()) {
                 if (linea.contains("✦") || linea.contains("Nivel Cénit")) continue;
@@ -128,17 +126,17 @@ public class ItemManager {
         }
         ItemMeta meta = item.getItemMeta();
         List<String> lore = new ArrayList<>();
-        meta.setDisplayName(serialize(dto.nombre()));
-        lore.add(serialize(dto.rareza()));
-        lore.add(serialize("&#1c0f2aProfesión: &#ff00ff" + dto.profesion()));
-        lore.add(serialize("&#1c0f2aTier: &#ff00ff" + dto.tier()));
+        meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre()));
+        lore.add(CrossplayUtils.getChat(null, dto.rareza()));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aProfesión: &#ff00ff" + dto.profesion()));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aTier: &#ff00ff" + dto.tier()));
         lore.add(" ");
-        lore.add(serialize("&#1c0f2aVelocidad Base: &#00f5ff+" + dto.velocidadBase()));
-        lore.add(serialize("&#1c0f2aBonus Drops: &#00f5ff+" + dto.multiplicadorFortuna() + "%"));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aVelocidad Base: &#00f5ff+" + dto.velocidadBase()));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aBonus Drops: &#00f5ff+" + dto.multiplicadorFortuna() + "%"));
         lore.add(" ");
-        lore.add(serialize("&#1c0f2aBloques Rotos: &#ff00ff0"));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aBloques Rotos: &#ff00ff0"));
         lore.add(" ");
-        lore.add(serialize("&#1c0f2aRequisito de " + dto.profesion() + ": Nivel " + dto.nivelRequerido()));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aRequisito de " + dto.profesion() + ": Nivel " + dto.nivelRequerido()));
         meta.setLore(lore);
         meta.setUnbreakable(true);
         meta.getPersistentDataContainer().set(llaveHerramientaId, PersistentDataType.STRING, dto.id());
@@ -167,18 +165,18 @@ public class ItemManager {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         List<String> lore = new ArrayList<>();
-        meta.setDisplayName(serialize(dto.nombre()) + serialize(" &#1c0f2a[&#ff00ff+0&#1c0f2a]"));
-        lore.add(serialize("&#1c0f2aClase: &#ff00ff" + dto.claseRequerida()));
-        lore.add(serialize("&#1c0f2aElemento: " + dto.elemento()));
+        meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre() + " &#1c0f2a[&#ff00ff+0&#1c0f2a]"));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aClase: &#ff00ff" + dto.claseRequerida()));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aElemento: " + dto.elemento()));
         lore.add(" ");
-        lore.add(serialize("&#1c0f2aDaño Base: &#8b0000" + dto.danioBase() + " ⚔"));
-        lore.add(serialize("&#1c0f2aVelocidad: &#ff00ff" + dto.velocidadAtaque() + " ⚡"));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aDaño Base: &#8b0000" + dto.danioBase() + " ⚔"));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aVelocidad: &#ff00ff" + dto.velocidadAtaque() + " ⚡"));
         lore.add(" ");
         if (!dto.habilidadId().equalsIgnoreCase("ninguna")) {
-            lore.add(serialize("&#ff00ff✦ Habilidad: &#1c0f2a" + dto.habilidadId().toUpperCase() + " &#ff00ff<bold>(CLIC DERECHO)</bold>"));
+            lore.add(CrossplayUtils.getChat(null, "&#ff00ff✦ Habilidad: &#1c0f2a" + dto.habilidadId().toUpperCase() + " &#ff00ff<bold>(CLIC DERECHO)</bold>"));
             lore.add(" ");
         }
-        lore.add(serialize("&#1c0f2aRequisito de Combate: Nivel " + dto.nivelRequerido()));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aRequisito de Combate: Nivel " + dto.nivelRequerido()));
         meta.setLore(lore);
         meta.setUnbreakable(true);
         meta.getPersistentDataContainer().set(llaveWeaponId, PersistentDataType.STRING, dto.id());
@@ -218,35 +216,52 @@ public class ItemManager {
         List<String> lore = new ArrayList<>();
         String etiquetaPieza = "";
         switch (tipoPieza.toUpperCase()) {
-            case "HELMET": etiquetaPieza = " &#1c0f2a(Casco)"; break;
-            case "CHESTPLATE": etiquetaPieza = " &#1c0f2a(Peto)"; break;
-            case "LEGGINGS": etiquetaPieza = " &#1c0f2a(Pantalones)"; break;
-            case "BOOTS": etiquetaPieza = " &#1c0f2a(Botas)"; break;
+            case "HELMET":
+                etiquetaPieza = " &#1c0f2a(Casco)";
+                break;
+            case "CHESTPLATE":
+                etiquetaPieza = " &#1c0f2a(Peto)";
+                break;
+            case "LEGGINGS":
+                etiquetaPieza = " &#1c0f2a(Pantalones)";
+                break;
+            case "BOOTS":
+                etiquetaPieza = " &#1c0f2a(Botas)";
+                break;
         }
-        meta.setDisplayName(serialize(dto.nombre() + etiquetaPieza));
-        lore.add(serialize("&#1c0f2aClase: &#ff00ff" + dto.claseRequerida()));
+        meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre() + etiquetaPieza));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aClase: &#ff00ff" + dto.claseRequerida()));
         lore.add(" ");
-        if (dto.vidaExtra() > 0) lore.add(serialize("&#1c0f2aVida Extra: &#8b0000+" + dto.vidaExtra() + " ❤"));
-        if (dto.velocidadMovimiento() > 0) lore.add(serialize("&#1c0f2aVelocidad: &#00f5ff+" + dto.velocidadMovimiento() + " 🍃"));
-        if (dto.suerteMinera() > 0) lore.add(serialize("&#1c0f2aFortuna Minera: &#00f5ff+" + dto.suerteMinera() + "% ✨"));
-        if (dto.velocidadMineria() > 0) lore.add(serialize("&#1c0f2aPrisa Minera: &#ff00ff+" + dto.velocidadMineria() + " ⚡"));
-        if (dto.suerteAgricola() > 0) lore.add(serialize("&#1c0f2aFortuna Agrícola: &#00f5ff+" + dto.suerteAgricola() + "% 🌾"));
-        if (dto.suerteTala() > 0) lore.add(serialize("&#1c0f2aDoble Caída (Tala): &#00f5ff+" + dto.suerteTala() + "% 🪓"));
-        if (dto.criaturaMarina() > 0) lore.add(serialize("&#1c0f2aProb. Criatura Marina: &#00f5ff+" + dto.criaturaMarina() + "% 🦑"));
-        if (dto.velocidadPesca() > 0) lore.add(serialize("&#1c0f2aVelocidad Pesca: &#00f5ff+" + dto.velocidadPesca() + "% 🎣"));
+        if (dto.vidaExtra() > 0)
+            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aVida Extra: &#8b0000+" + dto.vidaExtra() + " ❤"));
+        if (dto.velocidadMovimiento() > 0)
+            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aVelocidad: &#00f5ff+" + dto.velocidadMovimiento() + " 🍃"));
+        if (dto.suerteMinera() > 0)
+            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aFortuna Minera: &#00f5ff+" + dto.suerteMinera() + "% ✨"));
+        if (dto.velocidadMineria() > 0)
+            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aPrisa Minera: &#ff00ff+" + dto.velocidadMineria() + " ⚡"));
+        if (dto.suerteAgricola() > 0)
+            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aFortuna Agrícola: &#00f5ff+" + dto.suerteAgricola() + "% 🌾"));
+        if (dto.suerteTala() > 0)
+            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aDoble Caída (Tala): &#00f5ff+" + dto.suerteTala() + "% 🪓"));
+        if (dto.criaturaMarina() > 0)
+            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aProb. Criatura Marina: &#00f5ff+" + dto.criaturaMarina() + "% 🦑"));
+        if (dto.velocidadPesca() > 0)
+            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aVelocidad Pesca: &#00f5ff+" + dto.velocidadPesca() + "% 🎣"));
         List<String> loreCustom = pluginMemoria.getFileManager().getArmaduras().getStringList("armaduras_profesion." + id_yml + ".lore_custom");
         if (loreCustom != null && !loreCustom.isEmpty()) {
             lore.add(" ");
             for (String linea : loreCustom) {
-                lore.add(serialize(linea));
+                lore.add(CrossplayUtils.getChat(null, linea));
             }
         }
         lore.add(" ");
-        lore.add(serialize("&#1c0f2aRequisito de " + dto.skillRequerida() + ": Nivel " + dto.nivelRequerido()));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aRequisito de " + dto.skillRequerida() + ": Nivel " + dto.nivelRequerido()));
         meta.setLore(lore);
         meta.setUnbreakable(true);
         meta.getPersistentDataContainer().set(llaveArmaduraId, PersistentDataType.STRING, dto.id());
-        if (dto.vidaExtra() > 0) meta.getPersistentDataContainer().set(llaveVidaExtra, PersistentDataType.DOUBLE, dto.vidaExtra());
+        if (dto.vidaExtra() > 0)
+            meta.getPersistentDataContainer().set(llaveVidaExtra, PersistentDataType.DOUBLE, dto.vidaExtra());
         item.setItemMeta(meta);
         return item;
     }
@@ -254,7 +269,7 @@ public class ItemManager {
     public static ItemStack crearPolvoEstelar() {
         ItemStack item = new ItemStack(Material.GLOWSTONE_DUST);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(serialize("&#ff00ff✨ Polvo Estelar"));
+        meta.displayName(CrossplayUtils.parseCrossplay(null, "&#ff00ff✨ Polvo Estelar"));
         meta.getPersistentDataContainer().set(llaveMaterialMejora, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
         return item;
@@ -263,13 +278,13 @@ public class ItemManager {
     public static ItemStack crearHojaVacio() {
         ItemStack item = new ItemStack(Material.DIAMOND_SWORD);
         ItemMeta meta = item.getItemMeta();
-        meta.setDisplayName(serialize("&#ff00ff🌌 Hoja del Vacío"));
+        meta.displayName(CrossplayUtils.parseCrossplay(null, "&#ff00ff🌌 Hoja del Vacío"));
         List<String> lore = new ArrayList<>();
-        lore.add(serialize("&#1c0f2aArtefacto de Utilidad"));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aArtefacto de Utilidad"));
         lore.add(" ");
-        lore.add(serialize("&#ff00ffHabilidad: Transmisión Instantánea <bold>(CLIC DERECHO)</bold>"));
-        lore.add(serialize("&#1c0f2aCosto: &#ff00ff40 Energía ⚡"));
-        lore.add(serialize("&#8b0000🔒 Ligado al Alma"));
+        lore.add(CrossplayUtils.getChat(null, "&#ff00ffHabilidad: Transmisión Instantánea <bold>(CLIC DERECHO)</bold>"));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aCosto: &#ff00ff40 Energía ⚡"));
+        lore.add(CrossplayUtils.getChat(null, "&#8b0000🔒 Ligado al Alma"));
         meta.setLore(lore);
         meta.setUnbreakable(true);
         meta.getPersistentDataContainer().set(llaveSoulbound, PersistentDataType.BYTE, (byte) 1);
@@ -319,21 +334,29 @@ public class ItemManager {
         ItemMeta meta = libro.getItemMeta();
         String nombreRomanos = "I";
         switch (nivelReal) {
-            case 2: nombreRomanos = "II"; break;
-            case 3: nombreRomanos = "III"; break;
-            case 4: nombreRomanos = "IV"; break;
-            case 5: nombreRomanos = "V"; break;
+            case 2:
+                nombreRomanos = "II";
+                break;
+            case 3:
+                nombreRomanos = "III";
+                break;
+            case 4:
+                nombreRomanos = "IV";
+                break;
+            case 5:
+                nombreRomanos = "V";
+                break;
         }
-        meta.setDisplayName(serialize(dto.nombre() + " " + nombreRomanos));
+        meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre() + " " + nombreRomanos));
         List<String> lore = new ArrayList<>();
-        lore.add(serialize("&#1c0f2aLibro de Encantamiento Mágico"));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aLibro de Encantamiento Mágico"));
         lore.add(" ");
         double valorActual = dto.getValorPorNivel(nivelReal);
         String descReemplazada = dto.descripcion().replace("{val}", String.valueOf(valorActual));
-        lore.add(serialize(descReemplazada));
+        lore.add(CrossplayUtils.getChat(null, descReemplazada));
         lore.add(" ");
-        lore.add(serialize("&#1c0f2aAplica a: " + String.join(", ", dto.aplicaA())));
-        lore.add(serialize("&#ff00ffLlévalo a un Yunque Mágico para aplicarlo."));
+        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aAplica a: " + String.join(", ", dto.aplicaA())));
+        lore.add(CrossplayUtils.getChat(null, "&#ff00ffLlévalo a un Yunque Mágico para aplicarlo."));
         meta.setLore(lore);
         meta.getPersistentDataContainer().set(llaveEnchantId, PersistentDataType.STRING, dto.id());
         meta.getPersistentDataContainer().set(llaveEnchantNivel, PersistentDataType.INTEGER, nivelReal);
@@ -350,13 +373,21 @@ public class ItemManager {
         meta.getPersistentDataContainer().set(keyEnchant, PersistentDataType.INTEGER, nivel);
         String nombreRomanos = "I";
         switch (nivel) {
-            case 2: nombreRomanos = "II"; break;
-            case 3: nombreRomanos = "III"; break;
-            case 4: nombreRomanos = "IV"; break;
-            case 5: nombreRomanos = "V"; break;
+            case 2:
+                nombreRomanos = "II";
+                break;
+            case 3:
+                nombreRomanos = "III";
+                break;
+            case 4:
+                nombreRomanos = "IV";
+                break;
+            case 5:
+                nombreRomanos = "V";
+                break;
         }
-        String lineaEncantamiento = serialize(enchant.nombre() + " " + nombreRomanos);
-        String nombrePuro = org.bukkit.ChatColor.stripColor(LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(enchant.nombre())));
+        String lineaEncantamiento = CrossplayUtils.getChat(null, enchant.nombre() + " " + nombreRomanos);
+        String nombrePuro = org.bukkit.ChatColor.stripColor(CrossplayUtils.getChat(null, enchant.nombre()));
         List<String> lore = meta.getLore();
         if (lore != null) {
             boolean encontrado = false;

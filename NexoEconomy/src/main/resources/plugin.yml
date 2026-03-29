@@ -8,11 +8,19 @@ commands:
   eco:
     description: Comando principal de economía
     aliases: [bal, balance, money, gemas, mana]
+    permission: nexoeconomy.user
+    permission-message: "No tienes permiso para usar este comando."
   trade:
     description: Inicia un intercambio seguro con otro jugador
+    permission: nexoeconomy.user
+    permission-message: "No tienes permiso para usar este comando."
   bazar:
     description: Acceso al Mercado Global
     aliases: [ bazaar, mercado, ah ]
+    permission: nexoeconomy.user
+    permission-message: "No tienes permiso para usar este comando."
   mercadonegro:
     description: Comandos del Mercado Negro
     aliases: [ bm, blackmarket ]
+    permission: nexoeconomy.user
+    permission-message: "No tienes permiso para usar este comando."

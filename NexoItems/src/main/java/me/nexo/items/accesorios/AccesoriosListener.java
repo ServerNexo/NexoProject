@@ -1,10 +1,9 @@
 package me.nexo.items.accesorios;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -30,8 +29,6 @@ public class AccesoriosListener implements Listener {
     private final NexoItems plugin;
     private final AccesoriosManager manager;
 
-    public static final String TITLE_PLAIN = "» Bolsa de Accesorios";
-
     private final Map<UUID, Long> cooldownCorazon = new ConcurrentHashMap<>();
 
     private final NamespacedKey keyVida;
@@ -48,14 +45,10 @@ public class AccesoriosListener implements Listener {
         this.keyArmadura = new NamespacedKey(plugin, "accesorio_armadura");
     }
 
-    private String serialize(String hex) {
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
-    }
-
     @EventHandler
     public void alCerrarBolsa(InventoryCloseEvent event) {
         String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (tituloLimpio.equals(TITLE_PLAIN)) {
+        if (tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.accesorios.titulo").replaceAll("<[^>]*>", ""))) {
             manager.procesarYGuardarBolsa((Player) event.getPlayer(), event.getInventory());
             ((Player) event.getPlayer()).playSound(event.getPlayer().getLocation(), Sound.ITEM_ARMOR_EQUIP_LEATHER, 1f, 1.2f);
         }
@@ -64,7 +57,7 @@ public class AccesoriosListener implements Listener {
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
         String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (tituloLimpio.equals(TITLE_PLAIN)) {
+        if (tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.accesorios.titulo").replaceAll("<[^>]*>", ""))) {
             ItemStack currentItem = event.getCurrentItem();
 
             if (currentItem != null && currentItem.getType() == Material.RED_STAINED_GLASS_PANE) {
@@ -105,7 +98,7 @@ public class AccesoriosListener implements Listener {
             user.setEnergiaExtraAccesorios(energiaExtra);
         }
 
-        p.sendMessage(NexoColor.parse("&#00f5ff✨ Enlace de Hardware Estable. Poder de Red: &#ff00ff<bold>" + event.getNexoPower() + " PX</bold>"));
+        CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.accesorios.stats-actualizadas").replace("%power%", String.valueOf(event.getNexoPower())));
     }
 
     private void aplicarAtributo(Player p, Attribute atributo, NamespacedKey key, double valor) {
@@ -141,10 +134,9 @@ public class AccesoriosListener implements Listener {
                     p.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, p.getLocation(), 150);
                     p.playSound(p.getLocation(), Sound.ITEM_TOTEM_USE, 1f, 0.5f);
 
-                    p.sendTitle(
-                            serialize("&#00f5ff<bold>MILAGRO DE HARDWARE</bold>"),
-                            serialize("&#1c0f2aEl Corazón del Nexo ha purgado tus fallos vitales."),
-                            10, 60, 10
+                    CrossplayUtils.sendTitle(p,
+                            plugin.getConfigManager().getMessage("eventos.accesorios.milagro.titulo"),
+                            plugin.getConfigManager().getMessage("eventos.accesorios.milagro.subtitulo")
                     );
                 }
             }

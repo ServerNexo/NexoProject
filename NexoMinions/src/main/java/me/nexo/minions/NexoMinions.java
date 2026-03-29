@@ -1,76 +1,64 @@
 package me.nexo.minions;
 
+import me.nexo.core.user.NexoAPI;
 import me.nexo.minions.commands.ComandoMinion;
-import me.nexo.minions.data.TiersConfig; // 🌟 El nuevo import
+import me.nexo.minions.commands.ComandoMinionTabCompleter;
+import me.nexo.minions.data.TiersConfig;
 import me.nexo.minions.data.UpgradesConfig;
-import me.nexo.minions.listeners.*;
+import me.nexo.minions.listeners.ExplosionListener;
+import me.nexo.minions.listeners.MenuListener;
+import me.nexo.minions.listeners.MinionInteractListener;
+import me.nexo.minions.listeners.MinionLoadListener;
 import me.nexo.minions.manager.MinionManager;
-import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoMinions extends JavaPlugin {
 
     private MinionManager minionManager;
+    private TiersConfig tiersConfig;
     private UpgradesConfig upgradesConfig;
-    private TiersConfig tiersConfig; // 🌟 La nueva variable
 
     @Override
     public void onEnable() {
-        // 1. Cargamos los archivos de configuración
-        this.upgradesConfig = new UpgradesConfig(this);
-        this.tiersConfig = new TiersConfig(this); // 🌟 Inicializamos los costos
-
-        // 2. Inicializamos el cerebro de las abejas
         this.minionManager = new MinionManager(this);
+        this.tiersConfig = new TiersConfig(this);
+        this.upgradesConfig = new UpgradesConfig(this);
 
-        // 3. Registramos el comando
+        NexoAPI.getServices().register(MinionManager.class, this.minionManager);
+
+        getServer().getPluginManager().registerEvents(new MinionInteractListener(this), this);
+        getServer().getPluginManager().registerEvents(new MinionLoadListener(this), this);
+        getServer().getPluginManager().registerEvents(new MenuListener(this), this);
+        getServer().getPluginManager().registerEvents(new ExplosionListener(), this);
+
         if (getCommand("minion") != null) {
             getCommand("minion").setExecutor(new ComandoMinion(this));
+            getCommand("minion").setTabCompleter(new ComandoMinionTabCompleter());
         }
 
-        // 4. Registramos los eventos
+        getServer().getScheduler().runTaskTimer(this, () -> minionManager.tickAll(System.currentTimeMillis()), 20L, 20L);
 
-        getServer().getPluginManager().registerEvents(new MinionListener(this), this);
-        getServer().getPluginManager().registerEvents(new MinionInteractListener(this), this);
-        getServer().getPluginManager().registerEvents(new MenuListener(this), this);
-        getServer().getPluginManager().registerEvents(new MinionLoadListener(this), this);
-
-        getServer().getPluginManager().registerEvents(new ExplosionListener(this), this);
-
-
-        // 5. El Reloj de las Abejas (Tick)
-        Bukkit.getScheduler().runTaskTimer(this, () -> {
-            if (minionManager != null) {
-                minionManager.tickAll(System.currentTimeMillis());
-            }
-        }, 20L, 20L);
-
-        getLogger().info("========================================");
-        getLogger().info("🐝 NexoMinions V1.0 - ¡Sistema de Abejas Activado!");
-        getLogger().info("⚙️ Upgrades y Costos de Evolución cargados.");
-        getLogger().info("========================================");
+        getLogger().info("NexoMinions ha sido habilitado.");
     }
 
     @Override
     public void onDisable() {
-        if (this.minionManager != null) {
-            getLogger().info("NexoMinions ha sido desactivado. ¡Abejas a dormir!");
+        if (minionManager != null) {
+            minionManager.saveAllMinionsSync();
         }
+        NexoAPI.getServices().unregister(MinionManager.class);
+        getLogger().info("NexoMinions ha sido deshabilitado.");
     }
 
-    // ==========================================
-    // GETTERS GLOBALES
-    // ==========================================
     public MinionManager getMinionManager() {
         return minionManager;
     }
 
-    public UpgradesConfig getUpgradesConfig() {
-        return upgradesConfig;
-    }
-
-    // 🌟 El getter que le faltaba a tu código para borrar ese error rojo
     public TiersConfig getTiersConfig() {
         return tiersConfig;
+    }
+
+    public UpgradesConfig getUpgradesConfig() {
+        return upgradesConfig;
     }
 }

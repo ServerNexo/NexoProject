@@ -1,10 +1,9 @@
 package me.nexo.items.estaciones;
 
-import me.nexo.core.utils.NexoColor;
-import me.nexo.items.managers.ItemManager;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.EnchantDTO;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import me.nexo.items.managers.ItemManager;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -20,26 +19,23 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.Arrays;
+import java.util.stream.Collectors;
 
 public class YunqueListener implements Listener {
 
     private final NexoItems plugin;
-
-    public static final String TITLE_PLAIN = "» Yunque Mágico";
-    public static final String MENU_TITLE = "&#1c0f2a<bold>»</bold> &#ff00ffYunque Mágico";
 
     public YunqueListener(NexoItems plugin) {
         this.plugin = plugin;
     }
 
     public void abrirMenu(Player jugador) {
-        Inventory inv = Bukkit.createInventory(null, 27, NexoColor.parse(MENU_TITLE));
+        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(jugador, plugin.getConfigManager().getMessage("menus.yunque.titulo")));
 
         ItemStack cristal = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta metaCristal = cristal.getItemMeta();
         if (metaCristal != null) {
-            metaCristal.setDisplayName(serialize(" "));
+            metaCristal.displayName(CrossplayUtils.parseCrossplay(jugador, " "));
             cristal.setItemMeta(metaCristal);
         }
 
@@ -53,11 +49,10 @@ public class YunqueListener implements Listener {
         ItemStack yunque = new ItemStack(Material.ANVIL);
         ItemMeta metaYunque = yunque.getItemMeta();
         if (metaYunque != null) {
-            metaYunque.setDisplayName(serialize("&#ff00ff<bold>FUSIONAR MAGIA</bold>"));
-            metaYunque.setLore(Arrays.asList(
-                    serialize("&#1c0f2aAplica el encantamiento del libro"),
-                    serialize("&#1c0f2aa tu arma, herramienta o armadura.")
-            ));
+            metaYunque.displayName(CrossplayUtils.parseCrossplay(jugador, plugin.getConfigManager().getMessage("menus.yunque.boton.titulo")));
+            metaYunque.lore(plugin.getConfigManager().getMessages().getStringList("menus.yunque.boton.lore").stream()
+                    .map(line -> CrossplayUtils.parseCrossplay(jugador, line))
+                    .collect(Collectors.toList()));
             yunque.setItemMeta(metaYunque);
         }
         inv.setItem(13, yunque);
@@ -67,8 +62,8 @@ public class YunqueListener implements Listener {
 
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
-        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!plainTitle.equals(TITLE_PLAIN)) return;
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.yunque.titulo").replaceAll("<[^>]*>", ""))) return;
 
         Player jugador = (Player) event.getWhoClicked();
         int slot = event.getRawSlot();
@@ -87,13 +82,13 @@ public class YunqueListener implements Listener {
             ItemStack libro = inv.getItem(15);
 
             if (itemObj == null || itemObj.getType() == Material.AIR) {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Inserta un arma, herramienta o armadura en la bahía izquierda."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.yunque.inserta-activo"));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             if (libro == null || !libro.hasItemMeta() || !libro.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveEnchantId, PersistentDataType.STRING)) {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Necesitas un Módulo de Encantamiento válido en la bahía derecha."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.yunque.necesitas-modulo"));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -105,7 +100,7 @@ public class YunqueListener implements Listener {
             boolean esArmadura = pdcItem.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING);
 
             if (!esArma && !esHerramienta && !esArmadura) {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Este activo no soporta encantamientos corporativos."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.yunque.no-soporta-encantamientos"));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -117,7 +112,9 @@ public class YunqueListener implements Listener {
             String tipoItem = esArma ? "Arma" : (esHerramienta ? "Herramienta" : "Armadura");
 
             if (enchantDTO != null && !enchantDTO.aplicaA().contains(tipoItem) && !enchantDTO.aplicaA().contains("Cualquiera")) {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Incompatibilidad: " + enchantDTO.nombre() + " no puede aplicarse a " + tipoItem + "s."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.yunque.incompatibilidad")
+                        .replace("%enchant%", enchantDTO.nombre())
+                        .replace("%type%", tipoItem));
                 jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -128,7 +125,7 @@ public class YunqueListener implements Listener {
             inv.setItem(11, itemEncantado);
             inv.setItem(15, new ItemStack(Material.AIR));
 
-            jugador.sendMessage(NexoColor.parse("&#00f5ff[✓] FUSIÓN EXITOSA. Módulo " + enchantDTO.nombre() + " inyectado en el activo."));
+            CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.yunque.fusion-exitosa").replace("%enchant%", enchantDTO.nombre()));
             jugador.playSound(jugador.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1f, 1f);
             jugador.playSound(jugador.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.5f, 2f);
         }
@@ -136,8 +133,8 @@ public class YunqueListener implements Listener {
 
     @EventHandler
     public void alCerrar(InventoryCloseEvent event) {
-        String plainTitle = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!plainTitle.equals(TITLE_PLAIN)) return;
+        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
+        if (!tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.yunque.titulo").replaceAll("<[^>]*>", ""))) return;
 
         Player jugador = (Player) event.getPlayer();
         Inventory inv = event.getInventory();
@@ -161,17 +158,13 @@ public class YunqueListener implements Listener {
                     meta1.getPersistentDataContainer().has(ItemManager.llaveHerramientaId, PersistentDataType.STRING) ||
                     meta1.getPersistentDataContainer().has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
 
-                String oldName = meta1.getDisplayName();
-                String newName = result.getItemMeta().getDisplayName();
+                String oldName = PlainTextComponentSerializer.plainText().serialize(meta1.displayName());
+                String newName = PlainTextComponentSerializer.plainText().serialize(result.getItemMeta().displayName());
 
                 if (!oldName.equals(newName)) {
                     event.setResult(null);
                 }
             }
         }
-    }
-
-    private String serialize(String hex) {
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
     }
 }

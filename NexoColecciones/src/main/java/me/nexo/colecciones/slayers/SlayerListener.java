@@ -20,9 +20,15 @@ import java.util.UUID;
 public class SlayerListener implements Listener {
 
     private final NexoColecciones plugin;
+    private final NexoCore core;
 
     public SlayerListener(NexoColecciones plugin) {
         this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
+    }
+
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("colecciones_messages.yml", path);
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -40,14 +46,14 @@ public class SlayerListener implements Listener {
                 if (slayer != null && slayer.isBossSpawned()) {
                     slayer.getBossBar().removeAll();
 
-                    CrossplayUtils.sendMessage(bossOwner, plugin.getConfigManager().getMessage("eventos.jefe-slayer.contrato-completado"));
-                    CrossplayUtils.sendMessage(bossOwner, plugin.getConfigManager().getMessage("eventos.jefe-slayer.jefe-derrotado").replace("%boss%", slayer.getBossName()));
+                    CrossplayUtils.sendMessage(bossOwner, getMessage("eventos.jefe-slayer.contrato-completado"));
+                    CrossplayUtils.sendMessage(bossOwner, getMessage("eventos.jefe-slayer.jefe-derrotado").replace("%boss%", slayer.getBossName()));
 
                     int recompensaGemas = slayer.getTemplate().requiredKills() / 10;
-                    NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(bossOwner.getUniqueId());
+                    NexoUser user = core.getUserManager().getUserOrNull(bossOwner.getUniqueId());
                     if (user != null) {
                         user.addGems(recompensaGemas);
-                        CrossplayUtils.sendMessage(bossOwner, plugin.getConfigManager().getMessage("eventos.jefe-slayer.recompensa-gemas").replace("%gems%", String.valueOf(recompensaGemas)));
+                        CrossplayUtils.sendMessage(bossOwner, getMessage("eventos.jefe-slayer.recompensa-gemas").replace("%gems%", String.valueOf(recompensaGemas)));
                     }
 
                     plugin.getCollectionManager().addProgress(bossOwner, slayer.getTemplate().id(), 1);
@@ -76,11 +82,11 @@ public class SlayerListener implements Listener {
                             boss.setHealth(1000.0);
                             boss.setMetadata("SlayerBoss", new org.bukkit.metadata.FixedMetadataValue(plugin, killer.getUniqueId().toString()));
 
-                            CrossplayUtils.sendMessage(killer, plugin.getConfigManager().getMessage("eventos.jefe-slayer.spawn-titulo"));
-                            CrossplayUtils.sendMessage(killer, plugin.getConfigManager().getMessage("eventos.jefe-slayer.spawn-descripcion").replace("%boss%", slayer.getBossName()));
+                            CrossplayUtils.sendMessage(killer, getMessage("eventos.jefe-slayer.spawn-titulo"));
+                            CrossplayUtils.sendMessage(killer, getMessage("eventos.jefe-slayer.spawn-descripcion").replace("%boss%", slayer.getBossName()));
 
                         } catch (Exception e) {
-                            CrossplayUtils.sendMessage(killer, plugin.getConfigManager().getMessage("eventos.jefe-slayer.error-tipo-jefe"));
+                            CrossplayUtils.sendMessage(killer, getMessage("eventos.jefe-slayer.error-tipo-jefe"));
                         }
                     }
                 }

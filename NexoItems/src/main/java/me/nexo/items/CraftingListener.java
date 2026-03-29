@@ -1,6 +1,6 @@
 package me.nexo.items;
 
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -32,7 +32,7 @@ public class CraftingListener implements Listener {
             if (!jugador.hasPermission("nexo.coleccion.diamante1")) {
                 event.setCancelled(true);
                 jugador.closeInventory();
-                jugador.sendMessage(NexoColor.parse("&#8b0000<bold>[!] ENSAMBLAJE DENEGADO</bold> &#1c0f2a| &#1c0f2aRequieres credenciales de &#00f5ffColección de Diamante I &#1c0f2apara procesar esta matriz."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.crafteo.ensamblaje-denegado"));
                 jugador.playSound(jugador.getLocation(), org.bukkit.Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             }
         }

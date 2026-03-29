@@ -2,7 +2,7 @@ package me.nexo.minions.menu;
 
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.manager.ActiveMinion;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -15,12 +15,14 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MinionMenu implements InventoryHolder {
     private final Inventory inv;
     private final ActiveMinion minion;
     private final NexoMinions plugin;
     private final Player player;
+    private final NexoCore core;
 
     public static final int[] UPGRADE_SLOTS = {10, 11, 15, 16};
 
@@ -28,13 +30,18 @@ public class MinionMenu implements InventoryHolder {
         this.plugin = plugin;
         this.minion = minion;
         this.player = player;
+        this.core = NexoCore.getPlugin(NexoCore.class);
 
-        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, "&#1c0f2a<bold>»</bold> &#ff00ffSello del Esclavo");
+        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, getMessage("menu.titulo"));
         int tamano = CrossplayUtils.getOptimizedMenuSize(player, 36);
         if (tamano < 36) tamano = 36;
 
         this.inv = Bukkit.createInventory(this, tamano, titulo);
         configurarMenu(tamano);
+    }
+
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("minions_messages.yml", path);
     }
 
     private void configurarMenu(int tamano) {
@@ -46,10 +53,10 @@ public class MinionMenu implements InventoryHolder {
         }
         for (int i = 0; i < tamano; i++) inv.setItem(i, cristal);
 
-        crearIconoGuia(1, Material.COAL, "&#8b0000🔥 Llama Abismal", "Sacrifica combustible puro aquí", "para acelerar el tormento del esclavo.", "&#ff00ff⬇ Deposita la ofrenda ⬇");
-        crearIconoGuia(2, Material.DROPPER, "&#ff00ff📦 Runas de Compresión", "Inscribe runas antiguas para", "fusionar la materia en su forma pura.", "&#ff00ff⬇ Deposita la runa ⬇");
-        crearIconoGuia(6, Material.CHEST, "&#ff00ff🧰 Fauces Insaciables", "Otorga cofres y reliquias para", "expandir el estómago de esta criatura.", "&#ff00ff⬇ Deposita la mejora ⬇");
-        crearIconoGuia(7, Material.HOPPER, "&#ff00ff🔄 Vínculo Umbrío", "Forja un pacto de sangre para", "drenar la materia a tus propios cofres.", "&#ff00ff⬇ Deposita el vínculo ⬇");
+        crearIconoGuia(1, Material.COAL, "combustible");
+        crearIconoGuia(2, Material.DROPPER, "compresion");
+        crearIconoGuia(6, Material.CHEST, "almacenamiento");
+        crearIconoGuia(7, Material.HOPPER, "vinculo");
 
         for (int i = 0; i < 4; i++) {
             ItemStack upgrade = minion.getUpgrades()[i];
@@ -63,13 +70,16 @@ public class MinionMenu implements InventoryHolder {
         ItemStack stats = new ItemStack(minion.getType().getTargetMaterial());
         ItemMeta metaStats = stats.getItemMeta();
         if (metaStats != null) {
-            metaStats.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff⭐ <bold>" + minion.getType().getDisplayName() + "</bold> &#1c0f2a(Nv. " + minion.getTier() + ")"));
+            metaStats.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menu.stats.titulo")
+                    .replace("%type%", minion.getType().getDisplayName())
+                    .replace("%tier%", String.valueOf(minion.getTier()))));
             List<net.kyori.adventure.text.Component> loreStats = new ArrayList<>();
-            loreStats.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aMateria Devorada: &#00f5ff" + minion.getStoredItems() + " uds"));
+            loreStats.add(CrossplayUtils.parseCrossplay(player, getMessage("menu.stats.lore.materia-devorada").replace("%items%", String.valueOf(minion.getStoredItems()))));
             double vel = (1.0 - minion.getSpeedMultiplier()) * 100;
-            loreStats.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aAgonía (Eficiencia): " + (vel > 0 ? "&#8b0000⚡ +" + (int)vel + "%" : "&#1c0f2aLetargo (Base)")));
-            if (minion.tieneMejora("COMPACTOR")) loreStats.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff📦 Sello de Amalgama [ACTIVO]"));
-            if (minion.tieneMejora("STORAGE_LINK")) loreStats.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff🔄 Nexo Logístico [CONECTADO]"));
+            String eficiencia = vel > 0 ? getMessage("menu.stats.lore.eficiencia-activa").replace("%speed%", String.valueOf((int) vel)) : getMessage("menu.stats.lore.eficiencia-base");
+            loreStats.add(CrossplayUtils.parseCrossplay(player, getMessage("menu.stats.lore.eficiencia") + eficiencia));
+            if (minion.tieneMejora("COMPACTOR")) loreStats.add(CrossplayUtils.parseCrossplay(player, getMessage("menu.stats.lore.sello-amalgama")));
+            if (minion.tieneMejora("STORAGE_LINK")) loreStats.add(CrossplayUtils.parseCrossplay(player, getMessage("menu.stats.lore.nexo-logistico")));
             metaStats.lore(loreStats);
             stats.setItemMeta(metaStats);
         }
@@ -80,19 +90,21 @@ public class MinionMenu implements InventoryHolder {
         if (metaEvo != null) {
             int sigNivel = minion.getTier() + 1;
             if (sigNivel > 12) {
-                metaEvo.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff✨ <bold>CÚSPIDE DEL ABISMO ALCANZADA</bold>"));
+                metaEvo.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menu.evolucion.max-nivel")));
             } else {
-                metaEvo.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff⬆ <bold>ASCENDER AL VACÍO A NV. " + sigNivel + "</bold>"));
-                List<net.kyori.adventure.text.Component> loreEvo = new ArrayList<>();
-                loreEvo.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aRealiza el ritual para empoderar a la entidad."));
-                loreEvo.add(CrossplayUtils.parseCrossplay(player, " "));
-                loreEvo.add(CrossplayUtils.parseCrossplay(player, "&#ff00ffTributo Requerido:"));
+                metaEvo.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menu.evolucion.titulo").replace("%level%", String.valueOf(sigNivel))));
+                List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menu.evolucion.lore");
+                List<net.kyori.adventure.text.Component> loreEvo = loreConfig.stream()
+                        .map(line -> CrossplayUtils.parseCrossplay(player, line))
+                        .collect(Collectors.toList());
                 ConfigurationSection costo = plugin.getTiersConfig().getCostoEvolucion(minion.getType(), sigNivel);
                 if (costo != null) {
                     String reqName = costo.getString("nexo_id", costo.getString("material", "Alma Perdida"));
-                    loreEvo.add(CrossplayUtils.parseCrossplay(player, "&#8b0000▶ " + costo.getInt("cantidad") + "x " + reqName));
+                    loreEvo.add(CrossplayUtils.parseCrossplay(player, getMessage("menu.evolucion.costo-ritual")
+                            .replace("%amount%", String.valueOf(costo.getInt("cantidad")))
+                            .replace("%item%", reqName)));
                 } else {
-                    loreEvo.add(CrossplayUtils.parseCrossplay(player, "&#8b0000[!] Ritual no detectado en tiers.yml"));
+                    loreEvo.add(CrossplayUtils.parseCrossplay(player, getMessage("menu.evolucion.error-ritual")));
                 }
                 metaEvo.lore(loreEvo);
             }
@@ -112,16 +124,17 @@ public class MinionMenu implements InventoryHolder {
         ItemStack extraer = new ItemStack(Material.HOPPER);
         ItemMeta metaExtraer = extraer.getItemMeta();
         if (metaExtraer != null) {
-            metaExtraer.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff📦 <bold>COSECHAR TRIBUTO</bold>"));
-            List<net.kyori.adventure.text.Component> loreExtraer = new ArrayList<>();
-            loreExtraer.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aReclama toda la materia que el esclavo ha juntado."));
-            loreExtraer.add(CrossplayUtils.parseCrossplay(player, " "));
-            loreExtraer.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aOfrendas Listas: &#00f5ff" + minion.getStoredItems() + " uds"));
-            if (!tipoSkill.isEmpty() && minion.getStoredItems() > 0) {
-                loreExtraer.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aConocimiento Arcano (" + tipoSkill + "): &#ff00ff+" + xpAcumulada + " XP"));
+            metaExtraer.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menu.cosechar.titulo")));
+            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menu.cosechar.lore");
+            List<net.kyori.adventure.text.Component> loreExtraer = loreConfig.stream()
+                    .map(line -> CrossplayUtils.parseCrossplay(player, line
+                            .replace("%items%", String.valueOf(minion.getStoredItems()))
+                            .replace("%skill%", tipoSkill)
+                            .replace("%xp%", String.valueOf(xpAcumulada))))
+                    .collect(Collectors.toList());
+            if (tipoSkill.isEmpty() || minion.getStoredItems() == 0) {
+                loreExtraer.removeIf(line -> CrossplayUtils.getChatPlain(player, line).contains("Conocimiento Arcano"));
             }
-            loreExtraer.add(CrossplayUtils.parseCrossplay(player, " "));
-            loreExtraer.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff► ¡Clic para reclamar tu ofrenda!"));
             metaExtraer.lore(loreExtraer);
             extraer.setItemMeta(metaExtraer);
         }
@@ -130,21 +143,21 @@ public class MinionMenu implements InventoryHolder {
         ItemStack romper = new ItemStack(Material.BARRIER);
         ItemMeta metaRomper = romper.getItemMeta();
         if (metaRomper != null) {
-            metaRomper.displayName(CrossplayUtils.parseCrossplay(player, "&#8b0000🧨 <bold>DESTERRAR ESCLAVO</bold>"));
+            metaRomper.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menu.desterrar.titulo")));
             romper.setItemMeta(metaRomper);
         }
         inv.setItem(tamano - 1, romper);
     }
 
-    private void crearIconoGuia(int slot, Material mat, String tituloHex, String... loreLines) {
+    private void crearIconoGuia(int slot, Material mat, String key) {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(CrossplayUtils.parseCrossplay(player, tituloHex));
-            List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-            for (String linea : loreLines) {
-                lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2a" + linea));
-            }
+            meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menu.iconos-guia." + key + ".titulo")));
+            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menu.iconos-guia." + key + ".lore");
+            List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
+                    .map(line -> CrossplayUtils.parseCrossplay(player, "&#1c0f2a" + line))
+                    .collect(Collectors.toList());
             meta.lore(lore);
             item.setItemMeta(meta);
         }
@@ -152,6 +165,11 @@ public class MinionMenu implements InventoryHolder {
     }
 
     @Override
-    public Inventory getInventory() { return inv; }
-    public ActiveMinion getMinion() { return minion; }
+    public Inventory getInventory() {
+        return inv;
+    }
+
+    public ActiveMinion getMinion() {
+        return minion;
+    }
 }

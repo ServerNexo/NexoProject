@@ -1,8 +1,8 @@
 package me.nexo.items.mecanicas;
 
-import me.nexo.core.utils.NexoColor;
-import me.nexo.items.managers.ItemManager;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
+import me.nexo.items.managers.ItemManager;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -26,7 +26,7 @@ public class PlayerItemListener implements Listener {
 
         if (!jugador.hasPlayedBefore()) {
             jugador.getInventory().addItem(ItemManager.generarArmaRPG("baculo_manantial_t1"));
-            jugador.sendMessage(NexoColor.parse("&#ff00ff<bold>NEXO</bold> &#1c0f2a| &#1c0f2a¡Bienvenido al sistema! Tu primer activo de combate ha sido asignado a tu inventario."));
+            CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.items.bienvenida"));
         }
     }
 
@@ -36,7 +36,7 @@ public class PlayerItemListener implements Listener {
 
         if (item.hasItemMeta() && item.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveSoulbound, PersistentDataType.BYTE)) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage(NexoColor.parse("&#8b0000<bold>[🔒] RESTRICCIÓN BIOMÉTRICA:</bold> &#1c0f2aNo puedes descartar un objeto enlazado permanentemente a tu firma neuronal."));
+            CrossplayUtils.sendMessage(event.getPlayer(), plugin.getConfigManager().getMessage("eventos.items.restringido"));
             event.getPlayer().playSound(event.getPlayer().getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
         }
     }

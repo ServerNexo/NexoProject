@@ -1,14 +1,13 @@
 package me.nexo.items.mecanicas;
 
-import me.nexo.core.utils.NexoColor;
-import me.nexo.items.managers.ItemManager;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.ArmorDTO;
 import me.nexo.items.dtos.EnchantDTO;
 import me.nexo.items.dtos.ToolDTO;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import me.nexo.items.managers.ItemManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -54,10 +53,6 @@ public class BlockBreakListener implements Listener {
         bloquesRegenerando.clear();
     }
 
-    private String serialize(String hex) {
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
-    }
-
     @EventHandler
     public void alPonerBloque(BlockPlaceEvent event) {
         if (event.getPlayer().getWorld().getName().equalsIgnoreCase(MUNDO_RPG)) {
@@ -84,20 +79,37 @@ public class BlockBreakListener implements Listener {
         boolean esCultivo = false, esMineral = false, esTronco = false;
 
         if (tipoOriginal == Material.COAL_ORE || tipoOriginal == Material.DEEPSLATE_COAL_ORE) {
-            xpGanada = 2; costeEnergia = 5; recompensa = new ItemStack(Material.COAL, 1); esMineral = true;
+            xpGanada = 2;
+            costeEnergia = 5;
+            recompensa = new ItemStack(Material.COAL, 1);
+            esMineral = true;
         } else if (tipoOriginal == Material.IRON_ORE || tipoOriginal == Material.DEEPSLATE_IRON_ORE) {
-            xpGanada = 5; costeEnergia = 10; recompensa = new ItemStack(Material.RAW_IRON, 1); esMineral = true;
+            xpGanada = 5;
+            costeEnergia = 10;
+            recompensa = new ItemStack(Material.RAW_IRON, 1);
+            esMineral = true;
         } else if (tipoOriginal == Material.DIAMOND_ORE || tipoOriginal == Material.DEEPSLATE_DIAMOND_ORE) {
-            xpGanada = 25; costeEnergia = 30; recompensa = new ItemStack(Material.DIAMOND, 1); esMineral = true;
+            xpGanada = 25;
+            costeEnergia = 30;
+            recompensa = new ItemStack(Material.DIAMOND, 1);
+            esMineral = true;
         } else if (tipoOriginal == Material.OAK_LOG || tipoOriginal == Material.BIRCH_LOG || tipoOriginal == Material.SPRUCE_LOG) {
-            xpGanada = 3; costeEnergia = 4; recompensa = new ItemStack(tipoOriginal, 1); esTronco = true;
+            xpGanada = 3;
+            costeEnergia = 4;
+            recompensa = new ItemStack(tipoOriginal, 1);
+            esTronco = true;
         } else if (tipoOriginal == Material.WHEAT || tipoOriginal == Material.CARROTS || tipoOriginal == Material.POTATOES) {
             if (dataOriginal instanceof Ageable) {
                 Ageable cultivo = (Ageable) dataOriginal;
                 if (cultivo.getAge() == cultivo.getMaximumAge()) {
-                    xpGanada = 1; costeEnergia = 1; esCultivo = true;
+                    xpGanada = 1;
+                    costeEnergia = 1;
+                    esCultivo = true;
                     recompensa = new ItemStack(tipoOriginal == Material.WHEAT ? Material.WHEAT : (tipoOriginal == Material.CARROTS ? Material.CARROT : Material.POTATO), 1);
-                } else { event.setCancelled(true); return; }
+                } else {
+                    event.setCancelled(true);
+                    return;
+                }
             }
         }
 
@@ -109,13 +121,13 @@ public class BlockBreakListener implements Listener {
 
             NexoUser user = NexoAPI.getInstance().getUserLocal(uuid);
             if (user == null) {
-                jugador.sendMessage(NexoColor.parse("&#8b0000[!] Enlace neural cargando. Por favor espera..."));
+                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.blockbreak.enlace-caido"));
                 return;
             }
 
             int energiaActual = user.getEnergiaMineria();
             if (energiaActual < costeEnergia) {
-                jugador.sendActionBar(NexoColor.parse("&#8b0000<bold>⚠ ¡ENERGÍA AGOTADA!</bold> &#1c0f2aDebes descansar..."));
+                CrossplayUtils.sendActionBar(jugador, plugin.getConfigManager().getMessage("eventos.blockbreak.energia-agotada"));
                 return;
             }
 
@@ -139,13 +151,15 @@ public class BlockBreakListener implements Listener {
                         NamespacedKey keyBendicion = new NamespacedKey(plugin, "nexo_enchant_bendicion_nexo");
                         if (pdc.has(keyBendicion, PersistentDataType.INTEGER)) {
                             EnchantDTO ench = plugin.getFileManager().getEnchantDTO("bendicion_nexo");
-                            if (ench != null) fortunaExtra += ench.getValorPorNivel(pdc.get(keyBendicion, PersistentDataType.INTEGER));
+                            if (ench != null)
+                                fortunaExtra += ench.getValorPorNivel(pdc.get(keyBendicion, PersistentDataType.INTEGER));
                         }
 
                         NamespacedKey keyExp = new NamespacedKey(plugin, "nexo_enchant_experiencia_divina");
                         if (pdc.has(keyExp, PersistentDataType.INTEGER)) {
                             EnchantDTO ench = plugin.getFileManager().getEnchantDTO("experiencia_divina");
-                            if (ench != null) xpGanada = (int) (xpGanada * ench.getValorPorNivel(pdc.get(keyExp, PersistentDataType.INTEGER)));
+                            if (ench != null)
+                                xpGanada = (int) (xpGanada * ench.getValorPorNivel(pdc.get(keyExp, PersistentDataType.INTEGER)));
                         }
 
                         NamespacedKey keyMidas = new NamespacedKey(plugin, "nexo_enchant_toque_de_midas");
@@ -155,7 +169,7 @@ public class BlockBreakListener implements Listener {
                                 ItemStack oro = new ItemStack(Material.GOLD_INGOT);
                                 ItemMeta oroMeta = oro.getItemMeta();
                                 if (oroMeta != null) {
-                                    oroMeta.setDisplayName(serialize("&#ff00ff✨ Oro Sintético"));
+                                    oroMeta.displayName(CrossplayUtils.parseCrossplay(jugador, plugin.getConfigManager().getMessage("eventos.blockbreak.oro-sintetico")));
                                     oro.setItemMeta(oroMeta);
                                 }
                                 jugador.getInventory().addItem(oro);
@@ -171,7 +185,7 @@ public class BlockBreakListener implements Listener {
                         if (lore != null) {
                             for (int i = 0; i < lore.size(); i++) {
                                 if (org.bukkit.ChatColor.stripColor(lore.get(i)).contains("Bloques Rotos:")) {
-                                    lore.set(i, serialize("&#1c0f2aBloques Rotos: &#ff00ff" + String.format("%,d", rotos)));
+                                    lore.set(i, CrossplayUtils.getChat(jugador, "&#1c0f2aBloques Rotos: &#ff00ff" + String.format("%,d", rotos)));
                                     break;
                                 }
                             }
@@ -199,13 +213,14 @@ public class BlockBreakListener implements Listener {
                 NamespacedKey keyAura = new NamespacedKey(plugin, "nexo_enchant_aura_recolectora");
                 if (pdc.has(keyAura, PersistentDataType.INTEGER)) {
                     EnchantDTO ench = plugin.getFileManager().getEnchantDTO("aura_recolectora");
-                    if (ench != null) suerteTotal += ench.getValorPorNivel(pdc.get(keyAura, PersistentDataType.INTEGER));
+                    if (ench != null)
+                        suerteTotal += ench.getValorPorNivel(pdc.get(keyAura, PersistentDataType.INTEGER));
                 }
             }
 
             int cantidad = (random.nextDouble() * 100 <= suerteTotal) ? 2 : 1;
             if (cantidad > 1) {
-                jugador.sendActionBar(NexoColor.parse("&#00f5ff✨ ¡DOBLE MATERIAL! &#1c0f2a(+" + String.format("%.1f", suerteTotal) + "%)"));
+                CrossplayUtils.sendActionBar(jugador, plugin.getConfigManager().getMessage("eventos.blockbreak.doble-material").replace("%suerte%", String.format("%.1f", suerteTotal)));
             }
 
             if (recompensa != null) {
@@ -222,7 +237,9 @@ public class BlockBreakListener implements Listener {
             while (xpActual >= (nivelActual * 100)) {
                 xpActual -= (nivelActual * 100);
                 nivelActual++;
-                jugador.sendTitle(serialize("&#ff00ff<bold>¡ASCENSO CÉNIT!</bold>"), serialize("&#1c0f2aNivel Corporal: &#00f5ff" + nivelActual), 10, 70, 20);
+                CrossplayUtils.sendTitle(jugador,
+                        plugin.getConfigManager().getMessage("eventos.blockbreak.ascenso-cenit.titulo"),
+                        plugin.getConfigManager().getMessage("eventos.blockbreak.ascenso-cenit.subtitulo").replace("%level%", String.valueOf(nivelActual)));
             }
 
             user.setNexoNivel(nivelActual);

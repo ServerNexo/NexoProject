@@ -1,7 +1,8 @@
 package me.nexo.factories;
 
+import me.nexo.core.user.NexoAPI;
 import me.nexo.factories.commands.ComandoFactory;
-import me.nexo.factories.config.ConfigManager;
+import me.nexo.factories.commands.ComandoFactoryTabCompleter;
 import me.nexo.factories.listeners.FactoryInteractListener;
 import me.nexo.factories.managers.BlueprintManager;
 import me.nexo.factories.managers.FactoryManager;
@@ -14,14 +15,11 @@ public class NexoFactories extends JavaPlugin {
     private FactoryManager factoryManager;
     private BlueprintManager blueprintManager;
     private LogicMenu logicMenu;
-    private ConfigManager configManager;
 
     @Override
     public void onEnable() {
         getLogger().info("========================================");
         getLogger().info("🏭 Iniciando NexoFactories (Motor Industrial Zero-Lag)...");
-
-        this.configManager = new ConfigManager(this);
 
         if (getServer().getPluginManager().getPlugin("NexoCore") == null ||
                 getServer().getPluginManager().getPlugin("NexoProtections") == null) {
@@ -32,6 +30,8 @@ public class NexoFactories extends JavaPlugin {
 
         this.factoryManager = new FactoryManager(this);
         this.blueprintManager = new BlueprintManager(this);
+
+        NexoAPI.getServices().register(FactoryManager.class, this.factoryManager);
 
         factoryManager.loadFactoriesAsync().thenRun(() -> {
             getLogger().info("✅ ¡Fábricas cargadas asíncronamente!");
@@ -49,6 +49,7 @@ public class NexoFactories extends JavaPlugin {
 
         if (getCommand("factory") != null) {
             getCommand("factory").setExecutor(new ComandoFactory(this));
+            getCommand("factory").setTabCompleter(new ComandoFactoryTabCompleter());
         }
 
         getLogger().info("✅ ¡NexoFactories cargado! Nexo-Grid en línea y produciendo.");
@@ -57,7 +58,12 @@ public class NexoFactories extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        getLogger().info("🏭 Apagando NexoFactories... Limpiando memoria.");
+        getLogger().info("🏭 Apagando NexoFactories... Guardando datos en la nube.");
+        if (factoryManager != null) {
+            factoryManager.saveAllFactoriesSync();
+        }
+        NexoAPI.getServices().unregister(FactoryManager.class);
+        getLogger().info("NexoFactories ha sido deshabilitado.");
     }
 
     public FactoryManager getFactoryManager() {
@@ -70,9 +76,5 @@ public class NexoFactories extends JavaPlugin {
 
     public LogicMenu getLogicMenu() {
         return logicMenu;
-    }
-
-    public ConfigManager getConfigManager() {
-        return configManager;
     }
 }

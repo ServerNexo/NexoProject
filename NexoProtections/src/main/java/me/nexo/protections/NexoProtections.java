@@ -1,13 +1,16 @@
 package me.nexo.protections;
 
 import me.nexo.core.NexoCore;
+import me.nexo.core.user.NexoAPI;
 import me.nexo.protections.commands.ComandoProteccion;
+import me.nexo.protections.commands.ComandoProteccionTabCompleter;
+import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoProtections extends JavaPlugin {
 
     private static NexoProtections instance;
-    private static me.nexo.protections.managers.ClaimManager claimManager;
+    private static ClaimManager claimManager;
     private me.nexo.protections.managers.LimitManager limitManager;
 
     @Override
@@ -22,25 +25,23 @@ public class NexoProtections extends JavaPlugin {
             return;
         }
 
-        // Inicializar Motores
-        claimManager = new me.nexo.protections.managers.ClaimManager();
+        claimManager = new ClaimManager();
         limitManager = new me.nexo.protections.managers.LimitManager(this);
 
-        // Cargar Base de Datos
+        NexoAPI.getServices().register(ClaimManager.class, claimManager);
+
         NexoCore core = NexoCore.getPlugin(NexoCore.class);
         claimManager.loadAllStonesAsync(core);
 
-        // Iniciar Consumo
         new me.nexo.protections.managers.UpkeepManager(this, claimManager);
 
-        // Registrar Listeners
         getServer().getPluginManager().registerEvents(new me.nexo.protections.listeners.ProtectionListener(claimManager, limitManager), this);
         getServer().getPluginManager().registerEvents(new me.nexo.protections.listeners.ProtectionMenuListener(claimManager), this);
         getServer().getPluginManager().registerEvents(new me.nexo.protections.listeners.EnvironmentListener(claimManager), this);
 
-        // Registrar Comando Único
         if (getCommand("nexo") != null) {
             getCommand("nexo").setExecutor(new ComandoProteccion(this));
+            getCommand("nexo").setTabCompleter(new ComandoProteccionTabCompleter());
         }
 
         getLogger().info("✅ ¡NexoProtections cargado y operativo!");
@@ -49,19 +50,18 @@ public class NexoProtections extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        NexoAPI.getServices().unregister(ClaimManager.class);
         getLogger().info("🛡️ NexoProtections apagado. La energía fue guardada asíncronamente.");
     }
 
-    // 🌟 COMANDO RELOAD GLOBAL
     public void reloadSystem() {
         getLogger().info("🔄 Recargando NexoProtections...");
         reloadConfig();
         NexoCore core = NexoCore.getPlugin(NexoCore.class);
-        // Limpiamos la RAM y volvemos a descargar todo de Supabase
         claimManager.getAllStones().clear();
         claimManager.loadAllStonesAsync(core);
     }
 
     public static NexoProtections getInstance() { return instance; }
-    public static me.nexo.protections.managers.ClaimManager getClaimManager() { return claimManager; }
+    public static ClaimManager getClaimManager() { return claimManager; }
 }

@@ -1,6 +1,7 @@
 package me.nexo.dungeons.waves;
 
 import io.lumine.mythic.bukkit.MythicBukkit;
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
 import org.bukkit.Bukkit;
@@ -23,14 +24,20 @@ public class WaveArena {
     private final Set<UUID> activeMythicMobs;
     private boolean isActive;
     private final NexoDungeons plugin;
+    private final NexoCore core;
 
     public WaveArena(NexoDungeons plugin, String arenaId, Location spawnCenter) {
         this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
         this.arenaId = arenaId;
         this.spawnCenter = spawnCenter;
         this.currentWave = 0;
         this.activeMythicMobs = new HashSet<>();
         this.isActive = false;
+    }
+
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("dungeons_messages.yml", path);
     }
 
     public void start() {
@@ -47,7 +54,7 @@ public class WaveArena {
             int checkpoint = this.currentWave - 1;
             spawnCenter.getWorld().getNearbyEntities(spawnCenter, 30, 30, 30).forEach(e -> {
                 if (e instanceof Player p) {
-                    CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.oleadas.punto-control").replace("%checkpoint%", String.valueOf(checkpoint)));
+                    CrossplayUtils.sendMessage(p, getMessage("eventos.oleadas.punto-control").replace("%checkpoint%", String.valueOf(checkpoint)));
                     p.playSound(p.getLocation(), org.bukkit.Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
                 }
             });
@@ -56,8 +63,8 @@ public class WaveArena {
         spawnCenter.getWorld().getNearbyEntities(spawnCenter, 30, 30, 30).forEach(e -> {
             if (e instanceof Player p) {
                 CrossplayUtils.sendTitle(p,
-                        plugin.getConfigManager().getMessage("eventos.oleadas.titulo-oleada").replace("%wave%", String.valueOf(currentWave)),
-                        plugin.getConfigManager().getMessage("eventos.oleadas.subtitulo-oleada")
+                        getMessage("eventos.oleadas.titulo-oleada").replace("%wave%", String.valueOf(currentWave)),
+                        getMessage("eventos.oleadas.subtitulo-oleada")
                 );
                 p.playSound(p.getLocation(), org.bukkit.Sound.EVENT_RAID_HORN, 1.0f, 1.0f);
             }

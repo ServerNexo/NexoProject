@@ -22,8 +22,6 @@ comandos:
       cantidad-invalida: "&#8b0000[!] La cifra monetaria debe ser mayor a 0."
       fondos-insuficientes: "&#8b0000[!] Fondos insuficientes en tu cuenta personal."
       fondos-clan-insuficientes: "&#8b0000[!] La tesorería del clan no tiene los fondos requeridos."
-      sin-permiso-oficial: "&#8b0000[!] Acceso Denegado: Requiere autorización de LÍDER u OFICIAL."
-      sin-permiso-lider: "&#8b0000[!] Acceso Denegado: Rango insuficiente. Requiere LÍDER."
       sin-home: "&#8b0000[!] Fallo de red: La corporación no posee un Monolito Base (/clan sethome)."
       home-invalido: "&#8b0000[!] Error crítico leyendo las coordenadas espaciales."
       sin-item: "&#8b0000[!] Debes sostener un material físico para iniciar la extracción."

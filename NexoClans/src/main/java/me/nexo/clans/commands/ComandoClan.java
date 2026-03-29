@@ -4,7 +4,10 @@ import me.nexo.clans.NexoClans;
 import me.nexo.clans.core.NexoClan;
 import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
+import me.nexo.economy.core.EconomyManager;
+import me.nexo.economy.core.NexoAccount;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -19,18 +22,24 @@ import java.util.UUID;
 public class ComandoClan implements CommandExecutor {
 
     private final NexoClans plugin;
+    private final NexoCore core;
 
     public ComandoClan(NexoClans plugin) {
         this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
+    }
+
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("clans_messages.yml", path);
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) return true;
-        NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
+        NexoUser user = core.getUserManager().getUserOrNull(player.getUniqueId());
 
         if (user == null) {
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.datos-cargando"));
+            CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.datos-cargando"));
             return true;
         }
 
@@ -38,11 +47,11 @@ public class ComandoClan implements CommandExecutor {
             if (user.hasClan()) {
                 Optional<NexoClan> clanOpt = plugin.getClanManager().getClanFromCache(user.getClanId());
                 clanOpt.ifPresentOrElse(
-                        clan -> me.nexo.clans.menu.ClanMenu.abrirMenu(player, clan, user),
-                        () -> CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.info.cargando"))
+                        clan -> me.nexo.clans.menu.ClanMenu.abrirMenu(player, clan, user, plugin),
+                        () -> CrossplayUtils.sendMessage(player, getMessage("comandos.clan.info.cargando"))
                 );
             } else {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-clan"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-clan"));
             }
             return true;
         }
@@ -51,26 +60,26 @@ public class ComandoClan implements CommandExecutor {
 
         if (subCommand.equals("create")) {
             if (user.hasClan()) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.ya-en-clan"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.ya-en-clan"));
                 return true;
             }
             if (args.length < 3) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.uso-create"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.uso-create"));
                 return true;
             }
             String tag = args[1].toUpperCase();
             if (tag.length() < 2 || tag.length() > 4 || !tag.matches("^[A-Z0-9]+$")) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.tag-invalido"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.tag-invalido"));
                 return true;
             }
             String nombreRaw = String.join(" ", java.util.Arrays.copyOfRange(args, 2, args.length));
             String nombreLimpio = nombreRaw.replaceAll("&#[a-fA-F0-9]{6}", "").replaceAll("&[0-9a-fk-orA-FK-OR]", "");
             if (nombreLimpio.length() < 3 || nombreLimpio.length() > 16) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.nombre-largo"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.nombre-largo"));
                 return true;
             }
             if (!nombreLimpio.matches("^[a-zA-Z0-9 ]+$")) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.nombre-invalido"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.nombre-invalido"));
                 return true;
             }
             plugin.getClanManager().crearClanAsync(player, user, tag, nombreRaw);
@@ -79,7 +88,7 @@ public class ComandoClan implements CommandExecutor {
 
         if (subCommand.equals("invite")) {
             if (!user.hasClan() || (!user.getClanRole().equals("LIDER") && !user.getClanRole().equals("OFICIAL"))) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-permiso-oficial"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-permiso-oficial"));
                 return true;
             }
             Player target = Bukkit.getPlayerExact(args[1]);
@@ -105,19 +114,19 @@ public class ComandoClan implements CommandExecutor {
             if (user.hasClan() && (user.getClanRole().equals("LIDER") || user.getClanRole().equals("OFICIAL"))) {
                 plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> plugin.getClanManager().toggleFriendlyFireAsync(clan, player, !clan.isFriendlyFire()));
             } else {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-permiso-oficial"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-permiso-oficial"));
             }
             return true;
         }
 
         if (subCommand.equals("kick")) {
             if (!user.hasClan() || (!user.getClanRole().equals("LIDER") && !user.getClanRole().equals("OFICIAL"))) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-permiso-oficial"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-permiso-oficial"));
                 return true;
             }
             Player target = Bukkit.getPlayerExact(args[1]);
             if (target != null) {
-                NexoUser tUser = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(target.getUniqueId());
+                NexoUser tUser = core.getUserManager().getUserOrNull(target.getUniqueId());
                 if (tUser != null && tUser.getClanId().equals(user.getClanId()))
                     plugin.getClanManager().expulsarJugadorAsync(player, target, tUser);
             }
@@ -128,81 +137,82 @@ public class ComandoClan implements CommandExecutor {
             if (user.hasClan() && user.getClanRole().equals("LIDER")) {
                 plugin.getClanManager().disolverClanAsync(player, user, user.getClanId());
             } else {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-permiso-lider"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-permiso-lider"));
             }
             return true;
         }
 
         if (subCommand.equals("deposit")) {
             if (!user.hasClan()) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-clan"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-clan"));
                 return true;
             }
             if (args.length < 2) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.uso-deposit"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.uso-deposit"));
                 return true;
             }
             try {
                 java.math.BigDecimal amount = new java.math.BigDecimal(args[1]);
                 if (amount.compareTo(java.math.BigDecimal.ZERO) <= 0) {
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.cantidad-invalida"));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.cantidad-invalida"));
                     return true;
                 }
-                me.nexo.economy.NexoEconomy eco = me.nexo.economy.NexoEconomy.getPlugin(me.nexo.economy.NexoEconomy.class);
-                eco.getEconomyManager().updateBalanceAsync(player.getUniqueId(), me.nexo.economy.core.NexoAccount.AccountType.PLAYER, me.nexo.economy.core.NexoAccount.Currency.COINS, amount, false).thenAccept(success -> {
-                    if (success) {
-                        plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
-                            clan.depositMoney(amount.doubleValue());
-                            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                                String sql = "UPDATE nexo_clans SET bank_balance = ? WHERE id = CAST(? AS UUID)";
-                                try (java.sql.Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
-                                     java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-                                    ps.setBigDecimal(1, clan.getBankBalance());
-                                    ps.setString(2, clan.getId().toString());
-                                    ps.executeUpdate();
-                                } catch (Exception e) {
-                                }
+                NexoAPI.getServices().get(EconomyManager.class).ifPresent(eco -> {
+                    eco.updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, amount, false).thenAccept(success -> {
+                        if (success) {
+                            plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
+                                clan.depositMoney(amount.doubleValue());
+                                Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                                    String sql = "UPDATE nexo_clans SET bank_balance = ? WHERE id = CAST(? AS UUID)";
+                                    try (java.sql.Connection conn = core.getDatabaseManager().getConnection();
+                                         java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+                                        ps.setBigDecimal(1, clan.getBankBalance());
+                                        ps.setString(2, clan.getId().toString());
+                                        ps.executeUpdate();
+                                    } catch (Exception e) {
+                                    }
+                                });
+                                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.exito.deposito").replace("%amount%", amount.toString()));
                             });
-                            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.exito.deposito").replace("%amount%", amount.toString()));
-                        });
-                    } else {
-                        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.fondos-insuficientes"));
-                    }
+                        } else {
+                            CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.fondos-insuficientes"));
+                        }
+                    });
                 });
             } catch (Exception e) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.cantidad-invalida"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.cantidad-invalida"));
             }
             return true;
         }
 
         if (subCommand.equals("withdraw")) {
             if (!user.hasClan()) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-clan"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-clan"));
                 return true;
             }
             if (!user.getClanRole().equals("LIDER") && !user.getClanRole().equals("OFICIAL")) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-permiso-oficial"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-permiso-oficial"));
                 return true;
             }
             if (args.length < 2) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.uso-withdraw"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.uso-withdraw"));
                 return true;
             }
             try {
                 java.math.BigDecimal amount = new java.math.BigDecimal(args[1]);
                 if (amount.compareTo(java.math.BigDecimal.ZERO) <= 0) {
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.cantidad-invalida"));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.cantidad-invalida"));
                     return true;
                 }
                 plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
                     if (!clan.hasEnoughMoney(amount.doubleValue())) {
-                        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.fondos-clan-insuficientes"));
+                        CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.fondos-clan-insuficientes"));
                         return;
                     }
                     clan.withdrawMoney(amount.doubleValue());
                     Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                         String sql = "UPDATE nexo_clans SET bank_balance = ? WHERE id = CAST(? AS UUID)";
-                        try (java.sql.Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
+                        try (java.sql.Connection conn = core.getDatabaseManager().getConnection();
                              java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                             ps.setBigDecimal(1, clan.getBankBalance());
                             ps.setString(2, clan.getId().toString());
@@ -210,19 +220,20 @@ public class ComandoClan implements CommandExecutor {
                         } catch (Exception e) {
                         }
                     });
-                    me.nexo.economy.NexoEconomy eco = me.nexo.economy.NexoEconomy.getPlugin(me.nexo.economy.NexoEconomy.class);
-                    eco.getEconomyManager().updateBalanceAsync(player.getUniqueId(), me.nexo.economy.core.NexoAccount.AccountType.PLAYER, me.nexo.economy.core.NexoAccount.Currency.COINS, amount, true);
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.exito.retiro").replace("%amount%", amount.toString()));
+                    NexoAPI.getServices().get(EconomyManager.class).ifPresent(eco -> {
+                        eco.updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, amount, true);
+                    });
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.exito.retiro").replace("%amount%", amount.toString()));
                 });
             } catch (Exception e) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.cantidad-invalida"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.cantidad-invalida"));
             }
             return true;
         }
 
         if (subCommand.equals("sethome")) {
             if (!user.hasClan() || !user.getClanRole().equals("LIDER")) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-permiso-lider"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-permiso-lider"));
                 return true;
             }
             plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
@@ -233,12 +244,12 @@ public class ComandoClan implements CommandExecutor {
 
         if (subCommand.equals("home")) {
             if (!user.hasClan()) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-clan"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-clan"));
                 return true;
             }
             plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
                 if (clan.getPublicHome() == null || clan.getPublicHome().isEmpty()) {
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-home"));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-home"));
                     return;
                 }
                 try {
@@ -250,9 +261,9 @@ public class ComandoClan implements CommandExecutor {
                     float yaw = Float.parseFloat(parts[4]);
                     float pitch = Float.parseFloat(parts[5]);
                     player.teleport(new Location(w, x, y, z, yaw, pitch));
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.exito.home"));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.exito.home"));
                 } catch (Exception e) {
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.home-invalido"));
+                    CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.home-invalido"));
                 }
             });
             return true;
@@ -260,12 +271,12 @@ public class ComandoClan implements CommandExecutor {
 
         if (subCommand.equals("tribute") || subCommand.equals("tributo")) {
             if (!user.hasClan()) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-clan"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-clan"));
                 return true;
             }
             org.bukkit.inventory.ItemStack itemEnMano = player.getInventory().getItemInMainHand();
             if (itemEnMano == null || itemEnMano.getType() == org.bukkit.Material.AIR) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.errores.sin-item"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-item"));
                 return true;
             }
             long expPorItem = 1;
@@ -277,16 +288,16 @@ public class ComandoClan implements CommandExecutor {
             plugin.getClanManager().getClanFromCache(user.getClanId()).ifPresent(clan -> {
                 boolean subioNivel = clan.addMonolithExp(expTotal);
                 player.getInventory().setItemInMainHand(null);
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.exito.tributo").replace("%exp%", String.valueOf(expTotal)));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.exito.tributo").replace("%exp%", String.valueOf(expTotal)));
                 if (subioNivel) {
-                    CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("comandos.clan.anuncios.level-up-divisor"));
-                    CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("comandos.clan.anuncios.level-up-titulo").replace("%clan%", clan.getName()));
-                    CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("comandos.clan.anuncios.level-up-desc").replace("%level%", String.valueOf(clan.getMonolithLevel())));
-                    CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("comandos.clan.anuncios.level-up-divisor"));
+                    CrossplayUtils.broadcastMessage(getMessage("comandos.clan.anuncios.level-up-divisor"));
+                    CrossplayUtils.broadcastMessage(getMessage("comandos.clan.anuncios.level-up-titulo").replace("%clan%", clan.getName()));
+                    CrossplayUtils.broadcastMessage(getMessage("comandos.clan.anuncios.level-up-desc").replace("%level%", String.valueOf(clan.getMonolithLevel())));
+                    CrossplayUtils.broadcastMessage(getMessage("comandos.clan.anuncios.level-up-divisor"));
                 }
                 Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
                     String sql = "UPDATE nexo_clans SET monolith_exp = ?, monolith_level = ? WHERE id = CAST(? AS UUID)";
-                    try (java.sql.Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
+                    try (java.sql.Connection conn = core.getDatabaseManager().getConnection();
                          java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                         ps.setLong(1, clan.getMonolithExp());
                         ps.setInt(2, clan.getMonolithLevel());
@@ -299,7 +310,7 @@ public class ComandoClan implements CommandExecutor {
             return true;
         }
 
-        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.clan.info.ayuda"));
+        CrossplayUtils.sendMessage(player, getMessage("comandos.clan.info.ayuda"));
         return true;
     }
 }

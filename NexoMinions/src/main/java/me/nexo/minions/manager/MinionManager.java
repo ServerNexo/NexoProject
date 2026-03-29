@@ -1,6 +1,7 @@
 package me.nexo.minions.manager;
 
 import com.nexomc.nexo.api.NexoItems;
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
@@ -20,11 +21,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MinionManager {
 
     private final NexoMinions plugin;
+    private final NexoCore core;
     private final ConcurrentHashMap<UUID, ActiveMinion> minionsActivos = new ConcurrentHashMap<>();
 
     public MinionManager(NexoMinions plugin) {
         this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
         MinionKeys.init(plugin);
+    }
+
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("minions_messages.yml", path);
     }
 
     public void spawnMinion(Location loc, UUID ownerId, MinionType type, int tier) {
@@ -57,8 +64,7 @@ public class MinionManager {
             TextDisplay holograma = loc.getWorld().spawn(holoLoc, TextDisplay.class, holo -> {
                 holo.setBillboard(TextDisplay.Billboard.CENTER);
                 holo.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 0));
-                // CrossplayUtils no es necesario aquí ya que el holograma no es por jugador
-                holo.text(me.nexo.core.utils.NexoColor.parse("&#ff00ffIniciando Sistemas..."));
+                holo.text(CrossplayUtils.parseCrossplay(null, getMessage("manager.iniciando-sistemas")));
             });
 
             pdc.set(new NamespacedKey(plugin, "minion_holo_id"), PersistentDataType.STRING, holograma.getUniqueId().toString());
@@ -91,7 +97,7 @@ public class MinionManager {
                     }
                     cantidad -= dar;
                 }
-                CrossplayUtils.sendMessage(player, "&#00f5ff[📦] Extracción Remota: &#1c0f2aHas recuperado &#ff00ff" + minion.getStoredItems() + " ítems &#1c0f2adel depósito del operario.");
+                CrossplayUtils.sendMessage(player, getMessage("manager.extraccion-remota").replace("%items%", String.valueOf(minion.getStoredItems())));
             }
 
             if (minion.getEntity() != null) minion.getEntity().remove();
@@ -102,13 +108,15 @@ public class MinionManager {
             if (owner != null && owner.isOnline()) {
                 addPlacedMinion(owner, -1);
                 if (owner.getUniqueId().equals(player.getUniqueId())) {
-                    CrossplayUtils.sendMessage(owner, "&#00f5ff[✓] <bold>PROTOCOLO DE DESMANTELAMIENTO:</bold> &#1c0f2aOperario recogido con éxito. &#00f5ff(" + getPlacedMinions(owner) + "/" + getMaxMinions(owner) + ")");
+                    CrossplayUtils.sendMessage(owner, getMessage("manager.desmantelamiento-exitoso")
+                            .replace("%placed%", String.valueOf(getPlacedMinions(owner)))
+                            .replace("%max%", String.valueOf(getMaxMinions(owner))));
                 } else {
-                    CrossplayUtils.sendMessage(owner, "&#8b0000[!] Alerta de Red: &#1c0f2aUn administrador corporativo ha desmantelado uno de tus operarios.");
-                    CrossplayUtils.sendMessage(player, "&#00f5ff[✓] Operario desmantelado. Cuota operativa restaurada al propietario original.");
+                    CrossplayUtils.sendMessage(owner, getMessage("manager.alerta-desmantelamiento-admin"));
+                    CrossplayUtils.sendMessage(player, getMessage("manager.desmantelamiento-admin"));
                 }
             } else {
-                CrossplayUtils.sendMessage(player, "&#8b0000[!] Advertencia del Sistema: &#1c0f2aEl propietario de la unidad está desconectado. Sincronización de cuota pospuesta.");
+                CrossplayUtils.sendMessage(player, getMessage("manager.propietario-offline"));
             }
             plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "minion give " + player.getName() + " " + minion.getType().name() + " " + minion.getTier());
         }
@@ -127,6 +135,12 @@ public class MinionManager {
                 continue;
             }
             minion.tick(currentTimeMillis);
+        }
+    }
+
+    public void saveAllMinionsSync() {
+        for (ActiveMinion minion : minionsActivos.values()) {
+            minion.saveData();
         }
     }
 

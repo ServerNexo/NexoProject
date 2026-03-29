@@ -10,3 +10,5 @@ commands:
     description: Comando principal de clanes
   c:
     description: Chat privado del clan
+    permission: nexoclans.chat
+    permission-message: "&#8b0000[!] No puedes usar el chat de clan si no perteneces a uno."

@@ -2,6 +2,7 @@ package me.nexo.colecciones.commands;
 
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.menu.ColeccionesMenu;
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -15,6 +16,10 @@ public class ComandoColecciones implements CommandExecutor {
         this.plugin = plugin;
     }
 
+    private String getMessage(String path) {
+        return NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("colecciones_messages.yml", path);
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
 
@@ -23,14 +28,14 @@ public class ComandoColecciones implements CommandExecutor {
                 plugin.getColeccionesConfig().recargarConfig();
                 plugin.getCollectionManager().cargarDesdeConfig();
                 plugin.getSlayerManager().cargarSlayers();
-                CrossplayUtils.sendMessage(null, plugin.getConfigManager().getMessage("comandos.colecciones.recarga-exito"));
+                CrossplayUtils.sendMessage(null, getMessage("comandos.colecciones.recarga-exito"));
             }
             return true;
         }
 
         if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
             if (!player.hasPermission("nexocolecciones.admin")) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.sin-permiso"));
+                CrossplayUtils.sendMessage(player, getMessage("comandos.colecciones.sin-permiso"));
                 return true;
             }
 
@@ -38,7 +43,7 @@ public class ComandoColecciones implements CommandExecutor {
             plugin.getCollectionManager().cargarDesdeConfig();
             plugin.getSlayerManager().cargarSlayers();
 
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.colecciones.recarga-exito"));
+            CrossplayUtils.sendMessage(player, getMessage("comandos.colecciones.recarga-exito"));
             return true;
         }
 

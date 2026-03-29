@@ -2,6 +2,7 @@ package me.nexo.colecciones.menu;
 
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.slayers.SlayerManager;
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -17,7 +18,8 @@ public class SlayerMenu {
 
     public static void abrirMenu(Player player, NexoColecciones plugin) {
         SlayerManager manager = plugin.getSlayerManager();
-        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.slayer.titulo")));
+        NexoCore core = NexoCore.getPlugin(NexoCore.class);
+        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("colecciones_messages.yml", "menus.slayer.titulo")));
 
         for (SlayerManager.SlayerTemplate template : manager.getTemplates().values()) {
             Material mat = Material.matchMaterial(template.targetMob() + "_SPAWN_EGG");
@@ -27,7 +29,7 @@ public class SlayerMenu {
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
                 meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>" + template.name() + "</bold>"));
-                List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.slayer.item-lore");
+                List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.slayer.item-lore");
                 List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
                         .map(line -> CrossplayUtils.parseCrossplay(player, line
                                 .replace("%id%", template.id())

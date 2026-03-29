@@ -2,6 +2,7 @@ package me.nexo.factories.menu;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 public class LogicMenu implements Listener {
 
     private final NexoFactories plugin;
+    private final NexoCore core;
     private final List<String> conditions = Arrays.asList("NONE", "ENERGY_>_50", "ENERGY_>_20", "STORAGE_<_100", "STORAGE_<_500");
     private final List<String> actions = Arrays.asList("NONE", "START_MACHINE", "PAUSE_MACHINE");
 
@@ -35,6 +37,11 @@ public class LogicMenu implements Listener {
 
     public LogicMenu(NexoFactories plugin) {
         this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
+    }
+
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("factories_messages.yml", path);
     }
 
     public void openMenu(Player player, ActiveFactory factory) {
@@ -54,7 +61,7 @@ public class LogicMenu implements Listener {
     }
 
     private void renderMenu(Player player) {
-        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.logic.titulo")));
+        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, getMessage("menus.logic.titulo")));
         UUID id = player.getUniqueId();
         String cond = conditions.get(currentConditionIndex.get(id));
         String act = actions.get(currentActionIndex.get(id));
@@ -62,8 +69,8 @@ public class LogicMenu implements Listener {
         ItemStack sensor = new ItemStack(Material.COMPARATOR);
         ItemMeta sensorMeta = sensor.getItemMeta();
         if (sensorMeta != null) {
-            sensorMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.logic.sensor.titulo")));
-            List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.logic.sensor.lore");
+            sensorMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.logic.sensor.titulo")));
+            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.logic.sensor.lore");
             sensorMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%condition%", cond))).collect(Collectors.toList()));
             sensor.setItemMeta(sensorMeta);
         }
@@ -72,8 +79,8 @@ public class LogicMenu implements Listener {
         ItemStack action = new ItemStack(Material.REDSTONE_TORCH);
         ItemMeta actionMeta = action.getItemMeta();
         if (actionMeta != null) {
-            actionMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.logic.operacion.titulo")));
-            List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.logic.operacion.lore");
+            actionMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.logic.operacion.titulo")));
+            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.logic.operacion.lore");
             actionMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%action%", act))).collect(Collectors.toList()));
             action.setItemMeta(actionMeta);
         }
@@ -82,8 +89,8 @@ public class LogicMenu implements Listener {
         ItemStack save = new ItemStack(Material.LIME_DYE);
         ItemMeta saveMeta = save.getItemMeta();
         if (saveMeta != null) {
-            saveMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.logic.guardar.titulo")));
-            List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.logic.guardar.lore");
+            saveMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.logic.guardar.titulo")));
+            List<String> loreConfig = core.getConfigManager().getMessages().getStringList("menus.logic.guardar.lore");
             saveMeta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
             save.setItemMeta(saveMeta);
         }
@@ -94,7 +101,7 @@ public class LogicMenu implements Listener {
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!CrossplayUtils.getChatPlain((Player) event.getWhoClicked(), event.getView().title()).equals(plugin.getConfigManager().getMessage("menus.logic.titulo").replaceAll("<[^>]*>", ""))) return;
+        if (!CrossplayUtils.getChatPlain((Player) event.getWhoClicked(), event.getView().title()).equals(getMessage("menus.logic.titulo").replaceAll("<[^>]*>", ""))) return;
 
         event.setCancelled(true);
         Player player = (Player) event.getWhoClicked();
@@ -130,7 +137,7 @@ public class LogicMenu implements Listener {
 
             player.closeInventory();
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 2f);
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.script-compilado"));
+            CrossplayUtils.sendMessage(player, getMessage("eventos.script-compilado"));
 
             editingFactory.remove(id);
             currentConditionIndex.remove(id);

@@ -3,52 +3,41 @@ package me.nexo.core.config;
 import me.nexo.core.NexoCore;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ConfigManager {
 
     private final NexoCore plugin;
-    private FileConfiguration messagesConfig = null;
-    private File messagesFile = null;
+    private final Map<String, FileConfiguration> configs = new ConcurrentHashMap<>();
 
     public ConfigManager(NexoCore plugin) {
         this.plugin = plugin;
-        saveDefaultMessages();
     }
 
-    public void reloadMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-
-        InputStream defaultStream = plugin.getResource("messages.yml");
-        if (defaultStream != null) {
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defaultStream));
-            messagesConfig.setDefaults(defaultConfig);
-        }
+    public FileConfiguration getConfig(String configName) {
+        return configs.computeIfAbsent(configName, this::loadConfig);
     }
 
-    public FileConfiguration getMessages() {
-        if (messagesConfig == null) {
-            reloadMessages();
+    private FileConfiguration loadConfig(String configName) {
+        File configFile = new File(plugin.getDataFolder(), configName);
+        if (!configFile.exists()) {
+            plugin.saveResource(configName, false);
         }
-        return messagesConfig;
+        return YamlConfiguration.loadConfiguration(configFile);
     }
 
-    public void saveDefaultMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-        if (!messagesFile.exists()) {
-            plugin.saveResource("messages.yml", false);
-        }
+    public void reloadConfig(String configName) {
+        File configFile = new File(plugin.getDataFolder(), configName);
+        configs.put(configName, YamlConfiguration.loadConfiguration(configFile));
     }
 
-    public String getMessage(String path) {
-        return getMessages().getString(path, "&cMessage not found: " + path);
+    public String getMessage(String configName, String path) {
+        return getConfig(configName).getString(path, "&cMessage not found: " + path);
     }
 }

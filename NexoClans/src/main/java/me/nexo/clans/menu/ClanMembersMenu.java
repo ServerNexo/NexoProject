@@ -3,6 +3,7 @@ package me.nexo.clans.menu;
 import me.nexo.clans.NexoClans;
 import me.nexo.clans.core.ClanMember;
 import me.nexo.clans.core.NexoClan;
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
 import org.bukkit.Bukkit;
@@ -18,10 +19,11 @@ import java.util.List;
 public class ClanMembersMenu {
 
     public static void abrirMenu(Player player, NexoClan clan, NexoUser user, NexoClans plugin) {
-        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("menus.miembros.buscando"));
+        NexoCore core = NexoCore.getPlugin(NexoCore.class);
+        CrossplayUtils.sendMessage(player, core.getConfigManager().getMessage("clans_messages.yml", "menus.miembros.buscando"));
 
         plugin.getClanManager().getMiembrosAsync(clan.getId(), miembros -> {
-            Inventory inv = Bukkit.createInventory(null, 54, CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.miembros.titulo")));
+            Inventory inv = Bukkit.createInventory(null, 54, CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("clans_messages.yml", "menus.miembros.titulo")));
 
             for (int i = 0; i < miembros.size() && i < 54; i++) {
                 ClanMember m = miembros.get(i);
@@ -32,7 +34,7 @@ public class ClanMembersMenu {
                     meta.setOwningPlayer(Bukkit.getOfflinePlayer(m.uuid()));
                     meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff" + m.name()));
                     List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                    lore.add(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.miembros.lore-rango").replace("%role%", m.role())));
+                    lore.add(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("clans_messages.yml", "menus.miembros.lore-rango").replace("%role%", m.role())));
                     meta.lore(lore);
                     head.setItemMeta(meta);
                 }
@@ -42,7 +44,7 @@ public class ClanMembersMenu {
             ItemStack back = new ItemStack(Material.ARROW);
             org.bukkit.inventory.meta.ItemMeta backMeta = back.getItemMeta();
             if (backMeta != null) {
-                backMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.miembros.boton-regresar")));
+                backMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("clans_messages.yml", "menus.miembros.boton-regresar")));
                 back.setItemMeta(backMeta);
             }
             inv.setItem(49, back);

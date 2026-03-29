@@ -11,3 +11,5 @@ commands:
   pvp:
     description: Activa o desactiva tu Modo de Guerra
     aliases: [ modo ]
+    permission: nexopvp.user
+    permission-message: "No tienes permiso para usar este comando."

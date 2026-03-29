@@ -11,10 +11,14 @@ commands:
   nexocore:
     description: Comando de administracion del Nexo
     permission: nexo.admin
+    permission-message: "&#8b0000[!] Acceso denegado: Autorización de Administrador requerida."
   void:
     description: Consulta el estado de tu Bendición del Vacío.
     aliases: [ bendicion, voidblessing ]
     permission: nexo.void
+  web:
+    description: Comandos para la conexión con el Panel Web
+    aliases: [ panel, dashboard ]
 
 libraries:
   - com.zaxxer:HikariCP:5.1.0

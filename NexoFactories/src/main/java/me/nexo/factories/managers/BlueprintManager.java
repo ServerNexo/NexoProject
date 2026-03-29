@@ -1,9 +1,12 @@
 package me.nexo.factories.managers;
 
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.user.NexoAPI;
 import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
 import me.nexo.factories.core.StructureTemplate;
+import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -27,6 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BlueprintManager implements Listener {
 
     private final NexoFactories plugin;
+    private final NexoCore core;
 
     private final Map<UUID, List<BlockDisplay>> activeHolograms = new ConcurrentHashMap<>();
     private final Map<UUID, Location> activeCores = new ConcurrentHashMap<>();
@@ -34,6 +38,11 @@ public class BlueprintManager implements Listener {
 
     public BlueprintManager(NexoFactories plugin) {
         this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
+    }
+
+    private String getMessage(String path) {
+        return core.getConfigManager().getMessage("factories_messages.yml", path);
     }
 
     public void projectBlueprint(Player player, Location coreLocation, StructureTemplate template) {
@@ -58,7 +67,7 @@ public class BlueprintManager implements Listener {
         activeHolograms.put(player.getUniqueId(), displays);
         activeCores.put(player.getUniqueId(), coreLocation);
         activeTemplates.put(player.getUniqueId(), template);
-        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blueprint.plano-proyectado"));
+        CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.plano-proyectado"));
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
     }
 
@@ -101,7 +110,7 @@ public class BlueprintManager implements Listener {
                     });
                     player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 2f);
                 } else {
-                    CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blueprint.pieza-incorrecta").replace("%block%", entry.getValue().name()));
+                    CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.pieza-incorrecta").replace("%block%", entry.getValue().name()));
                     event.setCancelled(true);
                     return;
                 }
@@ -110,29 +119,31 @@ public class BlueprintManager implements Listener {
         }
 
         if (isPart && template.isValid(coreLoc.getBlock())) {
-            me.nexo.protections.core.ProtectionStone stone = me.nexo.protections.NexoProtections.getClaimManager().getStoneAt(coreLoc);
-            if (stone == null) {
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blueprint.sin-proteccion"));
-                event.setCancelled(true);
-                return;
-            }
+            NexoAPI.getServices().get(ClaimManager.class).ifPresent(claimManager -> {
+                me.nexo.protections.core.ProtectionStone stone = claimManager.getStoneAt(coreLoc);
+                if (stone == null) {
+                    CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.sin-proteccion"));
+                    event.setCancelled(true);
+                    return;
+                }
 
-            ActiveFactory factory = new ActiveFactory(
-                    UUID.randomUUID(), stone.getStoneId(), player.getUniqueId(),
-                    template.getFactoryType(), 1, "OFFLINE", 0, coreLoc,
-                    "NONE", "NONE", System.currentTimeMillis()
-            );
+                ActiveFactory factory = new ActiveFactory(
+                        UUID.randomUUID(), stone.getStoneId(), player.getUniqueId(),
+                        template.getFactoryType(), 1, "OFFLINE", 0, coreLoc,
+                        "NONE", "NONE", System.currentTimeMillis()
+                );
 
-            plugin.getFactoryManager().createFactoryAsync(factory).thenRun(() -> {
-                CrossplayUtils.sendMessage(player, " ");
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blueprint.maquina-ensamblada"));
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blueprint.estructura-registrada").replace("%type%", template.getFactoryType()));
-                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blueprint.red-electrica"));
-                CrossplayUtils.sendMessage(player, " ");
-                player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+                plugin.getFactoryManager().createFactoryAsync(factory).thenRun(() -> {
+                    CrossplayUtils.sendMessage(player, " ");
+                    CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.maquina-ensamblada"));
+                    CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.estructura-registrada").replace("%type%", template.getFactoryType()));
+                    CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.red-electrica"));
+                    CrossplayUtils.sendMessage(player, " ");
+                    player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
+                });
+
+                clearBlueprint(player);
             });
-
-            clearBlueprint(player);
         }
     }
 }
