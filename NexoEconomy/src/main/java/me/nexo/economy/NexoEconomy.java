@@ -3,7 +3,6 @@ package me.nexo.economy;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.economy.bazar.BazaarChatListener;
 import me.nexo.economy.bazar.BazaarManager;
-import me.nexo.economy.bazar.BazaarMenuListener;
 import me.nexo.economy.blackmarket.BlackMarketListener;
 import me.nexo.economy.blackmarket.BlackMarketManager;
 import me.nexo.economy.commands.*;

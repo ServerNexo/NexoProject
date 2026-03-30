@@ -6,7 +6,6 @@ import me.nexo.minions.commands.ComandoMinionTabCompleter;
 import me.nexo.minions.data.TiersConfig;
 import me.nexo.minions.data.UpgradesConfig;
 import me.nexo.minions.listeners.ExplosionListener;
-import me.nexo.minions.listeners.MenuListener;
 import me.nexo.minions.listeners.MinionInteractListener;
 import me.nexo.minions.listeners.MinionLoadListener;
 import me.nexo.minions.manager.MinionManager;

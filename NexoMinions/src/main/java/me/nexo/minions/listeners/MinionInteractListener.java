@@ -43,7 +43,7 @@ public class MinionInteractListener implements Listener {
         }
 
         event.setCancelled(true);
-        player.openInventory(new MinionMenu(plugin, minion, player).getInventory());
+        new MinionMenu(player, plugin, minion).open();
     }
 
     // 🗡️ CLIC IZQUIERDO: Golpear para Recoger al Minion

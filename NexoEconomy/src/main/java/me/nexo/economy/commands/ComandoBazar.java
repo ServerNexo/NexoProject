@@ -25,7 +25,7 @@ public class ComandoBazar implements CommandExecutor {
         if (!(sender instanceof Player player)) return true;
 
         if (args.length == 0) {
-            new BazaarMenu(plugin, player, BazaarMenu.MenuType.MAIN).openMain();
+            new BazaarMenu(player, plugin).open();
             return true;
         }
 

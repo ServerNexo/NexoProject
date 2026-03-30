@@ -6,15 +6,12 @@ import me.nexo.factories.commands.ComandoFactoryTabCompleter;
 import me.nexo.factories.listeners.FactoryInteractListener;
 import me.nexo.factories.managers.BlueprintManager;
 import me.nexo.factories.managers.FactoryManager;
-import me.nexo.factories.menu.FactoryMenu;
-import me.nexo.factories.menu.LogicMenu;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoFactories extends JavaPlugin {
 
     private FactoryManager factoryManager;
     private BlueprintManager blueprintManager;
-    private LogicMenu logicMenu;
 
     @Override
     public void onEnable() {
@@ -40,12 +37,8 @@ public class NexoFactories extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(blueprintManager, this);
 
-        FactoryMenu factoryMenu = new FactoryMenu(this);
-        this.logicMenu = new LogicMenu(this);
-
-        getServer().getPluginManager().registerEvents(factoryMenu, this);
-        getServer().getPluginManager().registerEvents(this.logicMenu, this);
-        getServer().getPluginManager().registerEvents(new FactoryInteractListener(this, factoryMenu), this);
+        // 🌟 CORRECCIÓN: Registramos SOLO el listener de interacción (sin pasarle el menú)
+        getServer().getPluginManager().registerEvents(new FactoryInteractListener(this), this);
 
         if (getCommand("factory") != null) {
             getCommand("factory").setExecutor(new ComandoFactory(this));
@@ -74,7 +67,5 @@ public class NexoFactories extends JavaPlugin {
         return blueprintManager;
     }
 
-    public LogicMenu getLogicMenu() {
-        return logicMenu;
-    }
+    // 🌟 Los Getters de los menús viejos han sido eliminados por completo
 }

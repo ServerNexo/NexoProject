@@ -14,11 +14,10 @@ import org.bukkit.inventory.EquipmentSlot;
 public class FactoryInteractListener implements Listener {
 
     private final NexoFactories plugin;
-    private final FactoryMenu menu;
 
-    public FactoryInteractListener(NexoFactories plugin, FactoryMenu menu) {
+    // 🌟 CORRECCIÓN: Ya no pedimos el menú aquí, solo el plugin
+    public FactoryInteractListener(NexoFactories plugin) {
         this.plugin = plugin;
-        this.menu = menu;
     }
 
     @EventHandler
@@ -36,8 +35,9 @@ public class FactoryInteractListener implements Listener {
             event.setCancelled(true); // Cancelamos interactuar con hornos/mesas vanilla
             Player player = event.getPlayer();
 
-            // 🌟 ABRIMOS LA INTERFAZ
-            menu.openMenu(player, factory);
+            // 🌟 ABRIMOS LA INTERFAZ MODERNIZADA
+            // Creamos el menú en el acto y lo abrimos
+            new FactoryMenu(player, plugin, factory).open();
         }
     }
 }

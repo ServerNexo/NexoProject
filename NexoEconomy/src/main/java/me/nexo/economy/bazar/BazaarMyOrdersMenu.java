@@ -1,14 +1,14 @@
 package me.nexo.economy.bazar;
 
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.menus.NexoMenu;
 import me.nexo.economy.NexoEconomy;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -16,19 +16,28 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class BazaarMyOrdersMenu implements InventoryHolder {
+public class BazaarMyOrdersMenu extends NexoMenu {
 
     private final NexoEconomy plugin;
-    private final Player player;
-    private Inventory inventory;
 
-    public BazaarMyOrdersMenu(NexoEconomy plugin, Player player) {
+    public BazaarMyOrdersMenu(Player player, NexoEconomy plugin) {
+        super(player);
         this.plugin = plugin;
-        this.player = player;
     }
 
-    public void openMenu() {
-        this.inventory = Bukkit.createInventory(this, 54, CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.titulo")));
+    @Override
+    public String getMenuName() {
+        return plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.titulo");
+    }
+
+    @Override
+    public int getSlots() {
+        return 54;
+    }
+
+    @Override
+    public void setMenuItems() {
+        setFillerGlass();
 
         ItemStack loading = new ItemStack(Material.CLOCK);
         ItemMeta lMeta = loading.getItemMeta();
@@ -36,17 +45,15 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
         loading.setItemMeta(lMeta);
         inventory.setItem(22, loading);
 
-        fillBorders();
         addBackButton();
-        player.openInventory(inventory);
 
+        // 🚀 Carga asíncrona segura a la base de datos
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             List<BazaarManager.ActiveOrderDTO> orders = plugin.getBazaarManager().getMisOrdenes(player.getUniqueId());
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                // 🌟 CORRECCIÓN: Leemos el componente del título usando el serializador nativo de Kyori
-                String tituloPlano = PlainTextComponentSerializer.plainText().serialize(player.getOpenInventory().title());
-                if (!tituloPlano.contains("Mis Órdenes")) return;
+                // 🌟 PROTECCIÓN ANTI-CRASH: Verificamos directamente el objeto inventario, adiós al PlainTextComponentSerializer
+                if (player.getOpenInventory().getTopInventory() != inventory) return;
 
                 inventory.setItem(22, new ItemStack(Material.AIR));
 
@@ -73,6 +80,7 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
                             .collect(Collectors.toList());
                     meta.lore(lore);
 
+                    // 🌟 MAGIA: Incrustamos la acción de cancelar en el ítem (PDC)
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "cancel_order");
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "order_id"), PersistentDataType.INTEGER, order.id);
                     item.setItemMeta(meta);
@@ -90,6 +98,8 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
                     empty.setItemMeta(em);
                     inventory.setItem(22, empty);
                 }
+
+                setFillerGlass(); // Rematar cualquier hueco
             });
         });
     }
@@ -100,21 +110,38 @@ public class BazaarMyOrdersMenu implements InventoryHolder {
         meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.boton-volver")));
         meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "back_main");
         back.setItemMeta(meta);
-        inventory.setItem(inventory.getSize() - 5, back);
+        inventory.setItem(getSlots() - 5, back);
     }
 
-    private void fillBorders() {
-        ItemStack glass = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
-        ItemMeta meta = glass.getItemMeta();
-        meta.displayName(CrossplayUtils.parseCrossplay(player, " "));
-        glass.setItemMeta(meta);
-        for (int j = 0; j < inventory.getSize(); j++) {
-            if (inventory.getItem(j) == null || inventory.getItem(j).getType().isAir()) inventory.setItem(j, glass);
-        }
-    }
-
+    // 🌟 GESTOR DE CLICS BLINDADO
     @Override
-    public Inventory getInventory() {
-        return inventory;
+    public void handleMenu(InventoryClickEvent event) {
+        event.setCancelled(true); // Cero robos o arrastres por error
+
+        if (event.getClickedInventory() == null || event.getClickedInventory().equals(player.getInventory())) return;
+
+        ItemStack item = event.getCurrentItem();
+        if (item == null || !item.hasItemMeta()) return;
+
+        ItemMeta meta = item.getItemMeta();
+        NamespacedKey actionKey = new NamespacedKey(plugin, "action");
+
+        if (!meta.getPersistentDataContainer().has(actionKey, PersistentDataType.STRING)) return;
+        String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
+
+        if (action.equals("cancel_order")) {
+            int orderId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "order_id"), PersistentDataType.INTEGER);
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
+
+            // 🌟 BEDROCK FIX: Cierra el menú al instante, cancela la orden, y reabre 3 ticks después
+            player.closeInventory();
+            plugin.getBazaarManager().cancelarOrden(player, orderId);
+            Bukkit.getScheduler().runTaskLater(plugin, () -> new BazaarMyOrdersMenu(player, plugin).open(), 3L);
+
+        } else if (action.equals("back_main")) {
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
+            player.closeInventory();
+            Bukkit.getScheduler().runTaskLater(plugin, () -> new BazaarMenu(player, plugin).open(), 3L);
+        }
     }
 }
