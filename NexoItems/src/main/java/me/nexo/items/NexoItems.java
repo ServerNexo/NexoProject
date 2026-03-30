@@ -81,8 +81,13 @@ public class NexoItems extends JavaPlugin {
     @Override
     public void onDisable() {
         BlockBreakListener.restaurarBloquesRotos();
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            // Aquí irían las llamadas a los métodos de guardado síncrono
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (p.getOpenInventory().getTopInventory().getHolder() instanceof me.nexo.items.mochilas.PVMenu) {
+                p.closeInventory();
+            }
+            if (p.getOpenInventory().getTopInventory().getHolder() instanceof GuardarropaListener) {
+                p.closeInventory();
+            }
         }
         NexoAPI.getServices().unregister(ItemManager.class);
         getLogger().info("🗡️ NexoItems apagado y desconectado.");

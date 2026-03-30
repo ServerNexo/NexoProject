@@ -9,9 +9,11 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
@@ -32,7 +34,6 @@ public class TradeListener implements Listener {
         TradeSession session = plugin.getTradeManager().getSession(player);
         if (session == null) return;
 
-        // 🌟 CORRECCIÓN: Validación dinámica del título del menú usando la configuración real
         String expectedTitle = PlainTextComponentSerializer.plainText().serialize(
                 CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.trade.titulo"))
         );
@@ -107,6 +108,20 @@ public class TradeListener implements Listener {
                 owner.getInventory().addItem(item);
             }
             inv.setItem(i, null);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        TradeSession session = plugin.getTradeManager().getSession(player);
+        if (session != null) {
+            devolverItems(session);
+            plugin.getTradeManager().removeSession(session);
+            Player other = player.equals(session.getPlayer1()) ? session.getPlayer2() : session.getPlayer1();
+            if (other.getOpenInventory().getTopInventory().equals(session.getInventory())) {
+                other.closeInventory();
+            }
         }
     }
 }

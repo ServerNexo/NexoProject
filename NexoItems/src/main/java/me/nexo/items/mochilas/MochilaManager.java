@@ -60,8 +60,9 @@ public class MochilaManager {
     }
 
     public void guardarMochila(Player p, int id, Inventory inv) {
-        String base64Data = Base64Util.itemStackArrayToBase64(inv.getContents());
+        ItemStack[] contents = inv.getContents();
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            String base64Data = Base64Util.itemStackArrayToBase64(contents);
             guardarMochilaSync(p.getUniqueId().toString(), id, base64Data);
         });
     }
