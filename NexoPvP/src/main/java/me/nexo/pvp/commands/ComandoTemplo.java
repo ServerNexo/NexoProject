@@ -1,6 +1,5 @@
 package me.nexo.pvp.commands;
 
-import me.nexo.core.NexoCore;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.pvp.menus.BlessingMenu;
 import org.bukkit.command.Command;
@@ -17,7 +16,8 @@ public class ComandoTemplo implements CommandExecutor {
             return true;
         }
 
-        new BlessingMenu(NexoCore.getPlugin(NexoCore.class), player).openMenu();
+        // 🌟 Nueva instanciación Omega
+        new BlessingMenu(player).open();
         player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_PORTAL_TRIGGER, 0.5f, 2.0f);
 
         return true;

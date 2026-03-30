@@ -45,7 +45,8 @@ public class ComandoSlayer implements CommandExecutor {
             return true;
         }
 
-        SlayerMenu.abrirMenu(player, plugin);
+        // 🌟 CORRECCIÓN APLICADA: Ahora instanciamos y abrimos el NexoMenu correctamente
+        new SlayerMenu(player, plugin).open();
         return true;
     }
 }

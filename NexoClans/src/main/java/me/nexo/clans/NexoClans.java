@@ -6,7 +6,6 @@ import me.nexo.clans.commands.ComandoClan;
 import me.nexo.clans.commands.ComandoClanTabCompleter;
 import me.nexo.clans.listeners.ClanConnectionListener;
 import me.nexo.clans.listeners.ClanDamageListener;
-import me.nexo.clans.menu.ClanMenuListener;
 import me.nexo.core.user.NexoAPI;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -22,7 +21,7 @@ public class NexoClans extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new ClanConnectionListener(this), this);
         getServer().getPluginManager().registerEvents(new ClanDamageListener(this), this);
-        getServer().getPluginManager().registerEvents(new ClanMenuListener(this), this);
+
 
         if (getCommand("clan") != null) {
             getCommand("clan").setExecutor(new ComandoClan(this));

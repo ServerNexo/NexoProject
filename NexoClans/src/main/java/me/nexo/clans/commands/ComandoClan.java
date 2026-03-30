@@ -45,13 +45,14 @@ public class ComandoClan implements CommandExecutor {
 
         if (args.length == 0) {
             if (user.hasClan()) {
-                Optional<NexoClan> clanOpt = plugin.getClanManager().getClanFromCache(user.getClanId());
+                java.util.Optional<me.nexo.clans.core.NexoClan> clanOpt = plugin.getClanManager().getClanFromCache(user.getClanId());
                 clanOpt.ifPresentOrElse(
-                        clan -> me.nexo.clans.menu.ClanMenu.abrirMenu(player, clan, user, plugin),
-                        () -> CrossplayUtils.sendMessage(player, getMessage("comandos.clan.info.cargando"))
+                        // 🌟 AQUÍ ESTÁ LA MAGIA OMEGA: Instanciamos y abrimos el nuevo menú
+                        clan -> new me.nexo.clans.menu.ClanMenu(player, plugin, clan, user).open(),
+                        () -> me.nexo.core.crossplay.CrossplayUtils.sendMessage(player, getMessage("comandos.clan.info.cargando"))
                 );
             } else {
-                CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-clan"));
+                me.nexo.core.crossplay.CrossplayUtils.sendMessage(player, getMessage("comandos.clan.errores.sin-clan"));
             }
             return true;
         }

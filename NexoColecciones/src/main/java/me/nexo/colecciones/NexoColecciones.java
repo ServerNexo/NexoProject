@@ -8,7 +8,6 @@ import me.nexo.colecciones.colecciones.FlushTask;
 import me.nexo.colecciones.commands.ComandoColecciones;
 import me.nexo.colecciones.commands.ComandoColeccionesTabCompleter;
 import me.nexo.colecciones.commands.ComandoSlayer;
-import me.nexo.colecciones.menu.MenuListener;
 import me.nexo.colecciones.slayers.SlayerListener;
 import me.nexo.colecciones.slayers.SlayerManager;
 import me.nexo.core.user.NexoAPI;
@@ -35,7 +34,7 @@ public class NexoColecciones extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new ColeccionesListener(this), this);
         getServer().getPluginManager().registerEvents(new SlayerListener(this), this);
-        getServer().getPluginManager().registerEvents(new MenuListener(this), this);
+
 
         if (getCommand("colecciones") != null) {
             getCommand("colecciones").setExecutor(new ComandoColecciones(this));

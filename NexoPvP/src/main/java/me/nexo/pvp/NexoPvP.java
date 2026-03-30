@@ -39,7 +39,7 @@ public class NexoPvP extends JavaPlugin {
             getCommand("pvp").setTabCompleter(new ComandoPvPTabCompleter());
         }
 
-        getServer().getPluginManager().registerEvents(new me.nexo.pvp.menus.BlessingMenuListener(), this);
+
 
         if (getCommand("templo") != null) {
             getCommand("templo").setExecutor(new me.nexo.pvp.commands.ComandoTemplo());

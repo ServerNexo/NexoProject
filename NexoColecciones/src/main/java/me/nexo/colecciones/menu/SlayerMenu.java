@@ -4,26 +4,50 @@ import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.slayers.SlayerManager;
 import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
-import org.bukkit.Bukkit;
+import me.nexo.core.menus.NexoMenu;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class SlayerMenu {
+public class SlayerMenu extends NexoMenu {
 
-    public static void abrirMenu(Player player, NexoColecciones plugin) {
+    private final NexoColecciones plugin;
+    private final NexoCore core;
+
+    public SlayerMenu(Player player, NexoColecciones plugin) {
+        super(player);
+        this.plugin = plugin;
+        this.core = NexoCore.getPlugin(NexoCore.class);
+    }
+
+    @Override
+    public String getMenuName() {
+        return core.getConfigManager().getMessage("colecciones_messages.yml", "menus.slayer.titulo");
+    }
+
+    @Override
+    public int getSlots() {
+        return 27; // Inventario de 3 filas
+    }
+
+    @Override
+    public void setMenuItems() {
+        setFillerGlass(); // Rellena los huecos vacíos con cristal morado del Vacío
+
         SlayerManager manager = plugin.getSlayerManager();
-        NexoCore core = NexoCore.getPlugin(NexoCore.class);
 
-        // Carga el título correctamente
-        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("colecciones_messages.yml", "menus.slayer.titulo")));
+        // 🌟 CORRECCIÓN APLICADA: Obtenemos el lore directamente del config
+        List<String> loreConfig = core.getConfigManager().getConfig("colecciones_messages.yml").getStringList("menus.slayer.item-lore");
 
+        int slot = 10; // Empezamos a colocar los jefes en el centro de la interfaz
         for (SlayerManager.SlayerTemplate template : manager.getTemplates().values()) {
+            if (slot >= 17) break; // Límite de seguridad visual (1 fila central)
+
             Material mat = Material.matchMaterial(template.targetMob() + "_SPAWN_EGG");
             if (mat == null) mat = Material.SKELETON_SKULL;
 
@@ -31,9 +55,6 @@ public class SlayerMenu {
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
                 meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>" + template.name() + "</bold>"));
-
-                // 🌟 CORRECCIÓN: Llamamos a getConfig() en lugar del método fantasma getMessages()
-                List<String> loreConfig = core.getConfigManager().getConfig("colecciones_messages.yml").getStringList("menus.slayer.item-lore");
 
                 List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
                         .map(line -> CrossplayUtils.parseCrossplay(player, line
@@ -45,8 +66,14 @@ public class SlayerMenu {
                 meta.lore(lore);
                 item.setItemMeta(meta);
             }
-            inv.addItem(item);
+            inventory.setItem(slot++, item);
         }
-        player.openInventory(inv);
+    }
+
+    @Override
+    public void handleMenu(InventoryClickEvent event) {
+        // Como este menú es solo el registro visual de los cazadores,
+        // simplemente bloqueamos cualquier interacción para que no roben ítems.
+        event.setCancelled(true);
     }
 }

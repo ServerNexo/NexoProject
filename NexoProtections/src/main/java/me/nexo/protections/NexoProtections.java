@@ -36,7 +36,6 @@ public class NexoProtections extends JavaPlugin {
         new me.nexo.protections.managers.UpkeepManager(this, claimManager);
 
         getServer().getPluginManager().registerEvents(new me.nexo.protections.listeners.ProtectionListener(claimManager, limitManager), this);
-        getServer().getPluginManager().registerEvents(new me.nexo.protections.listeners.ProtectionMenuListener(claimManager), this);
         getServer().getPluginManager().registerEvents(new me.nexo.protections.listeners.EnvironmentListener(claimManager), this);
 
         if (getCommand("nexo") != null) {

@@ -52,7 +52,8 @@ public class ComandoColecciones implements CommandExecutor {
             return true;
         }
 
-        new ColeccionesMenu(plugin, player, ColeccionesMenu.MenuType.MAIN).openMain();
+        // 🌟 CORRECCIÓN APLICADA: Ahora usamos la nueva instanciación del NexoMenu
+        new ColeccionesMenu(player, plugin, ColeccionesMenu.MenuType.MAIN, "", "").open();
         return true;
     }
 }

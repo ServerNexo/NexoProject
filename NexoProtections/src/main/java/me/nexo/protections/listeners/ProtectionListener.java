@@ -37,12 +37,14 @@ public class ProtectionListener implements Listener {
     private final ClaimManager claimManager;
     private final LimitManager limitManager;
     private final NexoCore core;
+    private final NexoProtections plugin; // <-- AÑADE ESTO
     private final NamespacedKey isProtectionStoneKey;
 
     public ProtectionListener(ClaimManager claimManager, LimitManager limitManager) {
         this.claimManager = claimManager;
         this.limitManager = limitManager;
         this.core = NexoCore.getPlugin(NexoCore.class);
+        this.plugin = NexoProtections.getPlugin(NexoProtections.class);
         this.isProtectionStoneKey = new NamespacedKey(NexoProtections.getPlugin(NexoProtections.class), "is_protection_stone");
     }
 
@@ -171,7 +173,7 @@ public class ProtectionListener implements Listener {
                 event.setCancelled(true);
 
                 if (stone.getOwnerId().equals(player.getUniqueId()) || stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) {
-                    me.nexo.protections.menu.ProtectionMenu.openMenu(player, stone);
+                    new me.nexo.protections.menu.ProtectionMenu(player, plugin, stone).open();
                 } else {
                     CrossplayUtils.sendMessage(player, "&#8b0000[!] Herejía: &#1c0f2aEl Monolito rechaza tu tacto.");
                 }
