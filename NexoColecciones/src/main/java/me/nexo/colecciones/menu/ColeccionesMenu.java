@@ -5,7 +5,6 @@ import me.nexo.colecciones.colecciones.CollectionProfile;
 import me.nexo.colecciones.data.CollectionCategory;
 import me.nexo.colecciones.data.CollectionItem;
 import me.nexo.colecciones.data.Tier;
-import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
 import org.bukkit.Bukkit;
@@ -26,7 +25,6 @@ import java.util.stream.Collectors;
 public class ColeccionesMenu extends NexoMenu {
 
     private final NexoColecciones plugin;
-    private final NexoCore core;
     private final MenuType menuType;
     private final String categoryId;
     private final String itemId;
@@ -35,22 +33,22 @@ public class ColeccionesMenu extends NexoMenu {
         MAIN, CATEGORY, ITEM_TIERS
     }
 
-    // 🌟 NUEVO CONSTRUCTOR UNIFICADO
+    // 🌟 NUEVO CONSTRUCTOR UNIFICADO - SIN NEXOCORE
     public ColeccionesMenu(Player player, NexoColecciones plugin, MenuType type, String categoryId, String itemId) {
         super(player);
         this.plugin = plugin;
-        this.core = NexoCore.getPlugin(NexoCore.class);
         this.menuType = type;
         this.categoryId = categoryId;
         this.itemId = itemId;
     }
 
+    // 🌟 CORRECCIÓN: Usamos el ConfigManager nativo de Colecciones
     private String getMessage(String path) {
-        return core.getConfigManager().getMessage("colecciones_messages.yml", path);
+        return plugin.getConfigManager().getMessage(path);
     }
 
     private List<String> getMessageList(String path) {
-        return core.getConfigManager().getConfig("colecciones_messages.yml").getStringList(path);
+        return plugin.getConfigManager().getMessages().getStringList(path);
     }
 
     @Override
@@ -74,7 +72,7 @@ public class ColeccionesMenu extends NexoMenu {
 
     @Override
     public void setMenuItems() {
-        setFillerGlass(); // Añade el cristal morado en los huecos vacíos automáticamente
+        setFillerGlass(); // Añade el cristal morado automáticamente
 
         if (menuType == MenuType.MAIN) {
             for (CollectionCategory cat : plugin.getCollectionManager().getCategorias().values()) {
@@ -89,7 +87,6 @@ public class ColeccionesMenu extends NexoMenu {
                     meta.lore(lore);
                     meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
 
-                    // Llaves PDC para el clic
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_category");
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "category_id"), PersistentDataType.STRING, cat.getId());
                     item.setItemMeta(meta);
@@ -234,7 +231,6 @@ public class ColeccionesMenu extends NexoMenu {
         inventory.setItem(getSlots() - 5, back);
     }
 
-    // 🌟 AQUÍ ESTÁ EL ANTIGUO MENULISTENER, AHORA INCORPORADO DE FORMA SEGURA
     @Override
     public void handleMenu(InventoryClickEvent event) {
         event.setCancelled(true);
@@ -253,7 +249,6 @@ public class ColeccionesMenu extends NexoMenu {
             String catId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "category_id"), PersistentDataType.STRING);
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
 
-            // Bedrock Bug Fix - Ligero delay para abrir la nueva ventana
             player.closeInventory();
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 new ColeccionesMenu(player, plugin, MenuType.CATEGORY, catId, "").open();
@@ -274,7 +269,6 @@ public class ColeccionesMenu extends NexoMenu {
                 plugin.getCollectionManager().reclamarRecompensa(player, itemId, tierNivel);
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
 
-                // Refrescamos al instante sin cerrar inventario
                 setMenuItems();
             }
         }

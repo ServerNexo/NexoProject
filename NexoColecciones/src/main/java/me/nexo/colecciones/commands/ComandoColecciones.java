@@ -2,7 +2,6 @@ package me.nexo.colecciones.commands;
 
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.menu.ColeccionesMenu;
-import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -16,8 +15,9 @@ public class ComandoColecciones implements CommandExecutor {
         this.plugin = plugin;
     }
 
+    // 🌟 CORRECCIÓN: Ahora leemos del ConfigManager propio de Colecciones, sin depender de NexoCore
     private String getMessage(String path) {
-        return NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("colecciones_messages.yml", path);
+        return plugin.getConfigManager().getMessage(path);
     }
 
     @Override
@@ -52,7 +52,7 @@ public class ComandoColecciones implements CommandExecutor {
             return true;
         }
 
-        // 🌟 CORRECCIÓN APLICADA: Ahora usamos la nueva instanciación del NexoMenu
+        // 🌟 Nueva instanciación de NexoMenu (Arquitectura Omega)
         new ColeccionesMenu(player, plugin, ColeccionesMenu.MenuType.MAIN, "", "").open();
         return true;
     }

@@ -27,7 +27,8 @@ public class NexoMechanics extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new WoodcuttingMinigameManager(this), this);
 
         if (getCommand("skilltree") != null) {
-            getCommand("skilltree").setExecutor(new ComandoSkillTree());
+            // 🌟 CORRECCIÓN OMEGA: Ahora pasamos la instancia del plugin (this) al comando
+            getCommand("skilltree").setExecutor(new ComandoSkillTree(this));
             getCommand("skilltree").setTabCompleter(new ComandoSkillsTabCompleter());
         }
 

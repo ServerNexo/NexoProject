@@ -26,7 +26,7 @@ public class ComandoDungeon implements CommandExecutor {
         }
 
         // 🌟 CORRECCIÓN: Invertimos el orden para que encaje perfectamente con tu menú
-        DungeonMenu.openMainMenu(player, plugin);
+        new DungeonMenu(player, plugin).open();
         return true;
     }
 }

@@ -20,7 +20,6 @@ public class PVMenu extends NexoMenu {
 
     private final NexoItems plugin;
 
-    // 🌟 Fíjate que ahora el constructor es (Player player, NexoItems plugin)
     public PVMenu(Player player, NexoItems plugin) {
         super(player);
         this.plugin = plugin;
@@ -106,7 +105,8 @@ public class PVMenu extends NexoMenu {
             player.closeInventory();
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                new me.nexo.core.hub.HubMenu(me.nexo.core.NexoCore.getPlugin(me.nexo.core.NexoCore.class), player).openMenu();
+                // 🌟 CORRECCIÓN APLICADA: Nuevo orden del constructor (player, plugin) y método .open()
+                new me.nexo.core.hub.HubMenu(player, me.nexo.core.NexoCore.getPlugin(me.nexo.core.NexoCore.class)).open();
             }, 3L);
         }
     }

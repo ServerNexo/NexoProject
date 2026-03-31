@@ -8,6 +8,7 @@ import me.nexo.colecciones.colecciones.FlushTask;
 import me.nexo.colecciones.commands.ComandoColecciones;
 import me.nexo.colecciones.commands.ComandoColeccionesTabCompleter;
 import me.nexo.colecciones.commands.ComandoSlayer;
+import me.nexo.colecciones.config.ConfigManager; // 🌟 IMPORTACIÓN AÑADIDA
 import me.nexo.colecciones.slayers.SlayerListener;
 import me.nexo.colecciones.slayers.SlayerManager;
 import me.nexo.core.user.NexoAPI;
@@ -15,12 +16,17 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoColecciones extends JavaPlugin {
 
+    // 🌟 SE AÑADIÓ EL CONFIG MANAGER
+    private ConfigManager configManager;
     private CollectionManager collectionManager;
     private ColeccionesConfig coleccionesConfig;
     private SlayerManager slayerManager;
 
     @Override
     public void onEnable() {
+        // 🌟 SE INICIALIZA EL CONFIG MANAGER PRIMERO
+        this.configManager = new ConfigManager(this);
+
         this.coleccionesConfig = new ColeccionesConfig(this);
         this.collectionManager = new CollectionManager(this);
         this.slayerManager = new SlayerManager(this);
@@ -34,7 +40,6 @@ public class NexoColecciones extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new ColeccionesListener(this), this);
         getServer().getPluginManager().registerEvents(new SlayerListener(this), this);
-
 
         if (getCommand("colecciones") != null) {
             getCommand("colecciones").setExecutor(new ComandoColecciones(this));
@@ -57,6 +62,11 @@ public class NexoColecciones extends JavaPlugin {
         NexoAPI.getServices().unregister(CollectionManager.class);
         NexoAPI.getServices().unregister(SlayerManager.class);
         getLogger().info("NexoColecciones ha sido deshabilitado.");
+    }
+
+    // 🌟 SE AÑADIÓ EL GETTER PARA QUE COLECCIONESMENU PUEDA USARLO
+    public ConfigManager getConfigManager() {
+        return configManager;
     }
 
     public CollectionManager getCollectionManager() {

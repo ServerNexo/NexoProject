@@ -1,5 +1,7 @@
 package me.nexo.mechanics.commands;
 
+import me.nexo.core.utils.NexoColor;
+import me.nexo.mechanics.NexoMechanics;
 import me.nexo.mechanics.skills.SkillTreeMenu;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -9,18 +11,23 @@ import org.jetbrains.annotations.NotNull;
 
 public class ComandoSkillTree implements CommandExecutor {
 
+    private final NexoMechanics plugin;
+
+    // 🌟 Requerimos el plugin en el constructor para poder abrir el menú
+    public ComandoSkillTree(NexoMechanics plugin) {
+        this.plugin = plugin;
+    }
+
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage("Este comando solo puede ser ejecutado por un jugador.");
+            sender.sendMessage(NexoColor.parse("&#FF3366[!] Este terminal solo puede ser operado por un humano."));
             return true;
         }
 
-        // Aquí asumimos que el menú del árbol de habilidades es estático o se obtiene de un manager
-        // Si SkillTreeMenu necesita una instancia del plugin, habría que pasarla en el constructor.
-        // Por ahora, lo mantenemos simple.
-        // new SkillTreeMenu(plugin).openMenu(player);
-        player.sendMessage("Abriendo el árbol de habilidades..."); // Placeholder
+        // 🌟 ABRIMOS EL MENÚ OMEGA
+        new SkillTreeMenu(player, plugin).open();
+        player.playSound(player.getLocation(), org.bukkit.Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1.0f, 1.0f);
 
         return true;
     }
