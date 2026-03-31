@@ -1,36 +1,43 @@
 package me.nexo.economy.blackmarket;
 
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.menus.NexoMenu;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class BlackMarketMenu {
+public class BlackMarketMenu extends NexoMenu {
 
-    public static void open(Player player, NexoEconomy plugin) {
-        if (!plugin.getBlackMarketManager().isMarketOpen()) {
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-no-esta"));
-            return;
-        }
+    private final NexoEconomy plugin;
 
-        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.blackmarket.titulo")));
+    public BlackMarketMenu(Player player, NexoEconomy plugin) {
+        super(player);
+        this.plugin = plugin;
+    }
 
-        ItemStack filler = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
-        ItemMeta fillerMeta = filler.getItemMeta();
-        if (fillerMeta != null) {
-            fillerMeta.displayName(CrossplayUtils.parseCrossplay(player, " "));
-            filler.setItemMeta(fillerMeta);
-        }
-        for (int i = 0; i < 27; i++) inv.setItem(i, filler);
+    @Override
+    public String getMenuName() {
+        return plugin.getConfigManager().getMessage("menus.blackmarket.titulo");
+    }
+
+    @Override
+    public int getSlots() {
+        return 27;
+    }
+
+    @Override
+    public void setMenuItems() {
+        setFillerGlass(); // Rellena el fondo morado automáticamente
 
         List<BlackMarketItem> stock = plugin.getBlackMarketManager().getCurrentStock();
         int[] slots = {11, 13, 15};
@@ -63,11 +70,68 @@ public class BlackMarketMenu {
                 } else {
                     meta.lore(lore);
                 }
+
+                // 🌟 MAGIA PDC: Guardamos el índice del ítem para identificarlo en el clic
+                meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "bm_index"), PersistentDataType.INTEGER, i);
                 display.setItemMeta(meta);
             }
-            inv.setItem(slots[i], display);
+            inventory.setItem(slots[i], display);
+        }
+    }
+
+    // 🌟 LÓGICA DE COMPRA INCORPORADA (Adiós BlackMarketListener)
+    @Override
+    public void handleMenu(InventoryClickEvent event) {
+        event.setCancelled(true); // Bloqueo absoluto contra robos
+
+        if (!plugin.getBlackMarketManager().isMarketOpen()) {
+            player.closeInventory();
+            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-huido"));
+            return;
         }
 
-        player.openInventory(inv);
+        ItemStack item = event.getCurrentItem();
+        if (item == null || !item.hasItemMeta()) return;
+
+        ItemMeta meta = item.getItemMeta();
+        NamespacedKey indexKey = new NamespacedKey(plugin, "bm_index");
+
+        // Si el ítem que clickeó tiene nuestra llave del Mercado Negro
+        if (meta.getPersistentDataContainer().has(indexKey, PersistentDataType.INTEGER)) {
+            int index = meta.getPersistentDataContainer().get(indexKey, PersistentDataType.INTEGER);
+            List<BlackMarketItem> stock = plugin.getBlackMarketManager().getCurrentStock();
+
+            if (index >= 0 && index < stock.size()) {
+                BlackMarketItem bmItem = stock.get(index);
+
+                CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blackmarket.procesando-pago"));
+
+                // 🚀 Compra asíncrona segura contra la base de datos
+                plugin.getEconomyManager().updateBalanceAsync(
+                        player.getUniqueId(),
+                        NexoAccount.AccountType.PLAYER,
+                        bmItem.currency(),
+                        bmItem.price(),
+                        false
+                ).thenAccept(success -> {
+                    if (success) {
+                        ItemStack buyItem = bmItem.displayItem().clone();
+                        // Entregamos el ítem al inventario o lo tiramos al suelo si está lleno
+                        if (player.getInventory().firstEmpty() == -1) {
+                            player.getWorld().dropItemNaturally(player.getLocation(), buyItem);
+                        } else {
+                            player.getInventory().addItem(buyItem);
+                        }
+                        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blackmarket.negocios-exitosos"));
+                        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_TRADE, 1.0f, 1.0f);
+                        player.closeInventory();
+                    } else {
+                        String divisa = bmItem.currency() == NexoAccount.Currency.GEMS ? "Gemas" : "Maná";
+                        CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blackmarket.fondos-insuficientes").replace("%divisa%", divisa));
+                        player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                    }
+                });
+            }
+        }
     }
 }

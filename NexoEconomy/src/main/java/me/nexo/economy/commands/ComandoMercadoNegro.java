@@ -43,7 +43,14 @@ public class ComandoMercadoNegro implements CommandExecutor {
                 return true;
             }
 
-            BlackMarketMenu.open(player, plugin);
+            // Validar si el mercader está activo antes de abrir el menú
+            if (!plugin.getBlackMarketManager().isMarketOpen()) {
+                me.nexo.core.crossplay.CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-no-esta"));
+                return true;
+            }
+
+            // 🌟 NUEVA INSTANCIACIÓN OMEGA
+            new BlackMarketMenu(player, plugin).open();
         } else {
             sender.sendMessage(NexoColor.parse("&#ff4b2b[!] El terminal requiere un operario humano."));
         }

@@ -57,7 +57,6 @@ public class NexoItems extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new ReforjaListener(this), this);
         getServer().getPluginManager().registerEvents(new YunqueListener(this), this);
         getServer().getPluginManager().registerEvents(new ItemProtectionListener(this), this);
-        getServer().getPluginManager().registerEvents(new UpgradeListener(this), this);
         getServer().getPluginManager().registerEvents(new BlockBreakListener(this), this);
         getServer().getPluginManager().registerEvents(new FishingListener(this), this);
         getServer().getPluginManager().registerEvents(new DamageListener(this), this);
@@ -73,6 +72,8 @@ public class NexoItems extends JavaPlugin {
             getCommand("desguace").setExecutor(new ComandoDesguace(this));
             getCommand("desguace").setTabCompleter(new ComandoDesguaceTabCompleter());
         }
+        // Añade esta línea junto a las demás:
+        if (getCommand("forja") != null) getCommand("forja").setExecutor(new me.nexo.items.commands.ComandoUpgrade(this));
         if (getCommand("accesorios") != null) getCommand("accesorios").setExecutor(new ComandoAccesorios(this));
         if (getCommand("wardrobe") != null) getCommand("wardrobe").setExecutor(new ComandoWardrobe(this, wardrobeListener));
         if (getCommand("pv") != null) getCommand("pv").setExecutor(new ComandoPV(this));

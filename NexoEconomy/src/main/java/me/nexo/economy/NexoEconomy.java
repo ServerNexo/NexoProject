@@ -3,7 +3,6 @@ package me.nexo.economy;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.economy.bazar.BazaarChatListener;
 import me.nexo.economy.bazar.BazaarManager;
-import me.nexo.economy.blackmarket.BlackMarketListener;
 import me.nexo.economy.blackmarket.BlackMarketManager;
 import me.nexo.economy.commands.*;
 import me.nexo.economy.config.ConfigManager;
@@ -34,7 +33,7 @@ public class NexoEconomy extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new EconomyListener(this), this);
         getServer().getPluginManager().registerEvents(new TradeListener(this), this);
         getServer().getPluginManager().registerEvents(new BazaarChatListener(this), this);
-        getServer().getPluginManager().registerEvents(new BlackMarketListener(this), this);
+
 
         if (getCommand("eco") != null) {
             getCommand("eco").setExecutor(new ComandoEco(this));

@@ -2,13 +2,12 @@ package me.nexo.core.hub;
 
 import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.menus.NexoMenu;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -17,21 +16,28 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.ArrayList;
 import java.util.List;
 
-public class HubMenu implements InventoryHolder {
+public class HubMenu extends NexoMenu {
 
     private final NexoCore plugin;
-    private final Player player;
-    private Inventory inventory;
 
-    public HubMenu(NexoCore plugin, Player player) {
+    public HubMenu(Player player, NexoCore plugin) {
+        super(player);
         this.plugin = plugin;
-        this.player = player;
     }
 
-    public void openMenu() {
-        net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(player, "&#ff00ff🌌 Red del Nexo");
-        int tamano = CrossplayUtils.getOptimizedMenuSize(player, 54);
-        this.inventory = Bukkit.createInventory(this, tamano, titulo);
+    @Override
+    public String getMenuName() {
+        return "&#ff00ff🌌 Red del Nexo";
+    }
+
+    @Override
+    public int getSlots() {
+        return 54;
+    }
+
+    @Override
+    public void setMenuItems() {
+        setFillerGlass(); // El cristal morado automático de la Arquitectura Omega
 
         inventory.setItem(13, createPlayerProfile());
 
@@ -46,19 +52,39 @@ public class HubMenu implements InventoryHolder {
         inventory.setItem(31, createButton(Material.COMPASS, "&#00f5ff🌍 Viaje Rápido", "Teletransporte a zonas seguras.", "open_fast_travel"));
         inventory.setItem(32, createButton(Material.SHIELD, "&#00f5ff🛡️ Gestión de Clan", "Administra tu imperio.", "open_clans"));
         inventory.setItem(33, createButton(Material.WITHER_SKELETON_SKULL, "&#1c0f2a🌑 Mercado Negro", "Artefactos prohibidos.", "open_blackmarket"));
+    }
 
-        ItemStack glass = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
-        ItemMeta metaGlass = glass.getItemMeta();
-        metaGlass.displayName(CrossplayUtils.parseCrossplay(player, " "));
-        glass.setItemMeta(metaGlass);
+    @Override
+    public void handleMenu(InventoryClickEvent event) {
+        event.setCancelled(true); // Bloqueo anti-robo
 
-        for (int i = 0; i < inventory.getSize(); i++) {
-            if (inventory.getItem(i) == null || inventory.getItem(i).getType().isAir()) {
-                inventory.setItem(i, glass);
-            }
+        if (event.getCurrentItem() == null || !event.getCurrentItem().hasItemMeta()) return;
+
+        ItemMeta meta = event.getCurrentItem().getItemMeta();
+        NamespacedKey actionKey = new NamespacedKey(plugin, "hub_action");
+
+        if (meta.getPersistentDataContainer().has(actionKey, PersistentDataType.STRING)) {
+            String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
+
+            player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
+            player.closeInventory();
+
+            // Ejecutamos el comando asociado al botón con 3 ticks de retraso para Bedrock
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                switch (action) {
+                    case "open_skills": player.performCommand("skills"); break;
+                    case "open_colecciones": player.performCommand("colecciones"); break;
+                    case "open_recipes": player.performCommand("recipes"); break;
+                    case "open_bazar": player.performCommand("bazar"); break;
+                    case "open_slayer": player.performCommand("slayer"); break;
+                    case "open_pv": player.performCommand("pv"); break;
+                    case "open_wardrobe": player.performCommand("wardrobe"); break;
+                    case "open_fast_travel": player.performCommand("warp"); break;
+                    case "open_clans": player.performCommand("clan"); break;
+                    case "open_blackmarket": player.performCommand("mercadonegro"); break;
+                }
+            }, 3L);
         }
-
-        player.openInventory(inventory);
     }
 
     private ItemStack createPlayerProfile() {
@@ -98,7 +124,4 @@ public class HubMenu implements InventoryHolder {
         item.setItemMeta(meta);
         return item;
     }
-
-    @Override
-    public Inventory getInventory() { return inventory; }
 }

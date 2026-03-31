@@ -30,3 +30,6 @@ commands:
     description: Comando de desarrollador para probar items y menús.
     permission: nexo.admin
     permission-message: "No tienes permiso para usar este comando."
+  forja:
+    description: Abre la Forja de Evolución Cénit.
+    aliases: [ upgrade, cenit ]

@@ -27,9 +27,9 @@ public class ComandoPV implements CommandExecutor {
             return true;
         }
 
-        // 🌟 NUEVO: Si escribe solo "/pv" (0 argumentos), abrimos el Selector Visual
+        // 🌟 NUEVO: Si escribe solo "/pv" (0 argumentos), abrimos el Selector Visual Omega
         if (args.length == 0) {
-            new PVMenu(plugin, player).openMenu();
+            new PVMenu(player, plugin).open(); // <--- ¡AQUÍ ESTÁ LA CORRECCIÓN!
             return true;
         }
 
@@ -42,14 +42,13 @@ public class ComandoPV implements CommandExecutor {
         try {
             int vaultNumber = Integer.parseInt(args[0]);
 
-            // Validación de Permisos (Por defecto la 1 siempre debería estar permitida si así lo quieres,
-            // pero aquí respeta tus permisos de LuckPerms nexo.pv.X)
+            // Validación de Permisos
             if (!player.hasPermission("nexo.pv." + vaultNumber) && !player.hasPermission("nexo.pv.*")) {
                 player.sendMessage(NexoColor.parse(ERR_NO_PERM.replace("%num%", String.valueOf(vaultNumber))));
                 return true;
             }
 
-            // 🌟 Llama al método asíncrono que abre el inventario directamente
+            // Llama al método asíncrono que abre el inventario directamente
             plugin.getMochilaManager().abrirMochila(player, vaultNumber);
 
         } catch (NumberFormatException e) {

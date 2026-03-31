@@ -93,13 +93,16 @@ public class NexoMenuListener implements Listener {
                 player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
 
                 player.closeInventory();
-                new HubMenu(plugin, player).openMenu();
+
+                // 🌟 NUEVA INSTANCIACIÓN OMEGA
+                new HubMenu(player, plugin).open();
             }
         }
     }
 
     @EventHandler
     public void onClickInventory(InventoryClickEvent event) {
+        // 🛡️ Solo mantenemos la protección para que el jugador no pueda mover o tirar el reloj
         if (event.getCurrentItem() != null && isMenuItem(event.getCurrentItem())) event.setCancelled(true);
         if (event.getCursor() != null && isMenuItem(event.getCursor())) event.setCancelled(true);
         if (event.getClick().name().contains("NUMBER_KEY")) {
@@ -107,57 +110,7 @@ public class NexoMenuListener implements Listener {
             if (isMenuItem(hotbarItem)) event.setCancelled(true);
         }
 
-        if (event.getInventory().getHolder() instanceof HubMenu) {
-            event.setCancelled(true);
-
-            if (event.getCurrentItem() == null || !event.getCurrentItem().hasItemMeta()) return;
-
-            Player player = (Player) event.getWhoClicked();
-            ItemMeta meta = event.getCurrentItem().getItemMeta();
-            NamespacedKey actionKey = new NamespacedKey(plugin, "hub_action");
-
-            if (meta.getPersistentDataContainer().has(actionKey, PersistentDataType.STRING)) {
-                String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
-
-                player.playSound(player.getLocation(), org.bukkit.Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
-                player.closeInventory();
-
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    switch (action) {
-                        case "open_skills":
-                            player.performCommand("skills");
-                            break;
-                        case "open_colecciones":
-                            player.performCommand("colecciones");
-                            break;
-                        case "open_recipes":
-                            player.performCommand("recipes");
-                            break;
-                        case "open_bazar":
-                            player.performCommand("bazar");
-                            break;
-                        case "open_slayer":
-                            player.performCommand("slayer");
-                            break;
-                        case "open_pv":
-                            player.performCommand("pv");
-                            break;
-                        case "open_wardrobe":
-                            player.performCommand("wardrobe");
-                            break;
-                        case "open_fast_travel":
-                            player.performCommand("warp");
-                            break;
-                        case "open_clans":
-                            player.performCommand("clan");
-                            break;
-                        case "open_blackmarket":
-                            player.performCommand("mercadonegro");
-                            break;
-                    }
-                }, 3L);
-            }
-        }
+        // ✂️ Hemos eliminado TODA la lógica de clics del HubMenu, ya que ahora lo gestiona de forma autónoma.
     }
 
     private boolean isMenuItem(ItemStack item) {

@@ -5,6 +5,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
@@ -27,6 +28,11 @@ public abstract class NexoMenu implements InventoryHolder {
     public abstract int getSlots();
     public abstract void handleMenu(InventoryClickEvent e);
     public abstract void setMenuItems();
+
+    // 🌟 NUEVO: Método opcional para detectar cuando se cierra el menú.
+    // Lo dejamos vacío aquí para que los menús que NO lo necesiten no den error.
+    public void handleClose(InventoryCloseEvent e) {
+    }
 
     // 🌟 El método universal para abrir el menú
     public void open() {
