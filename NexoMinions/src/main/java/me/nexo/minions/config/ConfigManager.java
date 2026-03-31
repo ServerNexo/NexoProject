@@ -23,6 +23,8 @@ public class ConfigManager {
         if (messagesFile == null) {
             messagesFile = new File(plugin.getDataFolder(), "messages.yml");
         }
+
+        // 🌟 Recargamos la configuración desde el archivo recién actualizado
         messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
 
         InputStream defaultStream = plugin.getResource("messages.yml");
@@ -43,8 +45,14 @@ public class ConfigManager {
         if (messagesFile == null) {
             messagesFile = new File(plugin.getDataFolder(), "messages.yml");
         }
-        if (!messagesFile.exists()) {
-            plugin.saveResource("messages.yml", false);
+
+        // 🌟 PROTOCOLO OMEGA ACTIVADO:
+        // Eliminamos el if(!exists) y forzamos la actualización a "true".
+        // Siempre extraerá el messages.yml más reciente de tu código fuente.
+        try {
+            plugin.saveResource("messages.yml", true);
+        } catch (IllegalArgumentException e) {
+            plugin.getLogger().warning("No se pudo actualizar messages.yml desde el jar.");
         }
     }
 

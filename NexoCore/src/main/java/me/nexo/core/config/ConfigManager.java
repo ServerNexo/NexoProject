@@ -27,14 +27,37 @@ public class ConfigManager {
 
     private FileConfiguration loadConfig(String configName) {
         File configFile = new File(plugin.getDataFolder(), configName);
-        if (!configFile.exists()) {
-            plugin.saveResource(configName, false);
+
+        // 🛡️ REGLA OMEGA: ¡Proteger las credenciales de Supabase!
+        if (configName.equalsIgnoreCase("config.yml")) {
+            // Solo se crea si no existe. JAMÁS se sobreescribe.
+            if (!configFile.exists()) {
+                plugin.saveResource(configName, false);
+            }
         }
+        // 🌟 PROTOCOLO DE ACTUALIZACIÓN: messages.yml y otros archivos
+        else {
+            try {
+                // Siempre extrae la versión más nueva del .jar (Color Lila Iluminado, nuevos textos, etc)
+                plugin.saveResource(configName, true);
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("No se pudo actualizar " + configName + " desde el jar.");
+            }
+        }
+
         return YamlConfiguration.loadConfiguration(configFile);
     }
 
     public void reloadConfig(String configName) {
         File configFile = new File(plugin.getDataFolder(), configName);
+
+        // Si hacemos reload, también forzamos la actualización de los mensajes desde el .jar
+        if (!configName.equalsIgnoreCase("config.yml")) {
+            try {
+                plugin.saveResource(configName, true);
+            } catch (IllegalArgumentException ignored) {}
+        }
+
         configs.put(configName, YamlConfiguration.loadConfiguration(configFile));
     }
 
