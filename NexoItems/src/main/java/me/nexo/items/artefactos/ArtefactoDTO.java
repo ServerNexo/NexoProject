@@ -10,7 +10,7 @@ public record ArtefactoDTO(
         double power
 ) {
     public enum Rareza {
-        COMUN("&#1c0f2a"),
+        COMUN("&#E6CCFF"),
         RARO("&#00f5ff"),
         EPICO("&#ff00ff"),
         LEGENDARIO("&#ff00ff"),

@@ -49,7 +49,7 @@ public class BlessingMenu extends NexoMenu {
         if (metaStd != null) {
             metaStd.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff<bold>Bendición Menor</bold>"));
             List<net.kyori.adventure.text.Component> loreStd = new ArrayList<>();
-            loreStd.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aProtege tu experiencia y equipo de 1 muerte."));
+            loreStd.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFProtege tu experiencia y equipo de 1 muerte."));
             loreStd.add(CrossplayUtils.parseCrossplay(player, " "));
             loreStd.add(CrossplayUtils.parseCrossplay(player, "&#ff00ffPrecio: 50,000 Monedas"));
             metaStd.lore(loreStd);
@@ -63,7 +63,7 @@ public class BlessingMenu extends NexoMenu {
         if (metaPrem != null) {
             metaPrem.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>Bendición del Vacío Absoluto</bold>"));
             List<net.kyori.adventure.text.Component> lorePrem = new ArrayList<>();
-            lorePrem.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aProtección total garantizada por los dioses."));
+            lorePrem.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFProtección total garantizada por los dioses."));
             lorePrem.add(CrossplayUtils.parseCrossplay(player, " "));
             lorePrem.add(CrossplayUtils.parseCrossplay(player, "&#00f5ffPrecio: 150 Gemas"));
             metaPrem.lore(lorePrem);

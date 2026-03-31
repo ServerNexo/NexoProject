@@ -71,7 +71,7 @@ public class CombatComboManager implements Listener {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline()) {
                 p.setWorldBorder(null);
-                p.sendMessage(NexoColor.parse("&#1c0f2aEl Frenesí se ha desvanecido. Sistemas retornando a la normalidad."));
+                p.sendMessage(NexoColor.parse("&#E6CCFFEl Frenesí se ha desvanecido. Sistemas retornando a la normalidad."));
                 enFrenesi.remove(id);
             }
         }, 200L);
@@ -84,7 +84,7 @@ public class CombatComboManager implements Listener {
                 if (ahora - ultimoKill.getOrDefault(id, 0L) > 3000) {
                     combos.remove(id);
                     Player p = Bukkit.getPlayer(id);
-                    if (p != null) p.sendActionBar(NexoColor.parse("&#1c0f2aRacha de combate finalizada."));
+                    if (p != null) p.sendActionBar(NexoColor.parse("&#E6CCFFRacha de combate finalizada."));
                 }
             }
         }, 10L, 10L);

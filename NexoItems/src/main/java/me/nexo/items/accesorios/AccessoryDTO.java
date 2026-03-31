@@ -13,7 +13,7 @@ public record AccessoryDTO(
     }
 
     public enum Rareza {
-        COMUN(3, "&#1c0f2a"),
+        COMUN(3, "&#E6CCFF"),
         RARO(8, "&#00f5ff"),
         EPICO(12, "&#ff00ff"),
         LEGENDARIO(16, "&#ff00ff"),

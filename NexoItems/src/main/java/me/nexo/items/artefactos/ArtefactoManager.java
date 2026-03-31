@@ -234,7 +234,7 @@ public class ArtefactoManager {
 
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 if (invulnerables.remove(p.getUniqueId())) {
-                    p.sendMessage(NexoColor.parse("&#1c0f2aLa Capa Espectral se ha desvanecido. Tu firma vuelve a ser visible."));
+                    p.sendMessage(NexoColor.parse("&#E6CCFFLa Capa Espectral se ha desvanecido. Tu firma vuelve a ser visible."));
                     p.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1f, 1f);
                 }
             }, 80L);
@@ -244,7 +244,7 @@ public class ArtefactoManager {
         estrategias.put("reloj_astral", (p, dto) -> {
             limpiarCooldowns(p.getUniqueId());
             p.playSound(p.getLocation(), Sound.BLOCK_BELL_RESONATE, 1f, 1.5f);
-            p.sendMessage(NexoColor.parse("&#00f5ff✨ <bold>PARADOJA TEMPORAL:</bold> &#1c0f2aTus sistemas de enfriamiento han sido reseteados."));
+            p.sendMessage(NexoColor.parse("&#00f5ff✨ <bold>PARADOJA TEMPORAL:</bold> &#E6CCFFTus sistemas de enfriamiento han sido reseteados."));
             return true;
         });
 

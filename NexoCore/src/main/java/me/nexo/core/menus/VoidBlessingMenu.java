@@ -57,8 +57,8 @@ public class VoidBlessingMenu implements InventoryHolder {
             long remainingMillis = user.getVoidBlessingUntil() - System.currentTimeMillis();
             String timeFormatted = formatTime(remainingMillis);
 
-            lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aEstado: &#00f5ffACTIVO"));
-            lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aTiempo restante: &#ff00ff" + timeFormatted));
+            lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFEstado: &#00f5ffACTIVO"));
+            lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFTiempo restante: &#ff00ff" + timeFormatted));
             lore.add(Component.empty());
             lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff[✧] Beneficios Canalizados:"));
             // 🔥 CORRECCIÓN: Beneficios activos en Carmesí como solicitaste
@@ -69,8 +69,8 @@ public class VoidBlessingMenu implements InventoryHolder {
             statusItem.setType(Material.COAL); // Cambia el ítem si está inactivo
             statusMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#8b0000<bold>Bendición Inactiva</bold>"));
 
-            lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aEstado: &#8b0000DESACTIVADO"));
-            lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aTu alma se encuentra vulnerable."));
+            lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFEstado: &#8b0000DESACTIVADO"));
+            lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFTu alma se encuentra vulnerable."));
             lore.add(Component.empty());
             lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000[!] Consigue una Esencia del Vacío"));
             lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000    para proteger tu progreso."));

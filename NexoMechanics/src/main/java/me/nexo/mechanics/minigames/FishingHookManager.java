@@ -47,7 +47,7 @@ public class FishingHookManager implements Listener {
                         int maxEnergia = 100 + ((user.getNexoNivel() - 1) * 20) + user.getEnergiaExtraAccesorios();
 
                         user.setEnergiaMineria(Math.min(energiaAct + 5, maxEnergia));
-                        p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>EXTRACCIÓN ACUÁTICA:</bold> &#1c0f2aReservas recargadas &#ff00ff(+5⚡)"));
+                        p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>EXTRACCIÓN ACUÁTICA:</bold> &#E6CCFFReservas recargadas &#ff00ff(+5⚡)"));
                     }
                 }
             }

@@ -90,7 +90,7 @@ public class PasivasListener implements Listener {
 
                     victima.sendTitle(
                             net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#8b0000<bold>¡ESCUDO DE EMERGENCIA!</bold>")),
-                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#1c0f2aDaño letal anulado. Sistemas en enfriamiento.")),
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#E6CCFFDaño letal anulado. Sistemas en enfriamiento.")),
                             5, 40, 5
                     );
                 }
@@ -202,7 +202,7 @@ public class PasivasListener implements Listener {
                 ItemStack caught = itemEntity.getItemStack();
                 caught.setAmount(caught.getAmount() * 2);
                 itemEntity.setItemStack(caught);
-                p.sendActionBar(NexoColor.parse("&#00f5ff[✓] <bold>EXTRACCIÓN DUPLICADA:</bold> &#1c0f2aRedimensionamiento cuántico aplicado."));
+                p.sendActionBar(NexoColor.parse("&#00f5ff[✓] <bold>EXTRACCIÓN DUPLICADA:</bold> &#E6CCFFRedimensionamiento cuántico aplicado."));
             }
         }
     }
@@ -261,7 +261,7 @@ public class PasivasListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 p.setLevel(p.getLevel() + event.getExpLevelCost());
                 p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1f, 1f);
-                p.sendMessage(NexoColor.parse("&#ff00ff✨ <bold>RETENCIÓN DE ENERGÍA:</bold> &#1c0f2aCosto de ensamblaje reintegrado."));
+                p.sendMessage(NexoColor.parse("&#ff00ff✨ <bold>RETENCIÓN DE ENERGÍA:</bold> &#E6CCFFCosto de ensamblaje reintegrado."));
             }, 1L);
         }
     }

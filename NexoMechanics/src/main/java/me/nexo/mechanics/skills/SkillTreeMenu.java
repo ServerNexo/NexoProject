@@ -52,7 +52,7 @@ public class SkillTreeMenu extends NexoMenu {
 
         // 🌟 ÍTEM DE INFORMACIÓN DEL JUGADOR
         setItem(4, Material.ENCHANTED_BOOK, "&#ff00ffTus Puntos: &#00f5ff" + kp + " KP",
-                List.of("&#1c0f2aUsa estos puntos para desbloquear", "&#1c0f2anuevos nodos tecnológicos."));
+                List.of("&#E6CCFFUsa estos puntos para desbloquear", "&#E6CCFFnuevos nodos tecnológicos."));
 
         // 🌟 NODO DE EJEMPLO (Plantilla para que agregues el resto)
         ItemStack miningNode = new ItemStack(Material.DIAMOND_PICKAXE);
@@ -60,7 +60,7 @@ public class SkillTreeMenu extends NexoMenu {
         if (miningMeta != null) {
             miningMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ffNodo: Extracción Profunda"));
             miningMeta.lore(List.of(
-                    CrossplayUtils.parseCrossplay(player, "&#1c0f2aPermite minar minerales del vacío."),
+                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFPermite minar minerales del vacío."),
                     CrossplayUtils.parseCrossplay(player, " "),
                     CrossplayUtils.parseCrossplay(player, "&#ff00ffCosto: &#00f5ff5 KP")
             ));
@@ -118,12 +118,12 @@ public class SkillTreeMenu extends NexoMenu {
 
             attachment.setPermission(permiso, true);
 
-            p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>NODO DESBLOQUEADO:</bold> &#1c0f2aNueva tecnología industrial integrada a tu sistema."));
-            p.sendMessage(NexoColor.parse("&#1c0f2aPuntos de Conocimiento restantes: &#00f5ff" + user.getKnowledgePoints()));
+            p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>NODO DESBLOQUEADO:</bold> &#E6CCFFNueva tecnología industrial integrada a tu sistema."));
+            p.sendMessage(NexoColor.parse("&#E6CCFFPuntos de Conocimiento restantes: &#00f5ff" + user.getKnowledgePoints()));
             p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
 
         } else {
-            p.sendMessage(NexoColor.parse("&#8b0000[!] Conocimiento Insuficiente. &#1c0f2aRequieres más experiencia práctica para procesar este nodo."));
+            p.sendMessage(NexoColor.parse("&#8b0000[!] Conocimiento Insuficiente. &#E6CCFFRequieres más experiencia práctica para procesar este nodo."));
             p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
         }
     }

@@ -83,7 +83,7 @@ public class ItemManager {
     private static void aplicarEvolucionVisual(ItemStack item, String nombreBase, double danioBase, int nivel, String reforja) {
         ItemMeta meta = item.getItemMeta();
         String prefijoReforja = reforja.isEmpty() ? "" : "&#ff00ff" + reforja + " ";
-        String nombreFinal = prefijoReforja + nombreBase + " &#1c0f2a[Nv. " + nivel + "]";
+        String nombreFinal = prefijoReforja + nombreBase + " &#E6CCFF[Nv. " + nivel + "]";
         meta.displayName(CrossplayUtils.parseCrossplay(null, nombreFinal));
         if (danioBase > 0) {
             meta.removeAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE);
@@ -91,8 +91,8 @@ public class ItemManager {
             meta.addAttributeModifier(Attribute.GENERIC_ATTACK_DAMAGE, mod);
         }
         List<String> nuevoLore = new ArrayList<>();
-        nuevoLore.add(CrossplayUtils.getChat(null, "&#1c0f2aEstadísticas de Evolución:"));
-        nuevoLore.add(CrossplayUtils.getChat(null, "&#1c0f2aNivel Cénit: &#ff00ff" + nivel + "&#1c0f2a/60"));
+        nuevoLore.add(CrossplayUtils.getChat(null, "&#E6CCFFEstadísticas de Evolución:"));
+        nuevoLore.add(CrossplayUtils.getChat(null, "&#E6CCFFNivel Cénit: &#ff00ff" + nivel + "&#E6CCFF/60"));
         if (meta.hasLore()) {
             for (String linea : meta.getLore()) {
                 if (linea.contains("✦") || linea.contains("Nivel Cénit")) continue;
@@ -128,15 +128,15 @@ public class ItemManager {
         List<String> lore = new ArrayList<>();
         meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre()));
         lore.add(CrossplayUtils.getChat(null, dto.rareza()));
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aProfesión: &#ff00ff" + dto.profesion()));
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aTier: &#ff00ff" + dto.tier()));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFProfesión: &#ff00ff" + dto.profesion()));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFTier: &#ff00ff" + dto.tier()));
         lore.add(" ");
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aVelocidad Base: &#00f5ff+" + dto.velocidadBase()));
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aBonus Drops: &#00f5ff+" + dto.multiplicadorFortuna() + "%"));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFVelocidad Base: &#00f5ff+" + dto.velocidadBase()));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFBonus Drops: &#00f5ff+" + dto.multiplicadorFortuna() + "%"));
         lore.add(" ");
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aBloques Rotos: &#ff00ff0"));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFBloques Rotos: &#ff00ff0"));
         lore.add(" ");
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aRequisito de " + dto.profesion() + ": Nivel " + dto.nivelRequerido()));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFRequisito de " + dto.profesion() + ": Nivel " + dto.nivelRequerido()));
         meta.setLore(lore);
         meta.setUnbreakable(true);
         meta.getPersistentDataContainer().set(llaveHerramientaId, PersistentDataType.STRING, dto.id());
@@ -165,18 +165,18 @@ public class ItemManager {
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
         List<String> lore = new ArrayList<>();
-        meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre() + " &#1c0f2a[&#ff00ff+0&#1c0f2a]"));
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aClase: &#ff00ff" + dto.claseRequerida()));
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aElemento: " + dto.elemento()));
+        meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre() + " &#E6CCFF[&#ff00ff+0&#E6CCFF]"));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFClase: &#ff00ff" + dto.claseRequerida()));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFElemento: " + dto.elemento()));
         lore.add(" ");
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aDaño Base: &#8b0000" + dto.danioBase() + " ⚔"));
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aVelocidad: &#ff00ff" + dto.velocidadAtaque() + " ⚡"));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFDaño Base: &#8b0000" + dto.danioBase() + " ⚔"));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFVelocidad: &#ff00ff" + dto.velocidadAtaque() + " ⚡"));
         lore.add(" ");
         if (!dto.habilidadId().equalsIgnoreCase("ninguna")) {
-            lore.add(CrossplayUtils.getChat(null, "&#ff00ff✦ Habilidad: &#1c0f2a" + dto.habilidadId().toUpperCase() + " &#ff00ff<bold>(CLIC DERECHO)</bold>"));
+            lore.add(CrossplayUtils.getChat(null, "&#ff00ff✦ Habilidad: &#E6CCFF" + dto.habilidadId().toUpperCase() + " &#ff00ff<bold>(CLIC DERECHO)</bold>"));
             lore.add(" ");
         }
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aRequisito de Combate: Nivel " + dto.nivelRequerido()));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFRequisito de Combate: Nivel " + dto.nivelRequerido()));
         meta.setLore(lore);
         meta.setUnbreakable(true);
         meta.getPersistentDataContainer().set(llaveWeaponId, PersistentDataType.STRING, dto.id());
@@ -217,37 +217,37 @@ public class ItemManager {
         String etiquetaPieza = "";
         switch (tipoPieza.toUpperCase()) {
             case "HELMET":
-                etiquetaPieza = " &#1c0f2a(Casco)";
+                etiquetaPieza = " &#E6CCFF(Casco)";
                 break;
             case "CHESTPLATE":
-                etiquetaPieza = " &#1c0f2a(Peto)";
+                etiquetaPieza = " &#E6CCFF(Peto)";
                 break;
             case "LEGGINGS":
-                etiquetaPieza = " &#1c0f2a(Pantalones)";
+                etiquetaPieza = " &#E6CCFF(Pantalones)";
                 break;
             case "BOOTS":
-                etiquetaPieza = " &#1c0f2a(Botas)";
+                etiquetaPieza = " &#E6CCFF(Botas)";
                 break;
         }
         meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre() + etiquetaPieza));
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aClase: &#ff00ff" + dto.claseRequerida()));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFClase: &#ff00ff" + dto.claseRequerida()));
         lore.add(" ");
         if (dto.vidaExtra() > 0)
-            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aVida Extra: &#8b0000+" + dto.vidaExtra() + " ❤"));
+            lore.add(CrossplayUtils.getChat(null, "&#E6CCFFVida Extra: &#8b0000+" + dto.vidaExtra() + " ❤"));
         if (dto.velocidadMovimiento() > 0)
-            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aVelocidad: &#00f5ff+" + dto.velocidadMovimiento() + " 🍃"));
+            lore.add(CrossplayUtils.getChat(null, "&#E6CCFFVelocidad: &#00f5ff+" + dto.velocidadMovimiento() + " 🍃"));
         if (dto.suerteMinera() > 0)
-            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aFortuna Minera: &#00f5ff+" + dto.suerteMinera() + "% ✨"));
+            lore.add(CrossplayUtils.getChat(null, "&#E6CCFFFortuna Minera: &#00f5ff+" + dto.suerteMinera() + "% ✨"));
         if (dto.velocidadMineria() > 0)
-            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aPrisa Minera: &#ff00ff+" + dto.velocidadMineria() + " ⚡"));
+            lore.add(CrossplayUtils.getChat(null, "&#E6CCFFPrisa Minera: &#ff00ff+" + dto.velocidadMineria() + " ⚡"));
         if (dto.suerteAgricola() > 0)
-            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aFortuna Agrícola: &#00f5ff+" + dto.suerteAgricola() + "% 🌾"));
+            lore.add(CrossplayUtils.getChat(null, "&#E6CCFFFortuna Agrícola: &#00f5ff+" + dto.suerteAgricola() + "% 🌾"));
         if (dto.suerteTala() > 0)
-            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aDoble Caída (Tala): &#00f5ff+" + dto.suerteTala() + "% 🪓"));
+            lore.add(CrossplayUtils.getChat(null, "&#E6CCFFDoble Caída (Tala): &#00f5ff+" + dto.suerteTala() + "% 🪓"));
         if (dto.criaturaMarina() > 0)
-            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aProb. Criatura Marina: &#00f5ff+" + dto.criaturaMarina() + "% 🦑"));
+            lore.add(CrossplayUtils.getChat(null, "&#E6CCFFProb. Criatura Marina: &#00f5ff+" + dto.criaturaMarina() + "% 🦑"));
         if (dto.velocidadPesca() > 0)
-            lore.add(CrossplayUtils.getChat(null, "&#1c0f2aVelocidad Pesca: &#00f5ff+" + dto.velocidadPesca() + "% 🎣"));
+            lore.add(CrossplayUtils.getChat(null, "&#E6CCFFVelocidad Pesca: &#00f5ff+" + dto.velocidadPesca() + "% 🎣"));
         List<String> loreCustom = pluginMemoria.getFileManager().getArmaduras().getStringList("armaduras_profesion." + id_yml + ".lore_custom");
         if (loreCustom != null && !loreCustom.isEmpty()) {
             lore.add(" ");
@@ -256,7 +256,7 @@ public class ItemManager {
             }
         }
         lore.add(" ");
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aRequisito de " + dto.skillRequerida() + ": Nivel " + dto.nivelRequerido()));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFRequisito de " + dto.skillRequerida() + ": Nivel " + dto.nivelRequerido()));
         meta.setLore(lore);
         meta.setUnbreakable(true);
         meta.getPersistentDataContainer().set(llaveArmaduraId, PersistentDataType.STRING, dto.id());
@@ -280,10 +280,10 @@ public class ItemManager {
         ItemMeta meta = item.getItemMeta();
         meta.displayName(CrossplayUtils.parseCrossplay(null, "&#ff00ff🌌 Hoja del Vacío"));
         List<String> lore = new ArrayList<>();
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aArtefacto de Utilidad"));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFArtefacto de Utilidad"));
         lore.add(" ");
         lore.add(CrossplayUtils.getChat(null, "&#ff00ffHabilidad: Transmisión Instantánea <bold>(CLIC DERECHO)</bold>"));
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aCosto: &#ff00ff40 Energía ⚡"));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFCosto: &#ff00ff40 Energía ⚡"));
         lore.add(CrossplayUtils.getChat(null, "&#8b0000🔒 Ligado al Alma"));
         meta.setLore(lore);
         meta.setUnbreakable(true);
@@ -349,13 +349,13 @@ public class ItemManager {
         }
         meta.displayName(CrossplayUtils.parseCrossplay(null, dto.nombre() + " " + nombreRomanos));
         List<String> lore = new ArrayList<>();
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aLibro de Encantamiento Mágico"));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFLibro de Encantamiento Mágico"));
         lore.add(" ");
         double valorActual = dto.getValorPorNivel(nivelReal);
         String descReemplazada = dto.descripcion().replace("{val}", String.valueOf(valorActual));
         lore.add(CrossplayUtils.getChat(null, descReemplazada));
         lore.add(" ");
-        lore.add(CrossplayUtils.getChat(null, "&#1c0f2aAplica a: " + String.join(", ", dto.aplicaA())));
+        lore.add(CrossplayUtils.getChat(null, "&#E6CCFFAplica a: " + String.join(", ", dto.aplicaA())));
         lore.add(CrossplayUtils.getChat(null, "&#ff00ffLlévalo a un Yunque Mágico para aplicarlo."));
         meta.setLore(lore);
         meta.getPersistentDataContainer().set(llaveEnchantId, PersistentDataType.STRING, dto.id());

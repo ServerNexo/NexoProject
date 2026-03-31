@@ -185,7 +185,7 @@ public class BlockBreakListener implements Listener {
                         if (lore != null) {
                             for (int i = 0; i < lore.size(); i++) {
                                 if (org.bukkit.ChatColor.stripColor(lore.get(i)).contains("Bloques Rotos:")) {
-                                    lore.set(i, CrossplayUtils.getChat(jugador, "&#1c0f2aBloques Rotos: &#ff00ff" + String.format("%,d", rotos)));
+                                    lore.set(i, CrossplayUtils.getChat(jugador, "&#E6CCFFBloques Rotos: &#ff00ff" + String.format("%,d", rotos)));
                                     break;
                                 }
                             }

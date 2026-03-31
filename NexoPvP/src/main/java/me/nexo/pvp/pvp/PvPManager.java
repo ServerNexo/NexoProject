@@ -39,10 +39,10 @@ public class PvPManager {
 
         if (pvpActivo.contains(id)) {
             pvpActivo.remove(id);
-            p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>PROTOCOLO DE PAZ:</bold> &#1c0f2aHostilidad desactivada. Escudos neuronales activos."));
+            p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>PROTOCOLO DE PAZ:</bold> &#E6CCFFHostilidad desactivada. Escudos neuronales activos."));
         } else {
             pvpActivo.add(id);
-            p.sendMessage(NexoColor.parse("&#8b0000[!] <bold>PROTOCOLO DE GUERRA:</bold> &#1c0f2aHostilidad activada. Sistemas de armamento en línea."));
+            p.sendMessage(NexoColor.parse("&#8b0000[!] <bold>PROTOCOLO DE GUERRA:</bold> &#E6CCFFHostilidad activada. Sistemas de armamento en línea."));
         }
     }
 
@@ -50,10 +50,10 @@ public class PvPManager {
         long expiracion = System.currentTimeMillis() + 15000L;
 
         if (!estaEnCombate(p1)) {
-            p1.sendMessage(NexoColor.parse("&#8b0000<bold>¡ALERTA DE COMBATE!</bold> &#1c0f2aEnlace táctico detectado (15s). No te desconectes."));
+            p1.sendMessage(NexoColor.parse("&#8b0000<bold>¡ALERTA DE COMBATE!</bold> &#E6CCFFEnlace táctico detectado (15s). No te desconectes."));
         }
         if (!estaEnCombate(p2)) {
-            p2.sendMessage(NexoColor.parse("&#8b0000<bold>¡ALERTA DE COMBATE!</bold> &#1c0f2aEnlace táctico detectado (15s). No te desconectes."));
+            p2.sendMessage(NexoColor.parse("&#8b0000<bold>¡ALERTA DE COMBATE!</bold> &#E6CCFFEnlace táctico detectado (15s). No te desconectes."));
         }
 
         enCombate.put(p1.getUniqueId(), expiracion);

@@ -11,9 +11,13 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockExplodeEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
+
+import java.util.Iterator;
 
 public class EnvironmentListener implements Listener {
 
@@ -21,6 +25,25 @@ public class EnvironmentListener implements Listener {
 
     public EnvironmentListener(ClaimManager claimManager) {
         this.claimManager = claimManager;
+    }
+
+    // 🛡️ BLOQUEAR EXPLOSIONES (CREEPERS, TNT, ETC) DENTRO DE LOS DOMINIOS
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onEntityExplode(EntityExplodeEvent event) {
+        // Revisamos la lista de bloques que van a explotar
+        event.blockList().removeIf(block -> {
+            ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
+            // Si el bloque pertenece a un Monolito (o es el Monolito en sí), lo salvamos de la destrucción
+            return stone != null;
+        });
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onBlockExplode(BlockExplodeEvent event) {
+        event.blockList().removeIf(block -> {
+            ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
+            return stone != null;
+        });
     }
 
     // 🛡️ BLOQUEAR APERTURA DE COFRES, HORNOS, PUERTAS

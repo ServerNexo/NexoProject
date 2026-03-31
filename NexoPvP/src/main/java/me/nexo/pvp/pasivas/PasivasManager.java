@@ -68,7 +68,7 @@ public class PasivasManager {
                 if (invulnerablesUltimaBatalla.containsKey(id)) {
                     if (System.currentTimeMillis() > invulnerablesUltimaBatalla.get(id)) {
                         invulnerablesUltimaBatalla.remove(id);
-                        p.sendMessage(NexoColor.parse("&#8b0000[!] Escudo de Emergencia Agotado: &#1c0f2aTu inmunidad táctica se ha desvanecido."));
+                        p.sendMessage(NexoColor.parse("&#8b0000[!] Escudo de Emergencia Agotado: &#E6CCFFTu inmunidad táctica se ha desvanecido."));
                     }
                 }
             }

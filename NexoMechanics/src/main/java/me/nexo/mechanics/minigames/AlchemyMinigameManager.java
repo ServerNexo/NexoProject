@@ -85,7 +85,7 @@ public class AlchemyMinigameManager implements Listener {
 
                 if (mezcla.bombeos >= 3) {
                     p.playSound(locSoporte, Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
-                    CrossplayUtils.sendMessage(p, "&#00f5ff[✓] <bold>MEZCLA ESTABILIZADA:</bold> &#1c0f2aLa pureza de los químicos ha sido potenciada.");
+                    CrossplayUtils.sendMessage(p, "&#00f5ff[✓] <bold>MEZCLA ESTABILIZADA:</bold> &#E6CCFFLa pureza de los químicos ha sido potenciada.");
 
                     aplicarPremio(locSoporte, mezcla.pocionesOriginales);
                     mezclas.remove(locSoporte);

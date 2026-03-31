@@ -27,7 +27,7 @@ public class ProtectionMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        return "&#1c0f2a<bold>»</bold> &#00f5ffMonolito del Vacío";
+        return "&#E6CCFF<bold>»</bold> &#00f5ffMonolito del Vacío";
     }
 
     @Override
@@ -41,8 +41,8 @@ public class ProtectionMenu extends NexoMenu {
 
         // SLOT 11: ACÓLITOS
         List<String> memLore = List.of(
-                "&#1c0f2aExplora y destierra a las almas",
-                "&#1c0f2avinculadas a este Monolito.",
+                "&#E6CCFFExplora y destierra a las almas",
+                "&#E6CCFFvinculadas a este Monolito.",
                 " ",
                 "&#00f5ff► Clic para abrir el registro"
         );
@@ -50,18 +50,18 @@ public class ProtectionMenu extends NexoMenu {
 
         // SLOT 13: NÚCLEO
         List<String> infoLore = new ArrayList<>();
-        infoLore.add("&#1c0f2aSeñor Oscuro: &#ff00ff" + Bukkit.getOfflinePlayer(stone.getOwnerId()).getName());
-        infoLore.add("&#1c0f2aTipo de Culto: &#ff00ff" + (stone.getClanId() == null ? "Solitario" : "Sindicato"));
+        infoLore.add("&#E6CCFFSeñor Oscuro: &#ff00ff" + Bukkit.getOfflinePlayer(stone.getOwnerId()).getName());
+        infoLore.add("&#E6CCFFTipo de Culto: &#ff00ff" + (stone.getClanId() == null ? "Solitario" : "Sindicato"));
         infoLore.add(" ");
         double porcentaje = (stone.getCurrentEnergy() / stone.getMaxEnergy()) * 100;
         String colorEnergia = porcentaje > 50 ? "&#00f5ff" : (porcentaje > 20 ? "&#ff00ff" : "&#8b0000");
-        infoLore.add("&#1c0f2aEsencia Consumida: " + colorEnergia + String.format("%.1f", stone.getCurrentEnergy()) + " &#1c0f2a/ &#00f5ff" + stone.getMaxEnergy());
+        infoLore.add("&#E6CCFFEsencia Consumida: " + colorEnergia + String.format("%.1f", stone.getCurrentEnergy()) + " &#E6CCFF/ &#00f5ff" + stone.getMaxEnergy());
         setItem(13, Material.LODESTONE, "&#ff00ff<bold>NÚCLEO DEL MONOLITO</bold>", infoLore);
 
         // SLOT 15: FLAGS
         List<String> flagLore = List.of(
-                "&#1c0f2aAltera las leyes naturales y",
-                "&#1c0f2afísicas de los forasteros.",
+                "&#E6CCFFAltera las leyes naturales y",
+                "&#E6CCFFfísicas de los forasteros.",
                 " ",
                 "&#00f5ff► Clic para dictar las leyes"
         );
@@ -69,8 +69,8 @@ public class ProtectionMenu extends NexoMenu {
 
         // SLOT 22: RECARGA
         List<String> rechargeLore = List.of(
-                "&#1c0f2aOfrece sacrificios (Diamantes o Ecos)",
-                "&#1c0f2apara alimentar el vacío del Monolito."
+                "&#E6CCFFOfrece sacrificios (Diamantes o Ecos)",
+                "&#E6CCFFpara alimentar el vacío del Monolito."
         );
         setItem(22, Material.ECHO_SHARD, "&#ff00ff<bold>[ INFUNDIR ESENCIA ]</bold>", rechargeLore);
     }

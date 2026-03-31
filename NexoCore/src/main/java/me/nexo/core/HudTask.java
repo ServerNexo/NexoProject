@@ -55,17 +55,17 @@ public class HudTask extends BukkitRunnable {
             }
 
             // 3. BARRA DE MANÁ VISUAL [ ■■■■□ ]
-            String manaBar = buildProgressBar(manaActual, maxMana, 5, "&#00f5ff■", "&#1c0f2a■");
+            String manaBar = buildProgressBar(manaActual, maxMana, 5, "&#00f5ff■", "&#E6CCFF■");
 
             // 4. ESTADO DE CLASE O SKILL ACTIVA
             String activeFocus = "Ninguna";
             if (hasFullSet(p, "ASSASSIN")) activeFocus = "&#8b0000Asesino";
             else if (hasFullSet(p, "INQUISITOR")) activeFocus = "&#ff00ffInquisidor";
-            else activeFocus = "&#1c0f2aAventurero";
+            else activeFocus = "&#E6CCFFAventurero";
 
             // 5. RENDERIZADO FINAL DEL ACTION BAR (Vivid Void Protocol)
             // Ejemplo: [ ■■■■□ ] 80/100 MP | Clase: Inquisidor ✧
-            String hudFormat = String.format("%s &#00f5ff%d/%d MP &#1c0f2a| &#00f5ffClase: %s%s", 
+            String hudFormat = String.format("%s &#00f5ff%d/%d MP &#E6CCFF| &#00f5ffClase: %s%s", 
                     manaBar, manaActual, maxMana, activeFocus, voidIcon);
 
             p.sendActionBar(NexoColor.parse(hudFormat));
@@ -78,12 +78,12 @@ public class HudTask extends BukkitRunnable {
         float percent = (float) current / max;
         int progressBars = (int) (totalBars * percent);
 
-        StringBuilder bar = new StringBuilder("&#1c0f2a[ ");
+        StringBuilder bar = new StringBuilder("&#E6CCFF[ ");
         for (int i = 0; i < totalBars; i++) {
             if (i < progressBars) bar.append(filledSymbol);
             else bar.append(emptySymbol);
         }
-        bar.append(" &#1c0f2a]");
+        bar.append(" &#E6CCFF]");
         return bar.toString();
     }
 

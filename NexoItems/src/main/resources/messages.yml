@@ -8,10 +8,10 @@ comandos:
   accesorios:
     no-jugador: "&#8b0000[!] El terminal requiere un operario humano."
     ayuda:
-      divisor: "&#1c0f2a========================================"
+      divisor: "&#E6CCFF========================================"
       titulo: "&#ff00ff<bold>💍 MÓDULO DE ACCESORIOS (BETA)</bold>"
-      abrir: "&#ff00ff/accesorios &#1c0f2a- Abre tu bolsa de accesorios."
-      give: "&#ff00ff/accesorios give <jugador> <id> &#1c0f2a- Otorga un accesorio a un operario."
+      abrir: "&#ff00ff/accesorios &#E6CCFF- Abre tu bolsa de accesorios."
+      give: "&#ff00ff/accesorios give <jugador> <id> &#E6CCFF- Otorga un accesorio a un operario."
     errores:
       sin-permiso: "&#8b0000[!] Acceso denegado al módulo administrativo."
       uso-give: "&#8b0000[!] Uso: &#ff00ff/accesorios give <jugador> <id>"
@@ -23,18 +23,18 @@ comandos:
   guardarropa:
     no-jugador: "&#8b0000[!] El terminal requiere un operario humano."
     ayuda:
-      divisor: "&#1c0f2a========================================"
+      divisor: "&#E6CCFF========================================"
       titulo: "&#ff00ff<bold>👕 MÓDULO DE GUARDARROPA</bold>"
-      abrir: "&#ff00ff/wardrobe &#1c0f2a- Abre el panel de tu Guardarropa."
+      abrir: "&#ff00ff/wardrobe &#E6CCFF- Abre el panel de tu Guardarropa."
 
 eventos:
   accesorios:
     stats-actualizadas: "&#00f5ff✨ Enlace de Hardware Estable. Poder de Red: &#ff00ff<bold>%power% PX</bold>"
     milagro:
       titulo: "&#00f5ff<bold>MILAGRO DE HARDWARE</bold>"
-      subtitulo: "&#1c0f2aEl Corazón del Nexo ha purgado tus fallos vitales."
+      subtitulo: "&#E6CCFFEl Corazón del Nexo ha purgado tus fallos vitales."
   crafteo:
-    ensamblaje-denegado: "&#8b0000<bold>[!] ENSAMBLAJE DENEGADO</bold> &#1c0f2a| &#1c0f2aRequieres credenciales de &#00f5ffColección de Diamante I &#1c0f2apara procesar esta matriz."
+    ensamblaje-denegado: "&#8b0000<bold>[!] ENSAMBLAJE DENEGADO</bold> &#E6CCFF| &#E6CCFFRequieres credenciales de &#00f5ffColección de Diamante I &#E6CCFFpara procesar esta matriz."
   desguace:
     inserta-activo: "&#8b0000[!] Inserta un activo en la bahía de desguace (izquierda)."
     activo-incompatible: "&#8b0000[!] Activo incompatible. No posee la firma mágica del Nexo requerida para reciclar."
@@ -62,80 +62,80 @@ eventos:
     sin-armadura: "&#8b0000[!] No tienes ninguna armadura equipada para guardar."
     guardado-exitoso: "&#00f5ff[✓] 👕 ¡Armadura guardada exitosamente en el Preset #%preset%!"
     preset-vacio: "&#8b0000[!] No hay ninguna armadura guardada en el Preset #%preset%."
-    inventario-lleno: "&#8b0000<bold>[!] ¡INVENTARIO LLENO!</bold> &#1c0f2aNecesitas %slots% espacios libres para guardar tu armadura actual."
+    inventario-lleno: "&#8b0000<bold>[!] ¡INVENTARIO LLENO!</bold> &#E6CCFFNecesitas %slots% espacios libres para guardar tu armadura actual."
     equipado-exitoso: "&#00f5ff✨ ¡Te has equipado el Preset #%preset% rápidamente!"
   items:
-    bienvenida: "&#ff00ff<bold>NEXO</bold> &#1c0f2a| &#1c0f2a¡Bienvenido al sistema! Tu primer activo de combate ha sido asignado a tu inventario."
-    restringido: "&#8b0000<bold>[🔒] RESTRICCIÓN BIOMÉTRICA:</bold> &#1c0f2aNo puedes descartar un objeto enlazado permanentemente a tu firma neuronal."
+    bienvenida: "&#ff00ff<bold>NEXO</bold> &#E6CCFF| &#E6CCFF¡Bienvenido al sistema! Tu primer activo de combate ha sido asignado a tu inventario."
+    restringido: "&#8b0000<bold>[🔒] RESTRICCIÓN BIOMÉTRICA:</bold> &#E6CCFFNo puedes descartar un objeto enlazado permanentemente a tu firma neuronal."
 
 menus:
   desguace:
-    titulo: "&#1c0f2a<bold>»</bold> &#8b0000Desguace Automático"
+    titulo: "&#E6CCFF<bold>»</bold> &#8b0000Desguace Automático"
     boton:
       titulo: "&#8b0000<bold>⚡ Iniciar Desguace</bold>"
       lore:
-        - "&#1c0f2aHaz clic para desguazar todos los ítems"
-        - "&#1c0f2aválidos que hayas introducido."
+        - "&#E6CCFFHaz clic para desguazar todos los ítems"
+        - "&#E6CCFFválidos que hayas introducido."
   accesorios:
-    titulo: "&#1c0f2a<bold>»</bold> &#ff00ffBolsa de Accesorios"
+    titulo: "&#E6CCFF<bold>»</bold> &#ff00ffBolsa de Accesorios"
     slot-bloqueado:
       titulo: "&#8b0000<bold>🔒 Slot Bloqueado</bold>"
       lore:
-        - "&#1c0f2aAumenta tu Nivel de Colección"
-        - "&#1c0f2apara desbloquear este espacio."
+        - "&#E6CCFFAumenta tu Nivel de Colección"
+        - "&#E6CCFFpara desbloquear este espacio."
   herreria:
-    titulo: "&#1c0f2a<bold>»</bold> &#ff00ffHerrería del Nexo"
+    titulo: "&#E6CCFF<bold>»</bold> &#ff00ffHerrería del Nexo"
     boton:
       titulo: "&#00f5ff<bold>FORJAR MEJORA</bold>"
       lore:
-        - "&#1c0f2aHaz clic para intentar mejorar tu activo."
-        - "&#ff00ffRequiere: &#1c0f2a1x Polvo Estelar"
+        - "&#E6CCFFHaz clic para intentar mejorar tu activo."
+        - "&#ff00ffRequiere: &#E6CCFF1x Polvo Estelar"
   reforja:
-    titulo: "&#1c0f2a<bold>»</bold> &#00f5ffMesa de Reforjas"
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffMesa de Reforjas"
     boton:
       titulo: "&#00f5ff<bold>APLICAR REFORJA ALEATORIA</bold>"
       lore:
-        - "&#1c0f2aAplica modificadores extra a tu activo"
-        - "&#1c0f2adependiendo de su clase/profesión."
+        - "&#E6CCFFAplica modificadores extra a tu activo"
+        - "&#E6CCFFdependiendo de su clase/profesión."
         - " "
-        - "&#ff00ffRequiere: &#1c0f2a1x Polvo Estelar"
+        - "&#ff00ffRequiere: &#E6CCFF1x Polvo Estelar"
   upgrade:
-    titulo: "&#1c0f2a<bold>»</bold> &#ff00ffMesa de Evolución Cénit"
+    titulo: "&#E6CCFF<bold>»</bold> &#ff00ffMesa de Evolución Cénit"
     boton:
       titulo: "&#00f5ff<bold>↑ INICIAR EVOLUCIÓN ↑</bold>"
       lore:
-        - "&#1c0f2aColoca tu Arma o Herramienta arriba."
-        - "&#1c0f2aEl sistema calculará automáticamente"
-        - "&#1c0f2ael costo en &#ff00ffFragmentos &#1c0f2ao &#00f5ffEsencias&#1c0f2a."
+        - "&#E6CCFFColoca tu Arma o Herramienta arriba."
+        - "&#E6CCFFEl sistema calculará automáticamente"
+        - "&#E6CCFFel costo en &#ff00ffFragmentos &#E6CCFFo &#00f5ffEsencias&#E6CCFF."
   yunque:
-    titulo: "&#1c0f2a<bold>»</bold> &#ff00ffYunque Mágico"
+    titulo: "&#E6CCFF<bold>»</bold> &#ff00ffYunque Mágico"
     boton:
       titulo: "&#ff00ff<bold>FUSIONAR MAGIA</bold>"
       lore:
-        - "&#1c0f2aAplica el encantamiento del libro"
-        - "&#1c0f2aa tu arma, herramienta o armadura."
+        - "&#E6CCFFAplica el encantamiento del libro"
+        - "&#E6CCFFa tu arma, herramienta o armadura."
   guardarropa:
-    titulo: "&#1c0f2a<bold>»</bold> &#00f5ffGuardarropa RPG"
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffGuardarropa RPG"
     preset:
       titulo: "&#ff00ff<bold>Preset de Armadura #%id%</bold>"
       lore:
-        - "&#1c0f2aGuarda o equipa conjuntos de"
-        - "&#1c0f2aarmadura de forma instantánea."
+        - "&#E6CCFFGuarda o equipa conjuntos de"
+        - "&#E6CCFFarmadura de forma instantánea."
         - " "
-        - "&#00f5ff▶ CLIC IZQUIERDO: &#1c0f2aEquipar Set"
-        - "&#8b0000▶ CLIC DERECHO: &#1c0f2aGuardar Conjunto Actual"
+        - "&#00f5ff▶ CLIC IZQUIERDO: &#E6CCFFEquipar Set"
+        - "&#8b0000▶ CLIC DERECHO: &#E6CCFFGuardar Conjunto Actual"
   pv:
     titulo: "&#ff00ff🎒 Almacenamiento (PVs)"
     mochila:
       desbloqueada:
         titulo: "&#00f5ff<bold>Mochila %id%</bold>"
         lore:
-          - "&#1c0f2aTu espacio seguro en el vacío."
+          - "&#E6CCFFTu espacio seguro en el vacío."
           - " "
           - "&#00f5ff► Clic para abrir"
       bloqueada:
         titulo: "&#8b0000<bold>Mochila %id%</bold>"
         lore:
-          - "&#1c0f2aNo tienes acceso a este espacio."
+          - "&#E6CCFFNo tienes acceso a este espacio."
           - "&#8b0000[!] Requiere un rango superior."
     boton-volver: "&#00f5ff⬅ Volver al Grimorio"

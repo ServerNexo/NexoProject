@@ -171,11 +171,11 @@ public class AccesoriosManager {
 
         meta.displayName(CrossplayUtils.parseCrossplay(null, "&#ff00ff<bold>💍 " + dto.id().toUpperCase().replace("_", " ") + "</bold>"));
         meta.lore(Arrays.asList(
-                CrossplayUtils.parseCrossplay(null, "&#1c0f2aFamilia: &#00f5ff" + dto.family().name()),
-                CrossplayUtils.parseCrossplay(null, "&#1c0f2aRareza: &#00f5ff" + dto.rarity().name()),
+                CrossplayUtils.parseCrossplay(null, "&#E6CCFFFamilia: &#00f5ff" + dto.family().name()),
+                CrossplayUtils.parseCrossplay(null, "&#E6CCFFRareza: &#00f5ff" + dto.rarity().name()),
                 CrossplayUtils.parseCrossplay(null, " "),
-                CrossplayUtils.parseCrossplay(null, "&#1c0f2aBono: &#ff00ff+" + dto.statValue() + " " + dto.statType().name()),
-                CrossplayUtils.parseCrossplay(null, "&#1c0f2aAtributo Único: &#00f5ff" + dto.abilityDescription())
+                CrossplayUtils.parseCrossplay(null, "&#E6CCFFBono: &#ff00ff+" + dto.statValue() + " " + dto.statType().name()),
+                CrossplayUtils.parseCrossplay(null, "&#E6CCFFAtributo Único: &#00f5ff" + dto.abilityDescription())
         ));
 
         meta.getPersistentDataContainer().set(llaveAccesorio, PersistentDataType.STRING, dto.id());

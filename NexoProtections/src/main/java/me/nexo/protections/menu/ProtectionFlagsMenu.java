@@ -27,7 +27,7 @@ public class ProtectionFlagsMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        return "&#1c0f2a<bold>»</bold> &#00f5ffLeyes del Dominio";
+        return "&#E6CCFF<bold>»</bold> &#00f5ffLeyes del Dominio";
     }
 
     @Override
@@ -62,7 +62,7 @@ public class ProtectionFlagsMenu extends NexoMenu {
         String estadoColor = activo ? "&#00f5ff[ PERMITIDO ]" : "&#8b0000[ BLOQUEADO ]";
 
         List<String> lore = List.of(
-                "&#1c0f2aPara forasteros: " + estadoColor,
+                "&#E6CCFFPara forasteros: " + estadoColor,
                 " ",
                 "&#00f5ff► Clic para alternar esta ley"
         );

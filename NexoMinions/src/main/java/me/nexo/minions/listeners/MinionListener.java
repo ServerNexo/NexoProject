@@ -1,6 +1,6 @@
 package me.nexo.minions.listeners;
 
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT PARA LA PALETA GÓTICA DEL VACÍO
+import me.nexo.core.utils.NexoColor;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
@@ -15,10 +15,12 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.Interaction;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -33,8 +35,10 @@ public class MinionListener implements Listener {
     }
 
     // 🟩 EVENTO 1: Colocar el Minion
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
     public void onColocarMinion(PlayerInteractEvent event) {
+        // 🌟 CORRECCIÓN 1: Evitar doble ejecución por las dos manos (Mano principal y secundaria)
+        if (event.getHand() != EquipmentSlot.HAND) return;
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         if (event.getClickedBlock() == null) return;
 
@@ -43,9 +47,9 @@ public class MinionListener implements Listener {
 
         ItemMeta meta = item.getItemMeta();
 
-        // 🌟 USAR LAS LLAVES OFICIALES
+        // Verificamos si es un Minion Oficial
         if (meta.getPersistentDataContainer().has(MinionKeys.TYPE, PersistentDataType.STRING)) {
-            event.setCancelled(true);
+            event.setCancelled(true); // Evitamos que ponga la cabeza/bloque físico
             Player player = event.getPlayer();
 
             // 🌟 INTEGRACIÓN: Verificar derechos de propiedad territorial ANTES de hacer nada
@@ -58,12 +62,20 @@ public class MinionListener implements Listener {
                 }
             }
 
-            String typeStr = meta.getPersistentDataContainer().get(MinionKeys.TYPE, PersistentDataType.STRING);
-            Integer tier = meta.getPersistentDataContainer().get(MinionKeys.TIER, PersistentDataType.INTEGER);
+            try {
+                String typeStr = meta.getPersistentDataContainer().get(MinionKeys.TYPE, PersistentDataType.STRING);
 
-            if (typeStr != null && tier != null) {
-                try {
-                    // Verificamos los límites de minions del jugador
+                // 🌟 CORRECCIÓN 2: Extracción segura del Nivel (Tier) para evitar crasheos silenciosos
+                Integer tier = 1; // Valor por defecto
+                if (meta.getPersistentDataContainer().has(MinionKeys.TIER, PersistentDataType.INTEGER)) {
+                    tier = meta.getPersistentDataContainer().get(MinionKeys.TIER, PersistentDataType.INTEGER);
+                } else if (meta.getPersistentDataContainer().has(MinionKeys.TIER, PersistentDataType.BYTE)) {
+                    tier = (int) meta.getPersistentDataContainer().get(MinionKeys.TIER, PersistentDataType.BYTE);
+                } else if (meta.getPersistentDataContainer().has(MinionKeys.TIER, PersistentDataType.STRING)) {
+                    tier = Integer.parseInt(meta.getPersistentDataContainer().get(MinionKeys.TIER, PersistentDataType.STRING));
+                }
+
+                if (typeStr != null) {
                     int maxMinions = plugin.getMinionManager().getMaxMinions(player);
                     int placedMinions = plugin.getMinionManager().getPlacedMinions(player);
 
@@ -73,26 +85,29 @@ public class MinionListener implements Listener {
                         return; // 🛑 Detenemos el código aquí
                     }
 
-                    // Si tiene espacio y permiso de tierra, lo spawneamos
                     MinionType type = MinionType.valueOf(typeStr);
-                    Location spawnLoc = event.getClickedBlock().getLocation().add(0.5, 1.0, 0.5);
+
+                    // 🌟 CORRECCIÓN 3: Spawneo físico perfecto (Dependiendo de qué cara del bloque hizo clic)
+                    Location spawnLoc = event.getClickedBlock().getRelative(event.getBlockFace()).getLocation().add(0.5, 0, 0.5);
 
                     plugin.getMinionManager().spawnMinion(spawnLoc, player.getUniqueId(), type, tier);
-
-                    // Registramos que el jugador gastó 1 espacio
                     plugin.getMinionManager().addPlacedMinion(player, 1);
 
                     item.setAmount(item.getAmount() - 1);
                     player.sendMessage(NexoColor.parse("&#9933FF[✓] <bold>ESCLAVO CONJURADO:</bold> &#E6CCFFUnidad " + type.getDisplayName() + " atada al mundo terrenal. &#CC66FF(" + (placedMinions + 1) + "/" + maxMinions + ")"));
-                } catch (IllegalArgumentException e) {
-                    event.getPlayer().sendMessage(NexoColor.parse("&#FF3366[!] Fallo de Invocación: &#E6CCFFEl sello de este esclavo está corrupto."));
+                    player.playSound(spawnLoc, org.bukkit.Sound.ENTITY_ZOMBIE_VILLAGER_CURE, 0.5f, 1.5f);
                 }
+            } catch (Exception e) {
+                // 🌟 CORRECCIÓN 4: Capturamos cualquier error para que no haya fallos silenciosos
+                player.sendMessage(NexoColor.parse("&#FF3366[!] Fallo de Invocación: &#E6CCFFEl sello de este esclavo está corrupto o es incompatible."));
+                e.printStackTrace();
             }
         }
     }
 
     // 🟥 EVENTO 2: Romper el bloque debajo del Minion (La Gravedad)
-    @EventHandler
+    // 🌟 PARCHE DE SEGURIDAD APLICADO AQUÍ (Faltaba priority e ignoreCancelled)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Location topLoc = event.getBlock().getLocation().add(0.5, 1.0, 0.5);
 

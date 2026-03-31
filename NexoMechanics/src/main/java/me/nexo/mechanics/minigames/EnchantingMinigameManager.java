@@ -66,7 +66,7 @@ public class EnchantingMinigameManager implements Listener {
 
         p.sendTitle(
                 net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#ff00ff<bold>¡PUZZLE DE ENLACE!</bold>")),
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#1c0f2aGolpea: &#00f5ffAzul &#1c0f2a> &#8b0000Rojo &#1c0f2a> &#00f5ffVerde")),
+                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#E6CCFFGolpea: &#00f5ffAzul &#E6CCFF> &#8b0000Rojo &#E6CCFF> &#00f5ffVerde")),
                 5, 60, 5
         );
 
@@ -111,7 +111,7 @@ public class EnchantingMinigameManager implements Listener {
                 if (runas.isEmpty()) {
                     encantamientosGratis.add(p.getUniqueId());
                     runasActivas.remove(p.getUniqueId());
-                    p.sendMessage(NexoColor.parse("&#ff00ff✨ <bold>SISTEMA HACKEADO:</bold> &#1c0f2aTu próximo ensamblaje será 100% &#00f5ff<bold>GRATUITO</bold>&#1c0f2a."));
+                    p.sendMessage(NexoColor.parse("&#ff00ff✨ <bold>SISTEMA HACKEADO:</bold> &#E6CCFFTu próximo ensamblaje será 100% &#00f5ff<bold>GRATUITO</bold>&#E6CCFF."));
                     p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1.5f);
                 }
             } else {

@@ -135,14 +135,14 @@ public class MinionMenu extends NexoMenu {
     }
 
     private void crearIconoGuia(int slot, Material mat, String key) {
+        // 🌟 CORRECCIÓN DE COLOR: Aplicado el lila iluminado para no forzar la vista
         List<String> loreConfig = getMessageList("menu.iconos-guia." + key + ".lore").stream()
-                .map(line -> "&#1c0f2a" + line).collect(Collectors.toList());
+                .map(line -> "&#E6CCFF" + line).collect(Collectors.toList());
         setItem(slot, mat, getMessage("menu.iconos-guia." + key + ".titulo"), loreConfig);
     }
 
     @Override
     public void handleMenu(InventoryClickEvent event) {
-        // 🌟 BLOQUEO ABSOLUTO: Ningún ítem se puede arrastrar ni mover convencionalmente
         event.setCancelled(true);
 
         ItemStack clickedItem = event.getCurrentItem();
@@ -151,43 +151,48 @@ public class MinionMenu extends NexoMenu {
         // ==========================================
         // 🌟 MECÁNICA 100% BEDROCK-FRIENDLY PARA MEJORAS
         // ==========================================
-
-        // Si hizo clic ABAJO (en su inventario), quiere METER una mejora al minion
         if (event.getClickedInventory() != null && event.getClickedInventory().equals(player.getInventory())) {
 
-            // Buscar un hueco vacío en el Minion para poner el ítem
+            // 🛡️ PARCHE DE SEGURIDAD 1: ¡Validar que realmente sea una Mejora oficial de NexoMinions!
+            if (plugin.getUpgradesConfig().getUpgradeData(clickedItem) == null) {
+                player.sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFEse objeto no es un sello de mejora compatible."));
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                return;
+            }
+
             for (int i = 0; i < 4; i++) {
                 if (minion.getUpgrades()[i] == null || minion.getUpgrades()[i].getType() == Material.AIR) {
-                    minion.setUpgrade(i, clickedItem.clone()); // Guardar en el minion
-                    event.getClickedInventory().setItem(event.getSlot(), new ItemStack(Material.AIR)); // Quitar del jugador
+                    // 🛡️ PARCHE DE SEGURIDAD 2: Solo extraer 1 mejora de la pila, evitando el consumo masivo
+                    ItemStack upgradeToApply = clickedItem.clone();
+                    upgradeToApply.setAmount(1);
+                    minion.setUpgrade(i, upgradeToApply);
+
+                    clickedItem.setAmount(clickedItem.getAmount() - 1);
                     player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
-                    setMenuItems(); // Actualizar menú instantáneamente
+                    setMenuItems();
                     return;
                 }
             }
-            // Si llega aquí, es porque los 4 huecos están llenos
             player.sendMessage(NexoColor.parse("&#FF3366[!] Las ranuras de mejora están llenas."));
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             return;
         }
 
-        // Si hizo clic ARRIBA (en los slots del minion), quiere SACAR una mejora
         int slot = event.getRawSlot();
         for (int i = 0; i < 4; i++) {
             if (slot == UPGRADE_SLOTS[i]) {
-                // Dar ítem al jugador
                 HashMap<Integer, ItemStack> left = player.getInventory().addItem(clickedItem);
                 if (!left.isEmpty()) player.getWorld().dropItemNaturally(player.getLocation(), left.get(0));
 
-                minion.setUpgrade(i, null); // Borrar del minion
+                minion.setUpgrade(i, null);
                 player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 1f, 1f);
-                setMenuItems(); // Actualizar menú
+                setMenuItems();
                 return;
             }
         }
 
         // ==========================================
-        // 🌟 BOTONES INTERACTIVOS (COSECHA, EVOLUCIÓN, ETC)
+        // 🌟 BOTONES INTERACTIVOS
         // ==========================================
         String plainName = "";
         if (clickedItem.hasItemMeta() && clickedItem.getItemMeta().hasDisplayName()) {
@@ -206,16 +211,17 @@ public class MinionMenu extends NexoMenu {
             boolean tieneCompactador = minion.tieneMejoraActiva("ITEM_UPGRADES");
             HashMap<Integer, ItemStack> sobrante = new HashMap<>();
 
+            // 🛡️ PARCHE DE SEGURIDAD 3: Descomposición de Stacks (Evita el crasheo de IllegalArgumentException)
             if (tieneCompactador) {
                 int bloques = cantidad / 9;
                 int sueltos = cantidad % 9;
                 Material matBase = minion.getType().getTargetMaterial();
                 Material matCompactado = obtenerBloqueCompactado(matBase);
 
-                if (bloques > 0) sobrante.putAll(player.getInventory().addItem(new ItemStack(matCompactado, bloques)));
-                if (sueltos > 0) sobrante.putAll(player.getInventory().addItem(new ItemStack(matBase, sueltos)));
+                if (bloques > 0) darItemsSeguros(player, matCompactado, bloques, sobrante);
+                if (sueltos > 0) darItemsSeguros(player, matBase, sueltos, sobrante);
             } else {
-                sobrante.putAll(player.getInventory().addItem(new ItemStack(minion.getType().getTargetMaterial(), cantidad)));
+                darItemsSeguros(player, minion.getType().getTargetMaterial(), cantidad, sobrante);
             }
 
             for (ItemStack drop : sobrante.values()) {
@@ -250,18 +256,15 @@ public class MinionMenu extends NexoMenu {
             player.sendMessage(NexoColor.parse("&#CC66FF[✓] <bold>TRIBUTO COSECHADO:</bold> &#E6CCFFHas reclamado las ofrendas" + (tieneCompactador ? " &#9933FF(Compactadas)" : "") + "."));
             player.playSound(player.getLocation(), Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f, 2f);
 
-            // 🌟 BEDROCK FIX: Reabrir con retraso para limpiar los ghost items del cliente
             player.closeInventory();
             Bukkit.getScheduler().runTaskLater(plugin, this::open, 3L);
         }
 
-        // 🧨 Clic en Desterrar
         if (clickedItem.getType() == Material.BARRIER && plainName.contains("DESTERRAR")) {
             player.closeInventory();
             plugin.getMinionManager().recogerMinion(player, minion.getEntity().getUniqueId());
         }
 
-        // ⬆ Clic en Ascender
         if (clickedItem.getType() == Material.NETHER_STAR) {
             int sigNivel = minion.getTier() + 1;
             if (sigNivel > 12) return;
@@ -283,9 +286,18 @@ public class MinionMenu extends NexoMenu {
             player.sendMessage(NexoColor.parse("&#9933FF[✓] <bold>RITUAL COMPLETADO:</bold> &#E6CCFFEl esclavo ha ascendido a Nivel " + sigNivel + "."));
             minion.getEntity().getWorld().spawnParticle(org.bukkit.Particle.SCULK_SOUL, minion.getEntity().getLocation().add(0, 1, 0), 50, 0.5, 0.5, 0.5, 0.1);
 
-            // 🌟 BEDROCK FIX
             player.closeInventory();
             Bukkit.getScheduler().runTaskLater(plugin, this::open, 3L);
+        }
+    }
+
+    // 🛡️ PARCHE DE SEGURIDAD 3: Método protector contra Stacks Imposibles
+    private void darItemsSeguros(Player player, Material mat, int amount, HashMap<Integer, ItemStack> sobrante) {
+        int maxStack = mat.getMaxStackSize();
+        while (amount > 0) {
+            int toGive = Math.min(amount, maxStack);
+            sobrante.putAll(player.getInventory().addItem(new ItemStack(mat, toGive)));
+            amount -= toGive;
         }
     }
 

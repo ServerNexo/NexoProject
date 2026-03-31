@@ -41,7 +41,42 @@ public class ComandoProteccion implements CommandExecutor {
             return true;
         }
 
-        // 🌟 COMANDO NUEVO: /nexo ver (Revelar Fronteras)
+        // 🌟 COMANDO NUEVO: /nexo home (Viaje a la base)
+        if (args.length == 1 && args[0].equalsIgnoreCase("home")) {
+            ProtectionStone myStone = null;
+
+            // Buscamos el primer Monolito que le pertenezca al jugador
+            for (ProtectionStone stone : NexoProtections.getClaimManager().getAllStones().values()) {
+                if (stone.getOwnerId().equals(player.getUniqueId())) {
+                    myStone = stone;
+                    break;
+                }
+            }
+
+            if (myStone == null) {
+                player.sendMessage(NexoColor.parse("&#FF3366[!] Error: &#E6CCFFNo posees ningún Monolito en este mundo."));
+                return true;
+            }
+
+            // Calculamos el centro exacto de su protección
+            me.nexo.protections.core.ClaimBox box = myStone.getBox();
+            int centerX = (box.minX() + box.maxX()) / 2;
+            int centerZ = (box.minZ() + box.maxZ()) / 2;
+            org.bukkit.World world = Bukkit.getWorld(box.world());
+
+            if (world != null) {
+                // Buscamos el bloque más alto en esas coordenadas para no asfixiarlo
+                int y = world.getHighestBlockYAt(centerX, centerZ) + 1;
+                org.bukkit.Location tpLoc = new org.bukkit.Location(world, centerX + 0.5, y, centerZ + 0.5);
+
+                player.teleport(tpLoc);
+                player.sendMessage(NexoColor.parse("&#CC66FF[✓] <bold>VIAJE ESPACIAL:</bold> &#E6CCFFHas regresado a tu dominio."));
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
+            }
+            return true;
+        }
+
+        // 🌟 COMANDO: /nexo ver (Revelar Fronteras)
         if (args.length == 1 && args[0].equalsIgnoreCase("ver")) {
             ProtectionStone stone = NexoProtections.getClaimManager().getStoneAt(player.getLocation());
             if (stone == null) {
@@ -50,9 +85,8 @@ public class ComandoProteccion implements CommandExecutor {
             }
 
             me.nexo.protections.core.ClaimBox box = stone.getBox();
-            double y = player.getLocation().getY() + 1.0; // Las partículas se dibujan a la altura del pecho del jugador
+            double y = player.getLocation().getY() + 1.0;
 
-            // 🛠️ CORRECCIÓN: Usar PORTAL (no requiere parámetros extra como Float)
             for (int x = box.minX(); x <= box.maxX(); x++) {
                 player.spawnParticle(Particle.PORTAL, x + 0.5, y, box.minZ() + 0.5, 3, 0, 0, 0, 0);
                 player.spawnParticle(Particle.PORTAL, x + 0.5, y, box.maxZ() + 0.5, 3, 0, 0, 0, 0);

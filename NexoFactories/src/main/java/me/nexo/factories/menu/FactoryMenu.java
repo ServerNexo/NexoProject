@@ -94,7 +94,7 @@ public class FactoryMenu extends NexoMenu {
             case "ACTIVE" -> "&#00f5ff<bold>PRODUCIENDO</bold>";
             case "NO_ENERGY" -> "&#8b0000<bold>SIN ENERGÍA</bold>";
             case "SCRIPT_PAUSED" -> "&#ff00ff<bold>EN ESPERA (SCRIPT)</bold>";
-            default -> "&#1c0f2a<bold>SISTEMA APAGADO</bold>";
+            default -> "&#E6CCFF<bold>SISTEMA APAGADO</bold>";
         };
     }
 

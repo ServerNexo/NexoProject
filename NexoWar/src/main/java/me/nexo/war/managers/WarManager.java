@@ -51,8 +51,8 @@ public class WarManager {
         }
 
         if (contadorSuministros < COSTO_SUMINISTROS) {
-            leader.sendMessage(NexoColor.parse("&#8b0000[!] Logística Deficiente: &#1c0f2aSuministros insuficientes para sostener una campaña militar."));
-            leader.sendMessage(NexoColor.parse("&#1c0f2aRequerido: &#ff00ff" + COSTO_SUMINISTROS + "x Suministros Militares &#1c0f2a(Ensamblables en Factorías)."));
+            leader.sendMessage(NexoColor.parse("&#8b0000[!] Logística Deficiente: &#E6CCFFSuministros insuficientes para sostener una campaña militar."));
+            leader.sendMessage(NexoColor.parse("&#E6CCFFRequerido: &#ff00ff" + COSTO_SUMINISTROS + "x Suministros Militares &#E6CCFF(Ensamblables en Factorías)."));
             return;
         }
 
@@ -88,8 +88,8 @@ public class WarManager {
         saveWarToDatabase(contrato);
 
         Bukkit.broadcast(NexoColor.parse("&#ff00ff<bold>⚔ CONTRATO DE EXTERMINIO FIRMADO:</bold>"));
-        Bukkit.broadcast(NexoColor.parse("&#1c0f2a" + atacante.getName() + " &#1c0f2ay &#1c0f2a" + defensor.getName() + " &#1c0f2ahan bloqueado &#00f5ff🪙 " + apuesta.multiply(BigDecimal.valueOf(2)) + " &#1c0f2aen la bóveda de Escrow."));
-        Bukkit.broadcast(NexoColor.parse("&#00f5ff[!] Fase de Preparación Iniciada: &#1c0f2a5 minutos para el colapso de escudos perimetrales."));
+        Bukkit.broadcast(NexoColor.parse("&#E6CCFF" + atacante.getName() + " &#E6CCFFy &#E6CCFF" + defensor.getName() + " &#E6CCFFhan bloqueado &#00f5ff🪙 " + apuesta.multiply(BigDecimal.valueOf(2)) + " &#E6CCFFen la bóveda de Escrow."));
+        Bukkit.broadcast(NexoColor.parse("&#00f5ff[!] Fase de Preparación Iniciada: &#E6CCFF5 minutos para el colapso de escudos perimetrales."));
     }
 
     private void iniciarRelojDeGuerras() {
@@ -109,7 +109,7 @@ public class WarManager {
                             actualizarGuerraEnBD(activa);
 
                             Bukkit.broadcast(NexoColor.parse("&#8b0000<bold>⚠ ¡ALERTA DE CONFLICTO ACTIVO! ⚠</bold>"));
-                            Bukkit.broadcast(NexoColor.parse("&#1c0f2aLos escudos corporativos han caído. Fuego autorizado. Condición de victoria: &#8b0000" + KILLS_TO_WIN + " bajas."));
+                            Bukkit.broadcast(NexoColor.parse("&#E6CCFFLos escudos corporativos han caído. Fuego autorizado. Condición de victoria: &#8b0000" + KILLS_TO_WIN + " bajas."));
                         }
                     }
                 }
@@ -144,7 +144,7 @@ public class WarManager {
         );
         guerrasActivas.put(guerra.warId(), actualizada);
 
-        asesino.sendMessage(NexoColor.parse("&#00f5ff[✓] Baja Confirmada: &#1c0f2aProgreso táctico de tu sindicato: &#00f5ff" + (esAtacante ? killsA : killsD) + "/" + KILLS_TO_WIN));
+        asesino.sendMessage(NexoColor.parse("&#00f5ff[✓] Baja Confirmada: &#E6CCFFProgreso táctico de tu sindicato: &#00f5ff" + (esAtacante ? killsA : killsD) + "/" + KILLS_TO_WIN));
 
         if (killsA >= KILLS_TO_WIN || killsD >= KILLS_TO_WIN) {
             terminarGuerra(actualizada, clanAsesino);
@@ -166,7 +166,7 @@ public class WarManager {
                     clanManager.saveBankAsync(clan);
 
                     Bukkit.broadcast(NexoColor.parse("&#00f5ff<bold>🏆 AUDITORÍA FINALIZADA:</bold>"));
-                    Bukkit.broadcast(NexoColor.parse("&#1c0f2aEl sindicato &#ff00ff" + clan.getName() + " &#1c0f2aha masacrado a sus objetivos y asegura los fondos congelados de &#00f5ff🪙 " + premio + "&#1c0f2a."));
+                    Bukkit.broadcast(NexoColor.parse("&#E6CCFFEl sindicato &#ff00ff" + clan.getName() + " &#E6CCFFha masacrado a sus objetivos y asegura los fondos congelados de &#00f5ff🪙 " + premio + "&#E6CCFF."));
                 }
             });
         });

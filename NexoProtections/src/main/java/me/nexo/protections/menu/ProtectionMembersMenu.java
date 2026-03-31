@@ -32,7 +32,7 @@ public class ProtectionMembersMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        return "&#1c0f2a<bold>»</bold> &#00f5ffAcólitos del Pacto";
+        return "&#E6CCFF<bold>»</bold> &#00f5ffAcólitos del Pacto";
     }
 
     @Override
@@ -53,8 +53,8 @@ public class ProtectionMembersMenu extends NexoMenu {
             String targetName = target.getName() != null ? target.getName() : "Alma Desconocida";
 
             List<String> lore = List.of(
-                    "&#1c0f2aEsta alma tiene libre albedrío",
-                    "&#1c0f2adentro de tu Monolito.",
+                    "&#E6CCFFEsta alma tiene libre albedrío",
+                    "&#E6CCFFdentro de tu Monolito.",
                     " ",
                     "&#8b0000► Clic para DESTERRAR esta alma"
             );
@@ -77,8 +77,8 @@ public class ProtectionMembersMenu extends NexoMenu {
 
         // Botón Invocar (Información)
         List<String> addLore = List.of(
-                "&#1c0f2aPara añadir a un amigo,",
-                "&#1c0f2acierra este menú y escribe en el chat:",
+                "&#E6CCFFPara añadir a un amigo,",
+                "&#E6CCFFcierra este menú y escribe en el chat:",
                 "&#ff00ff/nexo trust <NombreJugador>"
         );
         setItem(getSlots() - 4, Material.WRITABLE_BOOK, "&#ff00ff<bold>INVOCAR NUEVA ALMA</bold>", addLore);

@@ -51,7 +51,7 @@ public class BlackMarketManager {
 
         possibleLootPool.add(new BlackMarketItem(
                 "forbidden_apple",
-                crearItemMagico(Material.ENCHANTED_GOLDEN_APPLE, "&#8b0000<bold>🍎 Manzana Prohibida</bold>", "&#1c0f2aFruta del inframundo."),
+                crearItemMagico(Material.ENCHANTED_GOLDEN_APPLE, "&#8b0000<bold>🍎 Manzana Prohibida</bold>", "&#E6CCFFFruta del inframundo."),
                 new BigDecimal("150"), NexoAccount.Currency.GEMS
         ));
     }

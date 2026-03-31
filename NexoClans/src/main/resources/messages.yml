@@ -7,7 +7,7 @@ comandos:
     errores:
       sin-clan: "&#8b0000[!] Comunicación Fallida: No tienes un enlace de clan activo."
       uso: "&#8b0000[!] Sintaxis de red: /cc <mensaje>"
-    formato: "&#1c0f2a[Clan] %clan_name% &#1c0f2a| &#ff00ff%player% &#1c0f2a» &#00f5ff%message%"
+    formato: "&#E6CCFF[Clan] %clan_name% &#E6CCFF| &#ff00ff%player% &#E6CCFF» &#00f5ff%message%"
   clan:
     errores:
       datos-cargando: "&#8b0000[!] Tus datos aún están cargando. Aguarda un instante."
@@ -28,14 +28,14 @@ comandos:
       nombre-tomado: "&#8b0000Error: Ese Tag o Nombre ya está registrado en otro Monolito."
     info:
       cargando: "&#00f5ffConectando con la base de datos del clan..."
-      ayuda: "&#1c0f2aSistemas de Comando: &#ff00ffcreate, invite, join, leave, friendlyfire, kick, disband, sethome, home, deposit, withdraw, tribute."
+      ayuda: "&#E6CCFFSistemas de Comando: &#ff00ffcreate, invite, join, leave, friendlyfire, kick, disband, sethome, home, deposit, withdraw, tribute."
     exito:
       deposito: "&#00f5ff[✓] Transferencia completada. Depositaste &#ff00ff🪙 %amount% &#00f5ffa la tesorería."
       retiro: "&#00f5ff[✓] Retiro autorizado. Extrajiste &#ff00ff🪙 %amount% &#00f5ffde la tesorería."
       home: "&#00f5ff[✓] Enlace establecido. Bienvenido al Monolito Central. 🏛️"
       tributo: "&#00f5ff[✓] Extracción completada. El Monolito absorbió &#ff00ff%exp% EXP&#00f5ff."
       home-establecido: "&#00f5ff[✓] Coordenadas del Monolito Base establecidas en la red."
-      clan-creado: "&#00f5ff¡Has fundado la corporación &#ff00ff%name% &#1c0f2a[&#00f5ff%tag%&#1c0f2a]&#00f5ff!"
+      clan-creado: "&#00f5ff¡Has fundado la corporación &#ff00ff%name% &#E6CCFF[&#00f5ff%tag%&#E6CCFF]&#00f5ff!"
       invitacion-enviada: "&#00f5ffInvitación de acceso enviada a &#ff00ff%player%&#00f5ff."
       unido: "&#00f5ff[✓] Te has unido exitosamente a la corporación &#ff00ff%clan%&#00f5ff."
       abandonado: "&#ff00ffHas revocado tu propio acceso al clan actual."
@@ -46,42 +46,42 @@ comandos:
       expulsado-feedback: "&#8b0000Tu acceso corporativo ha sido revocado por &#ff00ff%ejector%&#8b0000."
       disuelto: "&#8b0000[!] Alerta Crítica: Tu corporación ha sido disuelta por el Líder."
     anuncios:
-      level-up-divisor: "&#1c0f2a========================================"
+      level-up-divisor: "&#E6CCFF========================================"
       level-up-titulo: "&#ff00ff<bold>🏛️ ¡EVOLUCIÓN ESTRUCTURAL: %clan%!</bold>"
-      level-up-desc: "&#1c0f2aSu Monolito Central ha alcanzado el Nivel &#00f5ff%level%&#1c0f2a."
+      level-up-desc: "&#E6CCFFSu Monolito Central ha alcanzado el Nivel &#00f5ff%level%&#E6CCFF."
 
 menus:
   miembros:
-    titulo: "&#1c0f2a<bold>»</bold> &#00f5ffRegistro de Operarios"
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffRegistro de Operarios"
     buscando: "&#00f5ffConectando con la base de datos de Nexo..."
-    lore-rango: "&#1c0f2aRango: &#00f5ff%role%"
+    lore-rango: "&#E6CCFFRango: &#00f5ff%role%"
     boton-regresar: "&#00f5ffRegresar al Monolito Central"
   principal:
-    titulo: "&#1c0f2a<bold>»</bold> &#00f5ffCentral Logística del Clan"
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffCentral Logística del Clan"
     item-banco: "&#ff00ff<bold>💰 Reserva Logística</bold>"
     item-ff: "&#ff00ff<bold>⚔️ Protocolo de Fuego</bold>"
     item-miembros: "&#ff00ff<bold>👥 Base de Operarios</bold>"
     lore-monolito:
       - "&#ff00ff<bold>🏛️ Monolito de </bold>%clan_name%"
-      - "&#1c0f2aTag Operativo: &#ff00ff[%tag%]"
-      - "&#1c0f2aNivel de Núcleo: &#00f5ff%level%"
-      - "&#1c0f2aEnergía (EXP): &#00f5ff%exp%"
+      - "&#E6CCFFTag Operativo: &#ff00ff[%tag%]"
+      - "&#E6CCFFNivel de Núcleo: &#00f5ff%level%"
+      - "&#E6CCFFEnergía (EXP): &#00f5ff%exp%"
       - " "
       - "&#ff00ff<bold>SISTEMAS DE GESTIÓN (LÍDER):</bold>"
-      - "&#1c0f2a/clan invite <user> &#1c0f2a- Reclutar"
-      - "&#1c0f2a/clan kick <user> &#1c0f2a- Expulsar"
-      - "&#1c0f2a/clan sethome &#1c0f2a- Reubicar Monolito"
+      - "&#E6CCFF/clan invite <user> &#E6CCFF- Reclutar"
+      - "&#E6CCFF/clan kick <user> &#E6CCFF- Expulsar"
+      - "&#E6CCFF/clan sethome &#E6CCFF- Reubicar Monolito"
       - "&#8b0000/clan disband &#8b0000- Destruir Núcleo"
     lore-banco:
-      - "&#1c0f2aFondos Disponibles: &#ff00ff🪙 %balance%"
+      - "&#E6CCFFFondos Disponibles: &#ff00ff🪙 %balance%"
       - " "
-      - "&#1c0f2a/clan deposit <monto>"
-      - "&#1c0f2a/clan withdraw <monto>"
+      - "&#E6CCFF/clan deposit <monto>"
+      - "&#E6CCFF/clan withdraw <monto>"
     lore-ff:
-      - "&#1c0f2aEstado Actual: %status%"
+      - "&#E6CCFFEstado Actual: %status%"
       - " "
       - "&#00f5ff► Clic para alternar protocolo"
     lore-miembros:
-      - "&#1c0f2aRango Personal: &#00f5ff%role%"
+      - "&#E6CCFFRango Personal: &#00f5ff%role%"
       - " "
       - "&#00f5ff► Clic para inspeccionar base de datos"

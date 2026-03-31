@@ -4,14 +4,14 @@
 
 manager:
   iniciando-sistemas: "&#ff00ffIniciando Sistemas..."
-  extraccion-remota: "&#00f5ff[📦] Extracción Remota: &#1c0f2aHas recuperado &#ff00ff%items% ítems &#1c0f2adel depósito del operario."
-  desmantelamiento-exitoso: "&#00f5ff[✓] <bold>PROTOCOLO DE DESMANTELAMIENTO:</bold> &#1c0f2aOperario recogido con éxito. &#00f5ff(%placed%/%max%)"
-  alerta-desmantelamiento-admin: "&#8b0000[!] Alerta de Red: &#1c0f2aUn administrador corporativo ha desmantelado uno de tus operarios."
+  extraccion-remota: "&#00f5ff[📦] Extracción Remota: &#E6CCFFHas recuperado &#ff00ff%items% ítems &#E6CCFFdel depósito del operario."
+  desmantelamiento-exitoso: "&#00f5ff[✓] <bold>PROTOCOLO DE DESMANTELAMIENTO:</bold> &#E6CCFFOperario recogido con éxito. &#00f5ff(%placed%/%max%)"
+  alerta-desmantelamiento-admin: "&#8b0000[!] Alerta de Red: &#E6CCFFUn administrador corporativo ha desmantelado uno de tus operarios."
   desmantelamiento-admin: "&#00f5ff[✓] Operario desmantelado. Cuota operativa restaurada al propietario original."
-  propietario-offline: "&#8b0000[!] Advertencia del Sistema: &#1c0f2aEl propietario de la unidad está desconectado. Sincronización de cuota pospuesta."
+  propietario-offline: "&#8b0000[!] Advertencia del Sistema: &#E6CCFFEl propietario de la unidad está desconectado. Sincronización de cuota pospuesta."
 
 menu:
-  titulo: "&#1c0f2a<bold>»</bold> &#ff00ffSello del Esclavo"
+  titulo: "&#E6CCFF<bold>»</bold> &#ff00ffSello del Esclavo"
   iconos-guia:
     combustible:
       titulo: "&#8b0000🔥 Llama Abismal"
@@ -38,19 +38,19 @@ menu:
         - "drenar la materia a tus propios cofres."
         - "&#ff00ff⬇ Deposita el vínculo ⬇"
   stats:
-    titulo: "&#ff00ff⭐ <bold>%type%</bold> &#1c0f2a(Nv. %tier%)"
+    titulo: "&#ff00ff⭐ <bold>%type%</bold> &#E6CCFF(Nv. %tier%)"
     lore:
-      materia-devorada: "&#1c0f2aMateria Devorada: &#00f5ff%items% uds"
-      eficiencia: "&#1c0f2aAgonía (Eficiencia): "
+      materia-devorada: "&#E6CCFFMateria Devorada: &#00f5ff%items% uds"
+      eficiencia: "&#E6CCFFAgonía (Eficiencia): "
       eficiencia-activa: "&#8b0000⚡ +%speed%%"
-      eficiencia-base: "&#1c0f2aLetargo (Base)"
+      eficiencia-base: "&#E6CCFFLetargo (Base)"
       sello-amalgama: "&#00f5ff📦 Sello de Amalgama [ACTIVO]"
       nexo-logistico: "&#00f5ff🔄 Nexo Logístico [CONECTADO]"
   evolucion:
     max-nivel: "&#ff00ff✨ <bold>CÚSPIDE DEL ABISMO ALCANZADA</bold>"
     titulo: "&#00f5ff⬆ <bold>ASCENDER AL VACÍO A NV. %level%</bold>"
     lore:
-      - "&#1c0f2aRealiza el ritual para empoderar a la entidad."
+      - "&#E6CCFFRealiza el ritual para empoderar a la entidad."
       - " "
       - "&#ff00ffTributo Requerido:"
     costo-ritual: "&#8b0000▶ %amount%x %item%"
@@ -58,10 +58,10 @@ menu:
   cosechar:
     titulo: "&#00f5ff📦 <bold>COSECHAR TRIBUTO</bold>"
     lore:
-      - "&#1c0f2aReclama toda la materia que el esclavo ha juntado."
+      - "&#E6CCFFReclama toda la materia que el esclavo ha juntado."
       - " "
-      - "&#1c0f2aOfrendas Listas: &#00f5ff%items% uds"
-      - "&#1c0f2aConocimiento Arcano (%skill%): &#ff00ff+%xp% XP"
+      - "&#E6CCFFOfrendas Listas: &#00f5ff%items% uds"
+      - "&#E6CCFFConocimiento Arcano (%skill%): &#ff00ff+%xp% XP"
       - " "
       - "&#00f5ff► ¡Clic para reclamar tu ofrenda!"
   desterrar:

@@ -51,7 +51,7 @@ public class HubMenu extends NexoMenu {
         inventory.setItem(30, createButton(Material.LEATHER_CHESTPLATE, "&#ff00ff👕 Guardarropa", "Accede a tus armaduras.", "open_wardrobe"));
         inventory.setItem(31, createButton(Material.COMPASS, "&#00f5ff🌍 Viaje Rápido", "Teletransporte a zonas seguras.", "open_fast_travel"));
         inventory.setItem(32, createButton(Material.SHIELD, "&#00f5ff🛡️ Gestión de Clan", "Administra tu imperio.", "open_clans"));
-        inventory.setItem(33, createButton(Material.WITHER_SKELETON_SKULL, "&#1c0f2a🌑 Mercado Negro", "Artefactos prohibidos.", "open_blackmarket"));
+        inventory.setItem(33, createButton(Material.WITHER_SKELETON_SKULL, "&#E6CCFF🌑 Mercado Negro", "Artefactos prohibidos.", "open_blackmarket"));
     }
 
     @Override
@@ -95,15 +95,15 @@ public class HubMenu extends NexoMenu {
         meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>TUS ESTADÍSTICAS</bold>"));
 
         List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2aOperario: &#00f5ff" + player.getName()));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFOperario: &#00f5ff" + player.getName()));
         lore.add(CrossplayUtils.parseCrossplay(player, " "));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000❤ Vida: &#1c0f2a100/100"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff🛡️ Defensa: &#1c0f2a25"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000⚔️ Fuerza: &#1c0f2a10"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff⚡ Velocidad: &#1c0f2a100%"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000❤ Vida: &#E6CCFF100/100"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff🛡️ Defensa: &#E6CCFF25"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000⚔️ Fuerza: &#E6CCFF10"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff⚡ Velocidad: &#E6CCFF100%"));
         lore.add(CrossplayUtils.parseCrossplay(player, " "));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#ff00ff🪙 Monedas: &#1c0f2a0.0"));
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff💎 Gemas: &#1c0f2a0"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#ff00ff🪙 Monedas: &#E6CCFF0.0"));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff💎 Gemas: &#E6CCFF0"));
 
         meta.lore(lore);
         head.setItemMeta(meta);
@@ -115,7 +115,7 @@ public class HubMenu extends NexoMenu {
         ItemMeta meta = item.getItemMeta();
         meta.displayName(CrossplayUtils.parseCrossplay(player, "<bold>" + name + "</bold>"));
         List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-        lore.add(CrossplayUtils.parseCrossplay(player, "&#1c0f2a" + desc));
+        lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFF" + desc));
         lore.add(CrossplayUtils.parseCrossplay(player, " "));
         lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff► Clic para acceder"));
         meta.lore(lore);

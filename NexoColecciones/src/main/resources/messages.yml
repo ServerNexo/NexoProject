@@ -7,8 +7,8 @@ comandos:
     recarga-exito: "&#00f5ff[✓] Sistemas de Colecciones y Slayers sincronizados y en línea."
     top-error: "&#8b0000[!] Error: Esa colección no existe en la base de datos."
     top-titulo: "&#ff00ff<bold>🏆 TOP 5 GLOBAL: </bold>%collection_name%"
-    top-vacio: "&#1c0f2aNadie ha farmeado este recurso todavía..."
-    top-linea: "&#ff00ff%rank%. &#00f5ff%player% &#1c0f2a- &#ff00ff%amount% &#1c0f2afarmeados"
+    top-vacio: "&#E6CCFFNadie ha farmeado este recurso todavía..."
+    top-linea: "&#ff00ff%rank%. &#00f5ff%player% &#E6CCFF- &#ff00ff%amount% &#E6CCFFfarmeados"
   slayer:
     no-jugador: "&#8b0000Error: El terminal requiere un operario humano."
     cancelado: "&#00f5ffProtocolo de cacería abortado exitosamente."
@@ -16,42 +16,42 @@ comandos:
     no-encontrado: "&#8b0000[!] Protocolo no encontrado. Código de cacería inválido."
     ya-activo: "&#8b0000[!] Ya tienes un protocolo activo. Complétalo o cancélalo primero."
     inicio-caceria: "&#8b0000<bold>⚔️ ¡CACERÍA INICIADA! ⚔️</bold>"
-    contrato-aceptado: "&#1c0f2aContrato aceptado: &#ff00ff%name%"
-    descripcion-caceria: "&#1c0f2aMata &#8b0000%kills%x %mob%s &#1c0f2apara forzar la aparición del Jefe."
+    contrato-aceptado: "&#E6CCFFContrato aceptado: &#ff00ff%name%"
+    descripcion-caceria: "&#E6CCFFMata &#8b0000%kills%x %mob%s &#E6CCFFpara forzar la aparición del Jefe."
 
 eventos:
   subida-nivel:
     titulo: "&#ff00ff<bold>⭐ ¡NUEVO NIVEL DE COLECCIÓN ALCANZADO!</bold>"
-    descripcion: "&#1c0f2aHas alcanzado el Nivel %level% en: &#00f5ff%item%"
+    descripcion: "&#E6CCFFHas alcanzado el Nivel %level% en: &#00f5ff%item%"
     titulo-pantalla: "&#ff00ff⭐ NIVEL %level% ⭐"
     subtitulo-pantalla: "&#00f5ff¡%item_name% subió de nivel!"
-  max-nivel: "&#1c0f2a[&#ff00ff<bold>NEXO</bold>&#1c0f2a] &#00f5ff¡El operario &#ff00ff%player% &#00f5ffha dominado por completo la colección de &#ff00ff%item%&#00f5ff!"
-  recompensa-reclamada: "&#00f5ff[✓] <bold>RECOMPENSA RECLAMADA:</bold> &#1c0f2aEl vacío te ha entregado su poder."
+  max-nivel: "&#E6CCFF[&#ff00ff<bold>NEXO</bold>&#E6CCFF] &#00f5ff¡El operario &#ff00ff%player% &#00f5ffha dominado por completo la colección de &#ff00ff%item%&#00f5ff!"
+  recompensa-reclamada: "&#00f5ff[✓] <bold>RECOMPENSA RECLAMADA:</bold> &#E6CCFFEl vacío te ha entregado su poder."
   jefe-slayer:
     contrato-completado: "&#00f5ff<bold>⚔️ ¡CONTRATO COMPLETADO!</bold>"
-    jefe-derrotado: "&#1c0f2aObjetivo eliminado: &#8b0000%boss%"
+    jefe-derrotado: "&#E6CCFFObjetivo eliminado: &#8b0000%boss%"
     recompensa-gemas: "&#00f5ff💎 ¡Transferencia de &#ff00ff%gems% Gemas &#00f5ffrealizada a tu cuenta!"
     spawn-titulo: "&#8b0000<bold>¡AMENAZA DETECTADA!</bold>"
-    spawn-descripcion: "&#1c0f2aEl objetivo &#8b0000%boss% &#1c0f2aha entrado en tu área."
+    spawn-descripcion: "&#E6CCFFEl objetivo &#8b0000%boss% &#E6CCFFha entrado en tu área."
     error-tipo-jefe: "&#8b0000[Error Interno] El tipo de entidad en la base de datos es inválido."
 
 menus:
   colecciones:
     titulo: "&#00f5ffGrimorio del Vacío"
     categoria-lore:
-      - "&#1c0f2aExplora las colecciones"
-      - "&#1c0f2ade esta rama arcana."
+      - "&#E6CCFFExplora las colecciones"
+      - "&#E6CCFFde esta rama arcana."
       - " "
       - "&#00f5ff¡Clic para abrir!"
     item-desconocido:
       titulo: "&#8b0000Ítem Desconocido"
       lore:
-        - "&#1c0f2aAún no has descubierto"
-        - "&#1c0f2aesta materia en el mundo."
+        - "&#E6CCFFAún no has descubierto"
+        - "&#E6CCFFesta materia en el mundo."
     item-descubierto:
       lore:
-        - "&#1c0f2aNivel Alcanzado: &#00f5ff%level% / %max_tier%"
-        - "&#1c0f2aProgreso Total: &#ff00ff%progress%"
+        - "&#E6CCFFNivel Alcanzado: &#00f5ff%level% / %max_tier%"
+        - "&#E6CCFFProgreso Total: &#ff00ff%progress%"
         - " "
         - "&#00f5ff¡Clic para ver las recompensas!"
     tiers:
@@ -59,13 +59,13 @@ menus:
       reclamado:
         titulo: "&#00f5ff<bold>NIVEL %level% COMPLETADO</bold>"
         lore:
-          - "&#1c0f2aRequería: &#00f5ff%required%"
+          - "&#E6CCFFRequería: &#00f5ff%required%"
           - " "
           - "&#00f5ff[✓] El poder ya fluye en ti."
       listo-reclamar:
         titulo: "&#ff00ff<bold>⭐ NIVEL %level% ALCANZADO ⭐</bold>"
         lore-base:
-          - "&#1c0f2aRequería: &#00f5ff%required%"
+          - "&#E6CCFFRequería: &#00f5ff%required%"
           - " "
         lore-recompensa: # Se añade dinámicamente
         lore-accion:
@@ -74,23 +74,23 @@ menus:
       bloqueado:
         titulo: "&#8b0000<bold>NIVEL %level% BLOQUEADO</bold>"
         lore:
-          - "&#1c0f2aProgreso: &#8b0000%progress% / %required%"
+          - "&#E6CCFFProgreso: &#8b0000%progress% / %required%"
           - " "
-          - "&#1c0f2aMisterios aguardan a quienes"
-          - "&#1c0f2ademuestren su valía..."
+          - "&#E6CCFFMisterios aguardan a quienes"
+          - "&#E6CCFFdemuestren su valía..."
       stats-globales:
         titulo: "&#00f5ffEstadísticas Globales"
         lore:
-          - "&#1c0f2aTu progreso: &#ff00ff%progress%"
+          - "&#E6CCFFTu progreso: &#ff00ff%progress%"
           - " "
           - "&#00f5ff¡Clic para ver el Top 5 en Chat!"
       boton-volver: "&#00f5ff⬅ Volver"
   slayer:
-    titulo: "&#1c0f2a<bold>»</bold> &#00f5ffContratos de Eliminación (Slayer)"
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffContratos de Eliminación (Slayer)"
     item-lore:
-      - "&#1c0f2aCódigo de Contrato: %id%"
+      - "&#E6CCFFCódigo de Contrato: %id%"
       - " "
-      - "&#1c0f2aObjetivo: &#00f5ffEliminar %kills%x %mob%s"
-      - "&#1c0f2aAmenaza Final: &#8b0000%boss_name%"
+      - "&#E6CCFFObjetivo: &#00f5ffEliminar %kills%x %mob%s"
+      - "&#E6CCFFAmenaza Final: &#8b0000%boss_name%"
       - " "
       - "&#00f5ff¡Haz clic para iniciar la Cacería!"

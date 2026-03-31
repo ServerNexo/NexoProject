@@ -38,9 +38,9 @@ public class NexoMenuListener implements Listener {
         ItemStack item = new ItemStack(Material.CLOCK);
         ItemMeta meta = item.getItemMeta();
 
-        meta.displayName(NexoColor.parse("&#ff00ff<bold>Menú Principal</bold> &#1c0f2a(Clic Derecho)"));
+        meta.displayName(NexoColor.parse("&#ff00ff<bold>Menú Principal</bold> &#E6CCFF(Clic Derecho)"));
         List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-        lore.add(NexoColor.parse("&#1c0f2aTu conexión directa con el Nexo."));
+        lore.add(NexoColor.parse("&#E6CCFFTu conexión directa con el Nexo."));
         lore.add(net.kyori.adventure.text.Component.empty());
         lore.add(NexoColor.parse("&#00f5ff¡Clic derecho para abrir!"));
         meta.lore(lore);
