@@ -1,5 +1,6 @@
 package me.nexo.colecciones.colecciones;
 
+import com.google.gson.Gson;
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.core.NexoCore;
 import org.bukkit.Bukkit;
@@ -24,25 +25,32 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 
+import javax.sql.DataSource;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.util.UUID;
 
 public class ColeccionesListener implements Listener {
 
     private final NexoColecciones plugin;
     private final CollectionManager manager;
+    private final Gson gson; // 🌟 OPTIMIZACIÓN: Instanciado una sola vez para ahorrar RAM
+
     private static final String ANTI_EXPLOIT_KEY = "nexo_player_placed";
     private static final String BREWER_KEY = "nexo_last_brewer";
 
     public ColeccionesListener(NexoColecciones plugin) {
         this.plugin = plugin;
         this.manager = plugin.getCollectionManager();
+        this.gson = new Gson();
     }
 
     // ==========================================
-    // 🛡️ ANTI-EXPLOIT (Marcador)
+    // 🛡️ ANTI-EXPLOIT (Marcador de Bloques Artificiales)
     // ==========================================
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
+        // Le ponemos una etiqueta invisible a los bloques que coloca el jugador
         event.getBlock().setMetadata(ANTI_EXPLOIT_KEY, new FixedMetadataValue(plugin, true));
     }
 
@@ -51,28 +59,30 @@ public class ColeccionesListener implements Listener {
     // ==========================================
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreak(BlockBreakEvent event) {
-        // Si el evento fue cancelado, revisamos si estamos en "Mina"
-        if (event.isCancelled()) {
-            if (!event.getPlayer().getWorld().getName().equalsIgnoreCase("Mina")) {
-                return;
-            }
+        // Si el evento fue cancelado (ej. por protección), solo permitimos romper si está en la "Mina"
+        if (event.isCancelled() && !event.getPlayer().getWorld().getName().equalsIgnoreCase("Mina")) {
+            return;
         }
 
         Block block = event.getBlock();
         String blockId = block.getType().name();
 
+        // 🌾 Lógica especial para Cultivos (Ya que el jugador los planta)
         if (block.getBlockData() instanceof Ageable cultivo) {
-            if (cultivo.getAge() < cultivo.getMaximumAge()) return;
+            if (cultivo.getAge() < cultivo.getMaximumAge()) return; // Ignoramos si no está maduro
+
             manager.addProgress(event.getPlayer(), blockId, 1);
             if (block.hasMetadata(ANTI_EXPLOIT_KEY)) block.removeMetadata(ANTI_EXPLOIT_KEY, plugin);
             return;
         }
 
+        // 🚫 Anti-Exploit para bloques normales (Diamante, Madera, etc)
         if (block.hasMetadata(ANTI_EXPLOIT_KEY)) {
-            block.removeMetadata(ANTI_EXPLOIT_KEY, plugin);
-            return;
+            block.removeMetadata(ANTI_EXPLOIT_KEY, plugin); // Quitamos la marca para limpiar memoria
+            return; // No otorgamos puntos
         }
 
+        // Si es un bloque 100% natural, sumamos a la colección
         manager.addProgress(event.getPlayer(), blockId, 1);
     }
 
@@ -104,10 +114,8 @@ public class ColeccionesListener implements Listener {
     // ==========================================
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onInventoryOpen(InventoryOpenEvent event) {
-        if (event.getInventory().getType() == InventoryType.BREWING) {
-            if (event.getInventory().getLocation() != null) {
-                event.getInventory().getLocation().getBlock().setMetadata(BREWER_KEY, new FixedMetadataValue(plugin, event.getPlayer().getUniqueId().toString()));
-            }
+        if (event.getInventory().getType() == InventoryType.BREWING && event.getInventory().getLocation() != null) {
+            event.getInventory().getLocation().getBlock().setMetadata(BREWER_KEY, new FixedMetadataValue(plugin, event.getPlayer().getUniqueId().toString()));
         }
     }
 
@@ -132,7 +140,6 @@ public class ColeccionesListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEnchant(EnchantItemEvent event) {
         Player player = event.getEnchanter();
-
         int lapisUsado = event.whichButton() + 1;
         manager.addProgress(player, "LAPIS_LAZULI", lapisUsado);
 
@@ -146,7 +153,7 @@ public class ColeccionesListener implements Listener {
     // ==========================================
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
-        var dataSource = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getDataSource();
+        DataSource dataSource = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getDataSource();
         manager.loadPlayerFromDatabase(event.getPlayer().getUniqueId(), dataSource);
     }
 
@@ -156,31 +163,28 @@ public class ColeccionesListener implements Listener {
         CollectionProfile profile = manager.getProfile(uuid);
 
         if (profile != null && profile.isNeedsFlush()) {
-            var dataSource = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getDataSource();
+            DataSource dataSource = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getDataSource();
 
             Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                // 🌟 NUEVA SQL: Guarda el progreso y la memoria de Tiers reclamados
                 String sql = "INSERT INTO nexo_collections (uuid, collections_data, claimed_tiers) VALUES (?, ?::jsonb, ?::jsonb) " +
                         "ON CONFLICT (uuid) DO UPDATE SET collections_data = EXCLUDED.collections_data, claimed_tiers = EXCLUDED.claimed_tiers";
 
-                try (java.sql.Connection conn = dataSource.getConnection();
-                     java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
-
-                    com.google.gson.Gson gson = new com.google.gson.Gson();
+                try (Connection conn = dataSource.getConnection();
+                     PreparedStatement ps = conn.prepareStatement(sql)) {
 
                     ps.setString(1, uuid.toString());
-                    // 🌟 CORRECCIÓN: Usamos getProgressMap() y getClaimedTiersMap()
                     ps.setString(2, gson.toJson(profile.getProgressMap()));
                     ps.setString(3, gson.toJson(profile.getClaimedTiersMap()));
 
                     ps.executeUpdate();
 
                 } catch (Exception e) {
-                    plugin.getLogger().severe("Error al guardar colecciones de " + event.getPlayer().getName() + " al salir.");
+                    plugin.getLogger().severe("Error crítico al guardar el Grimorio de Colecciones de " + event.getPlayer().getName());
                     e.printStackTrace();
                 }
             });
         }
+        // Limpiamos de la memoria al salir para evitar fugas de RAM
         manager.removeProfile(uuid);
     }
 }
