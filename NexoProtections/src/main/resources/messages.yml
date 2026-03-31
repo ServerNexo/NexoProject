@@ -1,0 +1,99 @@
+# ------------------------------------------------- #
+#      Mensajes del Módulo NexoProtections
+# ------------------------------------------------- #
+
+comandos:
+  proteccion:
+    no-jugador: "&#8b0000[!] Este comando solo puede ser ejecutado por un jugador."
+    reload: "&#00f5ff[✓] Sistema de Protecciones recargado y sincronizado con la base de datos."
+    sin-permiso: "&#8b0000[!] No tienes permiso para usar este comando."
+    uso-trust: "&#8b0000[!] Uso: /nexo trust <jugador>"
+    uso-untrust: "&#8b0000[!] Uso: /nexo untrust <jugador>"
+    no-estas-en-proteccion: "&#8b0000[!] No te encuentras dentro de los límites de un Monolito."
+    no-eres-dueno: "&#8b0000[!] Solo el Señor de este Dominio puede gestionar los permisos."
+    jugador-no-encontrado: "&#8b0000[!] Jugador no encontrado en la red."
+    ya-es-miembro: "&#ff00ff%player%&#1c0f2a ya tiene acceso a este dominio."
+    trust-exitoso: "&#00f5ff[✓] Se ha concedido acceso a &#ff00ff%player%&#00f5ff a tu dominio."
+    no-es-miembro: "&#ff00ff%player%&#1c0f2a no tiene acceso a este dominio."
+    untrust-exitoso: "&#00f5ff[✓] Se ha revocado el acceso a &#ff00ff%player%&#00f5ff de tu dominio."
+
+eventos:
+  block-break:
+    ritual-deshecho: "&#ff00ff[✓] <bold>RITUAL DESHECHO:</bold> &#E6CCFFEl Monolito del Vacío ha sido desmantelado con éxito."
+    herejia: "&#8b0000[!] Herejía: &#E6CCFFSolo el Señor de este Dominio puede destruir el Monolito."
+    dominio-sellado-break: "&#8b0000[!] Dominio Sellado: &#E6CCFFEl vacío protege estas tierras. No puedes alterar su forma."
+  block-place:
+    dominio-sellado-build: "&#8b0000[!] Dominio Sellado: &#E6CCFFNo puedes invocar estructuras en tierras ajenas."
+    energia-corrupta: "&#8b0000[!] Energía Corrupta: &#E6CCFFEl aura de este Monolito colisiona con otro sello cercano. Aléjate más."
+    limite-alcanzado: "&#8b0000[!] Límite Alcanzado: &#E6CCFFTu alma no soporta mantener más Monolitos."
+    sello-invocado: "&#00f5ff[✓] <bold>SELLO INVOCADO:</bold> &#E6CCFFEl Vacío ahora reclama un radio de &#ff00ff%radius% bloques&#E6CCFF."
+  interact:
+    monolito-rechaza: "&#8b0000[!] Herejía: &#E6CCFFEl Monolito rechaza tu tacto."
+  movimiento:
+    campo-de-fuerza: "&#8b0000[!] Campo de Fuerza: &#E6CCFFEste dominio está cerrado para extraños."
+    entrada-dominio: "&#00f5ff🌿 Has entrado al dominio de %owner%"
+    salida-dominio: "&#8b0000🌲 Has entrado a Zona Salvaje"
+  upkeep:
+    sin-energia: "&#8b0000[!] Tu Monolito en &#ff00ff%location% &#8b0000se ha quedado sin Esencia y se ha desvanecido."
+
+menus:
+  principal:
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffMonolito del Vacío"
+    acolitos:
+      titulo: "&#ff00ff<bold>ACÓLITOS DEL PACTO</bold>"
+      lore:
+        - "&#E6CCFFExplora y destierra a las almas"
+        - "&#E6CCFFvinculadas a este Monolito."
+        - " "
+        - "&#00f5ff► Clic para abrir el registro"
+    nucleo:
+      titulo: "&#ff00ff<bold>NÚCLEO DEL MONOLITO</bold>"
+      lore:
+        - "&#E6CCFFSeñor Oscuro: &#ff00ff%owner%"
+        - "&#E6CCFFTipo de Culto: &#ff00ff%type%"
+        - " "
+        - "&#E6CCFFEsencia Consumida: %energy_color%%current_energy% &#E6CCFF/ &#00f5ff%max_energy%"
+    leyes:
+      titulo: "&#ff00ff<bold>LEYES DEL DOMINIO</bold>"
+      lore:
+        - "&#E6CCFFAltera las leyes naturales y"
+        - "&#E6CCFFfísicas de los forasteros."
+        - " "
+        - "&#00f5ff► Clic para dictar las leyes"
+    recarga:
+      titulo: "&#ff00ff<bold>[ INFUNDIR ESENCIA ]</bold>"
+      lore:
+        - "&#E6CCFFOfrece sacrificios (Diamantes o Ecos)"
+        - "&#E6CCFFpara alimentar el vacío del Monolito."
+    feedback:
+      no-permiso-leyes: "&#8b0000[!] Solo el Señor del Dominio puede alterar las leyes naturales."
+      monolito-saciado: "&#8b0000[!] El Monolito está completamente saciado."
+      ofrenda-rechazada: "&#8b0000[!] Ofrenda Rechazada: &#E6CCFFNecesitas Diamantes o Fragmentos de Eco para alimentar el vacío."
+      esencia-devorada: "&#ff00ff[✓] <bold>ESENCIA DEVORADA:</bold> &#E6CCFFEl Monolito ha absorbido tu ofrenda."
+  miembros:
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffAcólitos del Pacto"
+    cabeza:
+      titulo: "&#ff00ff<bold>%player%</bold>"
+      lore:
+        - "&#E6CCFFEsta alma tiene libre albedrío"
+        - "&#E6CCFFdentro de tu Monolito."
+        - " "
+        - "&#8b0000► Clic para DESTERRAR esta alma"
+    volver: "&#00f5ff<bold>VOLVER AL MONOLITO</bold>"
+    invocar:
+      titulo: "&#ff00ff<bold>INVOCAR NUEVA ALMA</bold>"
+      lore:
+        - "&#E6CCFFPara añadir a un amigo,"
+        - "&#E6CCFFcierra este menú y escribe en el chat:"
+        - "&#ff00ff/nexo trust <NombreJugador>"
+  flags:
+    titulo: "&#E6CCFF<bold>»</bold> &#00f5ffLeyes del Dominio"
+    item:
+      lore:
+        - "&#E6CCFFPara forasteros: %status%"
+        - " "
+        - "&#00f5ff► Clic para alternar esta ley"
+      estado:
+        permitido: "&#00f5ff[ PERMITIDO ]"
+        bloqueado: "&#8b0000[ BLOQUEADO ]"
+    volver: "&#00f5ff<bold>VOLVER AL MONOLITO</bold>"

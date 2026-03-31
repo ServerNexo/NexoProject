@@ -1,6 +1,7 @@
 package me.nexo.protections;
 
 import me.nexo.core.NexoCore;
+import me.nexo.protections.config.ConfigManager;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.protections.commands.ComandoProteccion;
 import me.nexo.protections.commands.ComandoProteccionTabCompleter;
@@ -12,6 +13,7 @@ public class NexoProtections extends JavaPlugin {
     private static NexoProtections instance;
     private static ClaimManager claimManager;
     private me.nexo.protections.managers.LimitManager limitManager;
+    private ConfigManager configManager;
 
     @Override
     public void onEnable() {
@@ -59,6 +61,9 @@ public class NexoProtections extends JavaPlugin {
         NexoCore core = NexoCore.getPlugin(NexoCore.class);
         claimManager.getAllStones().clear();
         claimManager.loadAllStonesAsync(core);
+    }
+    public ConfigManager getConfigManager() {
+        return configManager;
     }
 
     public static NexoProtections getInstance() { return instance; }
