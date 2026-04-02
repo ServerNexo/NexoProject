@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class SkillTreeMenu extends NexoMenu {
 
@@ -33,9 +34,18 @@ public class SkillTreeMenu extends NexoMenu {
         this.plugin = plugin;
     }
 
+    // 🌟 MÉTODOS MÁGICOS DE LECTURA
+    private String getMessage(String path) {
+        return plugin.getConfigManager().getMessage(path);
+    }
+
+    private List<String> getMessageList(String path) {
+        return plugin.getConfigManager().getMessages().getStringList(path);
+    }
+
     @Override
     public String getMenuName() {
-        return "&#00f5ff🌳 Árbol de Conocimiento";
+        return getMessage("menus.skills.titulo");
     }
 
     @Override
@@ -51,19 +61,23 @@ public class SkillTreeMenu extends NexoMenu {
         int kp = user != null ? user.getKnowledgePoints() : 0;
 
         // 🌟 ÍTEM DE INFORMACIÓN DEL JUGADOR
-        setItem(4, Material.ENCHANTED_BOOK, "&#ff00ffTus Puntos: &#00f5ff" + kp + " KP",
-                List.of("&#E6CCFFUsa estos puntos para desbloquear", "&#E6CCFFnuevos nodos tecnológicos."));
+        String infoName = getMessage("menus.skills.items.info.nombre").replace("%kp%", String.valueOf(kp));
+        List<String> infoLore = getMessageList("menus.skills.items.info.lore");
+        setItem(4, Material.ENCHANTED_BOOK, infoName, infoLore);
 
-        // 🌟 NODO DE EJEMPLO (Plantilla para que agregues el resto)
+        // 🌟 NODO DE EJEMPLO (Minería)
         ItemStack miningNode = new ItemStack(Material.DIAMOND_PICKAXE);
         ItemMeta miningMeta = miningNode.getItemMeta();
         if (miningMeta != null) {
-            miningMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ffNodo: Extracción Profunda"));
-            miningMeta.lore(List.of(
-                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFPermite minar minerales del vacío."),
-                    CrossplayUtils.parseCrossplay(player, " "),
-                    CrossplayUtils.parseCrossplay(player, "&#ff00ffCosto: &#00f5ff5 KP")
-            ));
+            String nodeName = getMessage("menus.skills.nodos.mineria.nombre");
+            miningMeta.displayName(CrossplayUtils.parseCrossplay(player, nodeName));
+
+            List<net.kyori.adventure.text.Component> lore = getMessageList("menus.skills.nodos.mineria.lore").stream()
+                    .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%cost%", "5")))
+                    .collect(Collectors.toList());
+
+            miningMeta.lore(lore);
+
             // MAGIA PDC: Guardamos el permiso a dar y cuánto cuesta
             miningMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "unlock_node");
             miningMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "node_perm"), PersistentDataType.STRING, "nexo.skills.mining.1");
@@ -103,10 +117,11 @@ public class SkillTreeMenu extends NexoMenu {
     // 🧠 TU LÓGICA ORIGINAL INTACTA
     // ==========================================
     public static void desbloquearNodo(Player p, String permiso, int costo) {
+        NexoMechanics mechPlugin = NexoMechanics.getPlugin(NexoMechanics.class);
         NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
 
         if (user == null) {
-            p.sendMessage(NexoColor.parse("&#8b0000[!] Sincronización neuronal incompleta. Aguarda un momento."));
+            p.sendMessage(NexoColor.parse(mechPlugin.getConfigManager().getMessage("mensajes.errores.sincronizacion-incompleta")));
             return;
         }
 
@@ -118,12 +133,12 @@ public class SkillTreeMenu extends NexoMenu {
 
             attachment.setPermission(permiso, true);
 
-            p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>NODO DESBLOQUEADO:</bold> &#E6CCFFNueva tecnología industrial integrada a tu sistema."));
-            p.sendMessage(NexoColor.parse("&#E6CCFFPuntos de Conocimiento restantes: &#00f5ff" + user.getKnowledgePoints()));
+            p.sendMessage(NexoColor.parse(mechPlugin.getConfigManager().getMessage("mensajes.exito.nodo-desbloqueado")));
+            p.sendMessage(NexoColor.parse(mechPlugin.getConfigManager().getMessage("mensajes.exito.puntos-restantes").replace("%kp%", String.valueOf(user.getKnowledgePoints()))));
             p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
 
         } else {
-            p.sendMessage(NexoColor.parse("&#8b0000[!] Conocimiento Insuficiente. &#E6CCFFRequieres más experiencia práctica para procesar este nodo."));
+            p.sendMessage(NexoColor.parse(mechPlugin.getConfigManager().getMessage("mensajes.errores.conocimiento-insuficiente")));
             p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
         }
     }

@@ -21,7 +21,8 @@ public class ComandoSkillTree implements CommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(NexoColor.parse("&#FF3366[!] Este terminal solo puede ser operado por un humano."));
+            // 🌟 LECTURA DESDE CONFIGURACIÓN
+            sender.sendMessage(NexoColor.parse(plugin.getConfigManager().getMessage("mensajes.errores.solo-jugadores")));
             return true;
         }
 

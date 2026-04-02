@@ -1,49 +1,36 @@
 package me.nexo.mechanics;
 
-import me.nexo.core.user.NexoAPI;
 import me.nexo.mechanics.commands.ComandoSkillTree;
 import me.nexo.mechanics.commands.ComandoSkillsTabCompleter;
-import me.nexo.mechanics.minigames.*;
+import me.nexo.mechanics.config.ConfigManager; // 🌟 IMPORTACIÓN AÑADIDA
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoMechanics extends JavaPlugin {
 
-    private CombatComboManager combatComboManager;
+    // 🌟 VARIABLE AÑADIDA
+    private ConfigManager configManager;
 
     @Override
     public void onEnable() {
-        getLogger().info("========================================");
-        getLogger().info("⚙️ NexoMechanics: Iniciando Motores...");
+        // 🌟 INICIALIZACIÓN OMEGA
+        this.configManager = new ConfigManager(this);
 
-        this.combatComboManager = new CombatComboManager(this);
-        NexoAPI.getServices().register(CombatComboManager.class, this.combatComboManager);
-
-        getServer().getPluginManager().registerEvents(this.combatComboManager, this);
-        getServer().getPluginManager().registerEvents(new AlchemyMinigameManager(this), this);
-        getServer().getPluginManager().registerEvents(new EnchantingMinigameManager(this), this);
-        getServer().getPluginManager().registerEvents(new FarmingMinigameManager(this), this);
-        getServer().getPluginManager().registerEvents(new FishingHookManager(this), this);
-        getServer().getPluginManager().registerEvents(new MiningMinigameManager(this), this);
-        getServer().getPluginManager().registerEvents(new WoodcuttingMinigameManager(this), this);
-
-        if (getCommand("skilltree") != null) {
-            // 🌟 CORRECCIÓN OMEGA: Ahora pasamos la instancia del plugin (this) al comando
-            getCommand("skilltree").setExecutor(new ComandoSkillTree(this));
-            getCommand("skilltree").setTabCompleter(new ComandoSkillsTabCompleter());
+        if (getCommand("skills") != null) {
+            // Pasamos la instancia del plugin al comando
+            getCommand("skills").setExecutor(new ComandoSkillTree(this));
+            getCommand("skills").setTabCompleter(new ComandoSkillsTabCompleter());
         }
 
-        getLogger().info("🔗 Conexión exitosa con NexoCore API");
-        getLogger().info("⚙️ NexoMechanics activado correctamente.");
-        getLogger().info("========================================");
+        getLogger().info("NexoMechanics ha sido habilitado.");
     }
 
     @Override
     public void onDisable() {
-        NexoAPI.getServices().unregister(CombatComboManager.class);
-        getLogger().info("⚙️ NexoMechanics: Motores apagados.");
+        getLogger().info("NexoMechanics ha sido deshabilitado.");
     }
 
-    public CombatComboManager getCombatComboManager() {
-        return combatComboManager;
+    // 🌟 GETTER AÑADIDO
+    public ConfigManager getConfigManager() {
+        return configManager;
     }
 }
