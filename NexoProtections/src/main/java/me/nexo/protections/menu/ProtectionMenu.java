@@ -11,8 +11,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ProtectionMenu extends NexoMenu {
 
@@ -25,9 +25,18 @@ public class ProtectionMenu extends NexoMenu {
         this.stone = stone;
     }
 
+    // 🌟 MÉTODOS PARA LEER LA CONFIGURACIÓN LOCAL DE FORMA RÁPIDA
+    private String getMessage(String path) {
+        return plugin.getConfigManager().getMessage(path);
+    }
+
+    private List<String> getMessageList(String path) {
+        return plugin.getConfigManager().getMessages().getStringList(path);
+    }
+
     @Override
     public String getMenuName() {
-        return "&#E6CCFF<bold>»</bold> &#00f5ffMonolito del Vacío";
+        return getMessage("menus.principal.titulo");
     }
 
     @Override
@@ -40,39 +49,28 @@ public class ProtectionMenu extends NexoMenu {
         setFillerGlass(); // Cristal morado por defecto del NexoMenu
 
         // SLOT 11: ACÓLITOS
-        List<String> memLore = List.of(
-                "&#E6CCFFExplora y destierra a las almas",
-                "&#E6CCFFvinculadas a este Monolito.",
-                " ",
-                "&#00f5ff► Clic para abrir el registro"
-        );
-        setItem(11, Material.WITHER_SKELETON_SKULL, "&#ff00ff<bold>ACÓLITOS DEL PACTO</bold>", memLore);
+        setItem(11, Material.WITHER_SKELETON_SKULL, getMessage("menus.principal.acolitos.nombre"), getMessageList("menus.principal.acolitos.lore"));
 
         // SLOT 13: NÚCLEO
-        List<String> infoLore = new ArrayList<>();
-        infoLore.add("&#E6CCFFSeñor Oscuro: &#ff00ff" + Bukkit.getOfflinePlayer(stone.getOwnerId()).getName());
-        infoLore.add("&#E6CCFFTipo de Culto: &#ff00ff" + (stone.getClanId() == null ? "Solitario" : "Sindicato"));
-        infoLore.add(" ");
         double porcentaje = (stone.getCurrentEnergy() / stone.getMaxEnergy()) * 100;
         String colorEnergia = porcentaje > 50 ? "&#00f5ff" : (porcentaje > 20 ? "&#ff00ff" : "&#8b0000");
-        infoLore.add("&#E6CCFFEsencia Consumida: " + colorEnergia + String.format("%.1f", stone.getCurrentEnergy()) + " &#E6CCFF/ &#00f5ff" + stone.getMaxEnergy());
-        setItem(13, Material.LODESTONE, "&#ff00ff<bold>NÚCLEO DEL MONOLITO</bold>", infoLore);
+        String ownerName = Bukkit.getOfflinePlayer(stone.getOwnerId()).getName();
+
+        List<String> infoLore = getMessageList("menus.principal.nucleo.lore").stream()
+                .map(line -> line.replace("%owner%", ownerName != null ? ownerName : "Desconocido")
+                        .replace("%type%", stone.getClanId() == null ? "Solitario" : "Sindicato")
+                        .replace("%energy_color%", colorEnergia)
+                        .replace("%current_energy%", String.format("%.1f", stone.getCurrentEnergy()))
+                        .replace("%max_energy%", String.valueOf(stone.getMaxEnergy())))
+                .collect(Collectors.toList());
+
+        setItem(13, Material.LODESTONE, getMessage("menus.principal.nucleo.nombre"), infoLore);
 
         // SLOT 15: FLAGS
-        List<String> flagLore = List.of(
-                "&#E6CCFFAltera las leyes naturales y",
-                "&#E6CCFFfísicas de los forasteros.",
-                " ",
-                "&#00f5ff► Clic para dictar las leyes"
-        );
-        setItem(15, Material.SOUL_TORCH, "&#ff00ff<bold>LEYES DEL DOMINIO</bold>", flagLore);
+        setItem(15, Material.SOUL_TORCH, getMessage("menus.principal.leyes.nombre"), getMessageList("menus.principal.leyes.lore"));
 
         // SLOT 22: RECARGA
-        List<String> rechargeLore = List.of(
-                "&#E6CCFFOfrece sacrificios (Diamantes o Ecos)",
-                "&#E6CCFFpara alimentar el vacío del Monolito."
-        );
-        setItem(22, Material.ECHO_SHARD, "&#ff00ff<bold>[ INFUNDIR ESENCIA ]</bold>", rechargeLore);
+        setItem(22, Material.ECHO_SHARD, getMessage("menus.principal.recarga.nombre"), getMessageList("menus.principal.recarga.lore"));
     }
 
     @Override
@@ -86,7 +84,7 @@ public class ProtectionMenu extends NexoMenu {
         }
         else if (slot == 15) { // Leyes
             if (!stone.getOwnerId().equals(player.getUniqueId())) {
-                player.sendMessage(NexoColor.parse("&#FF3366[!] Solo el Señor del Dominio puede alterar las leyes naturales."));
+                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.solo-dueno")));
                 return;
             }
             player.playSound(player.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 1f);
@@ -94,7 +92,7 @@ public class ProtectionMenu extends NexoMenu {
         }
         else if (slot == 22) { // Recarga
             if (stone.getCurrentEnergy() >= stone.getMaxEnergy()) {
-                player.sendMessage(NexoColor.parse("&#FF3366[!] El Monolito está completamente saciado."));
+                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.monolito-lleno")));
                 return;
             }
             if (player.getInventory().contains(Material.ECHO_SHARD)) {
@@ -106,14 +104,14 @@ public class ProtectionMenu extends NexoMenu {
                 stone.addEnergy(100);
                 recargaExitosa();
             } else {
-                player.sendMessage(NexoColor.parse("&#FF3366[!] Ofrenda Rechazada: &#E6CCFFNecesitas Diamantes o Fragmentos de Eco para alimentar el vacío."));
+                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.ofrenda-rechazada")));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             }
         }
     }
 
     private void recargaExitosa() {
-        player.sendMessage(NexoColor.parse("&#CC66FF[✓] <bold>ESENCIA DEVORADA:</bold> &#E6CCFFEl Monolito ha absorbido tu ofrenda."));
+        player.sendMessage(NexoColor.parse(getMessage("mensajes.exito.recarga-exitosa")));
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, 1f, 0.5f);
         setMenuItems(); // Actualizamos la visual de la energía sin cerrar el menú
     }

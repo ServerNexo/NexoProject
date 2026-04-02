@@ -2,6 +2,7 @@ package me.nexo.pvp;
 
 import me.nexo.pvp.classes.ArmorClassListener;
 import me.nexo.pvp.commands.ComandoPvPTabCompleter;
+import me.nexo.pvp.config.ConfigManager; // 🌟 IMPORTACIÓN AÑADIDA
 import org.bukkit.plugin.java.JavaPlugin;
 
 import me.nexo.pvp.pvp.PvPManager;
@@ -17,6 +18,9 @@ import me.nexo.pvp.mechanics.DeathPenaltyListener;
 
 public class NexoPvP extends JavaPlugin {
 
+    // 🌟 DECLARACIÓN DEL CONFIG MANAGER
+    private ConfigManager configManager;
+
     private PvPManager pvpManager;
     private PasivasManager pasivasManager;
 
@@ -25,6 +29,9 @@ public class NexoPvP extends JavaPlugin {
         getLogger().info("========================================");
         getLogger().info("⚔️ NexoPvP activado correctamente.");
         getLogger().info("🔗 Conectado al cerebro: NexoCore.");
+
+        // 🌟 INICIALIZAR EL CONFIG MANAGER PRIMERO
+        this.configManager = new ConfigManager(this);
 
         this.pvpManager = new PvPManager(this);
         this.pasivasManager = new PasivasManager(this);
@@ -39,8 +46,6 @@ public class NexoPvP extends JavaPlugin {
             getCommand("pvp").setTabCompleter(new ComandoPvPTabCompleter());
         }
 
-
-
         if (getCommand("templo") != null) {
             getCommand("templo").setExecutor(new me.nexo.pvp.commands.ComandoTemplo());
         }
@@ -51,5 +56,10 @@ public class NexoPvP extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("⚔️ NexoPvP apagado.");
+    }
+
+    // 🌟 GETTER AÑADIDO PARA LOS MENÚS Y EVENTOS
+    public ConfigManager getConfigManager() {
+        return configManager;
     }
 }

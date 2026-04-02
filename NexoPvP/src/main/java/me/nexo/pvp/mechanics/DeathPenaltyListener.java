@@ -8,6 +8,7 @@ import me.nexo.core.user.NexoUser;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
+import me.nexo.pvp.NexoPvP; // 🌟 IMPORTACIÓN AÑADIDA
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -23,9 +24,16 @@ import java.util.concurrent.CompletableFuture;
 public class DeathPenaltyListener implements Listener {
 
     private final NexoCore core;
+    private final NexoPvP plugin; // 🌟 VARIABLE AÑADIDA
 
     public DeathPenaltyListener() {
         this.core = NexoCore.getPlugin(NexoCore.class);
+        this.plugin = NexoPvP.getPlugin(NexoPvP.class); // Auto-vinculación sin modificar el Main
+    }
+
+    // 🌟 MÉTODO DE LECTURA MÁGICA
+    private String getMessage(String path) {
+        return plugin.getConfigManager().getMessage(path);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -45,7 +53,8 @@ public class DeathPenaltyListener implements Listener {
             event.getDrops().clear();
             event.setDroppedExp(0);
 
-            player.sendMessage(NexoColor.parse("&#ff00ff[⚡] La Bendición del Vacío ha protegido tu alma, tus skills y tu riqueza."));
+            // 🌟 TEXTO DESDE CONFIG
+            player.sendMessage(NexoColor.parse(getMessage("mensajes.penalizaciones.muerte-protegida")));
 
             // Consumir la bendición de 1 uso si la tiene
             if (user.hasActiveBlessing("VOID_BLESSING")) {
@@ -82,7 +91,6 @@ public class DeathPenaltyListener implements Listener {
                 // Obtenemos la cuenta desde el caché/DB
                 ecoPlugin.getEconomyManager().getAccountAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER).thenAccept(account -> {
                     if (account != null) {
-                        // 🛠️ CORRECCIÓN: Usar getCoins() generado por Lombok
                         BigDecimal currentBalance = account.getCoins();
 
                         if (currentBalance != null && currentBalance.compareTo(BigDecimal.ZERO) > 0) {
@@ -92,7 +100,9 @@ public class DeathPenaltyListener implements Listener {
                             // Ejecutamos el débito seguro
                             ecoPlugin.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, loss, false).thenAccept(success -> {
                                 if (success) {
-                                    player.sendMessage(NexoColor.parse("&#8b0000[💸] El Gremio de Resurrección ha cobrado &#ff00ff" + loss.toPlainString() + " Monedas &#8b0000por recuperar tu cuerpo."));
+                                    // 🌟 TEXTO DESDE CONFIG CON VARIABLE DE MONEDAS
+                                    String msgCobro = getMessage("mensajes.penalizaciones.cobro-resurreccion").replace("%amount%", loss.toPlainString());
+                                    player.sendMessage(NexoColor.parse(msgCobro));
                                 }
                             });
                         }
@@ -100,8 +110,9 @@ public class DeathPenaltyListener implements Listener {
                 });
             }
 
-            player.sendMessage(NexoColor.parse("&#8b0000[☠] Has perecido. Has perdido el 8% del progreso en todas tus profesiones."));
-            player.sendMessage(NexoColor.parse("&#00f5ff[💡] Consejo: Adquiere la Bendición del Vacío para evitar estas penalizaciones."));
+            // 🌟 TEXTOS DESDE CONFIG
+            player.sendMessage(NexoColor.parse(getMessage("mensajes.penalizaciones.perdida-progreso")));
+            player.sendMessage(NexoColor.parse(getMessage("mensajes.penalizaciones.consejo-bendicion")));
         }
 
         player.playSound(player.getLocation(), Sound.ENTITY_WITHER_DEATH, 1.0f, 0.5f);

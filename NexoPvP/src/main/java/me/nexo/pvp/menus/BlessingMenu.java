@@ -7,6 +7,7 @@ import me.nexo.core.user.NexoUser;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
+import me.nexo.pvp.NexoPvP; // 🌟 IMPORTACIÓN DE TU PLUGIN
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -17,21 +18,32 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors; // 🌟 IMPORTACIÓN AÑADIDA
 
 public class BlessingMenu extends NexoMenu {
 
     private final NexoCore core;
+    private final NexoPvP plugin; // 🌟 VARIABLE AÑADIDA
 
     public BlessingMenu(Player player) {
         super(player);
         this.core = NexoCore.getPlugin(NexoCore.class);
+        this.plugin = NexoPvP.getPlugin(NexoPvP.class); // Auto-vinculación al plugin local
+    }
+
+    // 🌟 MÉTODOS MÁGICOS DE LECTURA
+    private String getMessage(String path) {
+        return plugin.getConfigManager().getMessage(path);
+    }
+
+    private List<String> getMessageList(String path) {
+        return plugin.getConfigManager().getMessages().getStringList(path);
     }
 
     @Override
     public String getMenuName() {
-        return "&#ff00ff🏛 Templo del Vacío";
+        return getMessage("menus.templo.titulo");
     }
 
     @Override
@@ -47,13 +59,15 @@ public class BlessingMenu extends NexoMenu {
         ItemStack standardBless = new ItemStack(Material.GOLD_NUGGET);
         ItemMeta metaStd = standardBless.getItemMeta();
         if (metaStd != null) {
-            metaStd.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff<bold>Bendición Menor</bold>"));
-            List<net.kyori.adventure.text.Component> loreStd = new ArrayList<>();
-            loreStd.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFProtege tu experiencia y equipo de 1 muerte."));
-            loreStd.add(CrossplayUtils.parseCrossplay(player, " "));
-            loreStd.add(CrossplayUtils.parseCrossplay(player, "&#ff00ffPrecio: 50,000 Monedas"));
+            metaStd.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.templo.items.bendicion-menor.nombre")));
+
+            // Leemos el lore de la config y lo parseamos para crossplay/colores
+            List<net.kyori.adventure.text.Component> loreStd = getMessageList("menus.templo.items.bendicion-menor.lore").stream()
+                    .map(line -> CrossplayUtils.parseCrossplay(player, line))
+                    .collect(Collectors.toList());
+
             metaStd.lore(loreStd);
-            metaStd.getPersistentDataContainer().set(new NamespacedKey(core, "action"), PersistentDataType.STRING, "buy_bless_coins");
+            metaStd.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "buy_bless_coins");
             standardBless.setItemMeta(metaStd);
         }
 
@@ -61,13 +75,14 @@ public class BlessingMenu extends NexoMenu {
         ItemStack premiumBless = new ItemStack(Material.NETHER_STAR);
         ItemMeta metaPrem = premiumBless.getItemMeta();
         if (metaPrem != null) {
-            metaPrem.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>Bendición del Vacío Absoluto</bold>"));
-            List<net.kyori.adventure.text.Component> lorePrem = new ArrayList<>();
-            lorePrem.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFProtección total garantizada por los dioses."));
-            lorePrem.add(CrossplayUtils.parseCrossplay(player, " "));
-            lorePrem.add(CrossplayUtils.parseCrossplay(player, "&#00f5ffPrecio: 150 Gemas"));
+            metaPrem.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.templo.items.bendicion-premium.nombre")));
+
+            List<net.kyori.adventure.text.Component> lorePrem = getMessageList("menus.templo.items.bendicion-premium.lore").stream()
+                    .map(line -> CrossplayUtils.parseCrossplay(player, line))
+                    .collect(Collectors.toList());
+
             metaPrem.lore(lorePrem);
-            metaPrem.getPersistentDataContainer().set(new NamespacedKey(core, "action"), PersistentDataType.STRING, "buy_bless_premium");
+            metaPrem.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "buy_bless_premium");
             premiumBless.setItemMeta(metaPrem);
         }
 
@@ -83,7 +98,7 @@ public class BlessingMenu extends NexoMenu {
         if (item == null || !item.hasItemMeta()) return;
 
         ItemMeta meta = item.getItemMeta();
-        NamespacedKey actionKey = new NamespacedKey(core, "action");
+        NamespacedKey actionKey = new NamespacedKey(plugin, "action");
 
         if (!meta.getPersistentDataContainer().has(actionKey, PersistentDataType.STRING)) return;
         String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
@@ -93,7 +108,7 @@ public class BlessingMenu extends NexoMenu {
 
         // Validar si ya la tiene para no cobrarle doble
         if (user.hasActiveBlessing("VOID_BLESSING")) {
-            player.sendMessage(NexoColor.parse("&#ff4b2b[!] Ya posees una Bendición activa protegiendo tu alma."));
+            player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.bendicion-activa")));
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             player.closeInventory();
             return;
@@ -108,9 +123,9 @@ public class BlessingMenu extends NexoMenu {
 
             eco.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, cost, false).thenAccept(success -> {
                 if (success) {
-                    aplicarBendicion(player, user, "VOID_BLESSING", "&#00f5ff[⚡] Has adquirido la Bendición Menor. Tu próxima muerte será perdonada.");
+                    aplicarBendicion(player, user, "VOID_BLESSING", getMessage("mensajes.exito.compra-menor"));
                 } else {
-                    player.sendMessage(NexoColor.parse("&#8b0000[!] No tienes suficientes monedas para este rito."));
+                    player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.sin-monedas")));
                     player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                 }
             });
@@ -120,9 +135,9 @@ public class BlessingMenu extends NexoMenu {
             int gemCost = 150;
             if (user.getGems() >= gemCost) {
                 user.removeGems(gemCost);
-                aplicarBendicion(player, user, "VOID_BLESSING", "&#ff00ff[⚡] Has adquirido la Bendición del Vacío Absoluto mediante ofrendas premium.");
+                aplicarBendicion(player, user, "VOID_BLESSING", getMessage("mensajes.exito.compra-premium"));
             } else {
-                player.sendMessage(NexoColor.parse("&#8b0000[!] No tienes suficientes Gemas. Adquiérelas en la tienda corporativa."));
+                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.sin-gemas")));
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             }
         }

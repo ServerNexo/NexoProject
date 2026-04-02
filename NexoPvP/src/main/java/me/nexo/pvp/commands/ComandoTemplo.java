@@ -1,6 +1,7 @@
 package me.nexo.pvp.commands;
 
 import me.nexo.core.utils.NexoColor;
+import me.nexo.pvp.NexoPvP; // 🌟 IMPORTACIÓN AÑADIDA
 import me.nexo.pvp.menus.BlessingMenu;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -9,10 +10,22 @@ import org.bukkit.entity.Player;
 
 public class ComandoTemplo implements CommandExecutor {
 
+    private final NexoPvP plugin;
+
+    public ComandoTemplo() {
+        this.plugin = NexoPvP.getPlugin(NexoPvP.class); // Auto-vinculación Omega
+    }
+
+    // 🌟 LECTOR DE MENSAJES
+    private String getMessage(String path) {
+        return plugin.getConfigManager().getMessage(path);
+    }
+
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(NexoColor.parse("&#8b0000[!] Solo operarios humanos."));
+            // 🌟 TEXTO DESDE CONFIG
+            sender.sendMessage(NexoColor.parse(getMessage("mensajes.errores.solo-jugadores")));
             return true;
         }
 

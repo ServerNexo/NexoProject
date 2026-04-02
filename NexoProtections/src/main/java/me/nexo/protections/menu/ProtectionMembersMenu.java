@@ -30,9 +30,18 @@ public class ProtectionMembersMenu extends NexoMenu {
         this.stone = stone;
     }
 
+    // 🌟 MÉTODOS MÁGICOS DE LECTURA
+    private String getMessage(String path) {
+        return plugin.getConfigManager().getMessage(path);
+    }
+
+    private List<String> getMessageList(String path) {
+        return plugin.getConfigManager().getMessages().getStringList(path);
+    }
+
     @Override
     public String getMenuName() {
-        return "&#E6CCFF<bold>»</bold> &#00f5ffAcólitos del Pacto";
+        return getMessage("menus.miembros.titulo");
     }
 
     @Override
@@ -52,15 +61,11 @@ public class ProtectionMembersMenu extends NexoMenu {
             OfflinePlayer target = Bukkit.getOfflinePlayer(uuid);
             String targetName = target.getName() != null ? target.getName() : "Alma Desconocida";
 
-            List<String> lore = List.of(
-                    "&#E6CCFFEsta alma tiene libre albedrío",
-                    "&#E6CCFFdentro de tu Monolito.",
-                    " ",
-                    "&#8b0000► Clic para DESTERRAR esta alma"
-            );
+            // Leemos el nombre y lore desde config
+            String headName = getMessage("menus.miembros.items.cabeza.nombre").replace("%player%", targetName);
+            List<String> lore = getMessageList("menus.miembros.items.cabeza.lore");
 
-            // Usamos el método setItem del NexoMenu base
-            setItem(slot, Material.PLAYER_HEAD, "&#ff00ff<bold>" + targetName + "</bold>", lore);
+            setItem(slot, Material.PLAYER_HEAD, headName, lore);
 
             // Recuperamos el ítem para inyectarle la skin y el UUID invisible
             ItemStack head = inventory.getItem(slot);
@@ -73,15 +78,10 @@ public class ProtectionMembersMenu extends NexoMenu {
         }
 
         // Botón Volver
-        setItem(getSlots() - 6, Material.ENDER_PEARL, "&#00f5ff<bold>VOLVER AL MONOLITO</bold>", null);
+        setItem(getSlots() - 6, Material.ENDER_PEARL, getMessage("menus.miembros.items.volver.nombre"), null);
 
         // Botón Invocar (Información)
-        List<String> addLore = List.of(
-                "&#E6CCFFPara añadir a un amigo,",
-                "&#E6CCFFcierra este menú y escribe en el chat:",
-                "&#ff00ff/nexo trust <NombreJugador>"
-        );
-        setItem(getSlots() - 4, Material.WRITABLE_BOOK, "&#ff00ff<bold>INVOCAR NUEVA ALMA</bold>", addLore);
+        setItem(getSlots() - 4, Material.WRITABLE_BOOK, getMessage("menus.miembros.items.invocar.nombre"), getMessageList("menus.miembros.items.invocar.lore"));
     }
 
     @Override
@@ -111,7 +111,7 @@ public class ProtectionMembersMenu extends NexoMenu {
             stone.removeFriend(targetUuid);
             plugin.getClaimManager().saveStoneDataAsync(stone);
 
-            player.sendMessage(NexoColor.parse("&#FF3366[!] DESTIERRO: &#E6CCFFEl alma ha sido expulsada de tu Monolito."));
+            player.sendMessage(NexoColor.parse(getMessage("mensajes.exito.destierro")));
             player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1f);
 
             // Refresca el menú al instante, sin tirones visuales

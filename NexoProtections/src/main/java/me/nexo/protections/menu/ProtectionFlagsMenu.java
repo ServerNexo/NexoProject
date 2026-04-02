@@ -13,6 +13,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ProtectionFlagsMenu extends NexoMenu {
 
@@ -25,9 +26,18 @@ public class ProtectionFlagsMenu extends NexoMenu {
         this.stone = stone;
     }
 
+    // 🌟 MÉTODOS MÁGICOS DE LECTURA
+    private String getMessage(String path) {
+        return plugin.getConfigManager().getMessage(path);
+    }
+
+    private List<String> getMessageList(String path) {
+        return plugin.getConfigManager().getMessages().getStringList(path);
+    }
+
     @Override
     public String getMenuName() {
-        return "&#E6CCFF<bold>»</bold> &#00f5ffLeyes del Dominio";
+        return getMessage("menus.leyes.titulo");
     }
 
     @Override
@@ -40,32 +50,31 @@ public class ProtectionFlagsMenu extends NexoMenu {
         setFillerGlass();
 
         // Fila 1: Entorno General
-        createFlagItem(10, Material.NETHERITE_SWORD, "Daño PvP", "pvp");
-        createFlagItem(11, Material.ZOMBIE_HEAD, "Aparición de Monstruos", "mob-spawning");
-        createFlagItem(12, Material.TNT, "Daño de Explosiones", "tnt-damage");
-        createFlagItem(13, Material.FLINT_AND_STEEL, "Propagación de Fuego", "fire-spread");
-        createFlagItem(14, Material.LEATHER, "Asesinato de Animales", "animal-damage");
+        createFlagItem(10, Material.NETHERITE_SWORD, getMessage("menus.leyes.flags.pvp"), "pvp");
+        createFlagItem(11, Material.ZOMBIE_HEAD, getMessage("menus.leyes.flags.mob-spawning"), "mob-spawning");
+        createFlagItem(12, Material.TNT, getMessage("menus.leyes.flags.tnt-damage"), "tnt-damage");
+        createFlagItem(13, Material.FLINT_AND_STEEL, getMessage("menus.leyes.flags.fire-spread"), "fire-spread");
+        createFlagItem(14, Material.LEATHER, getMessage("menus.leyes.flags.animal-damage"), "animal-damage");
 
         // Fila 2: Interacciones de Forasteros
-        createFlagItem(19, Material.OAK_DOOR, "Uso de Puertas/Botones", "interact");
-        createFlagItem(20, Material.CHEST, "Abrir Cofres/Hornos", "containers");
-        createFlagItem(21, Material.HOPPER, "Robar Ítems del Suelo", "item-pickup");
-        createFlagItem(22, Material.ROTTEN_FLESH, "Tirar Basura (Drop)", "item-drop");
-        createFlagItem(23, Material.IRON_DOOR, "Entrada de Forasteros", "ENTRY");
+        createFlagItem(19, Material.OAK_DOOR, getMessage("menus.leyes.flags.interact"), "interact");
+        createFlagItem(20, Material.CHEST, getMessage("menus.leyes.flags.containers"), "containers");
+        createFlagItem(21, Material.HOPPER, getMessage("menus.leyes.flags.item-pickup"), "item-pickup");
+        createFlagItem(22, Material.ROTTEN_FLESH, getMessage("menus.leyes.flags.item-drop"), "item-drop");
+        createFlagItem(23, Material.IRON_DOOR, getMessage("menus.leyes.flags.ENTRY"), "ENTRY");
 
         // Botón Volver
-        setItem(getSlots() - 5, Material.ENDER_PEARL, "&#00f5ff<bold>VOLVER AL MONOLITO</bold>", null);
+        setItem(getSlots() - 5, Material.ENDER_PEARL, getMessage("menus.leyes.items.volver.nombre"), null);
     }
 
     private void createFlagItem(int slot, Material mat, String nombre, String flagId) {
         boolean activo = stone.getFlag(flagId);
-        String estadoColor = activo ? "&#00f5ff[ PERMITIDO ]" : "&#8b0000[ BLOQUEADO ]";
+        String estadoColor = activo ? getMessage("menus.leyes.items.flag.estado-permitido") : getMessage("menus.leyes.items.flag.estado-bloqueado");
 
-        List<String> lore = List.of(
-                "&#E6CCFFPara forasteros: " + estadoColor,
-                " ",
-                "&#00f5ff► Clic para alternar esta ley"
-        );
+        // Formateamos el lore dinámicamente
+        List<String> lore = getMessageList("menus.leyes.items.flag.lore").stream()
+                .map(line -> line.replace("%status%", estadoColor))
+                .collect(Collectors.toList());
 
         setItem(slot, mat, "&#ff00ff<bold>" + nombre.toUpperCase() + "</bold>", lore);
 
