@@ -5,8 +5,10 @@ import com.google.inject.Injector;
 import com.google.inject.Singleton;
 
 import me.nexo.core.NexoCore;
-import me.nexo.core.DatabaseManager;
+import me.nexo.core.database.DatabaseManager;
 import me.nexo.core.user.UserManager;
+import me.nexo.core.user.UserRepository; // 🛡️ Importamos nuestro nuevo DAO
+import me.nexo.core.user.NexoUser;
 import me.nexo.core.config.ConfigManager;
 import me.nexo.core.PlayerListener;
 import me.nexo.core.HudTask;
@@ -27,24 +29,27 @@ public class ServiceBootstrap {
     private final NexoCore plugin;
     private final Server server;
     private final Logger logger;
-    private final Injector injector; // 💉 Inyectamos a Guice mismo
+    private final Injector injector;
 
     // Dependencias inyectadas automáticamente
     private final DatabaseManager databaseManager;
     private final UserManager userManager;
+    private final UserRepository userRepository; // 🛡️ Añadimos el Repositorio
     private final NexoWebServer webServer;
     private final ConfigManager configManager;
 
     @Inject
     public ServiceBootstrap(NexoCore plugin, Server server, Injector injector,
                             DatabaseManager databaseManager, UserManager userManager,
-                            NexoWebServer webServer, ConfigManager configManager) {
+                            UserRepository userRepository, NexoWebServer webServer,
+                            ConfigManager configManager) {
         this.plugin = plugin;
         this.server = server;
         this.logger = plugin.getLogger();
         this.injector = injector;
         this.databaseManager = databaseManager;
         this.userManager = userManager;
+        this.userRepository = userRepository; // 🛡️ Lo guardamos en la variable
         this.webServer = webServer;
         this.configManager = configManager;
     }
@@ -82,10 +87,11 @@ public class ServiceBootstrap {
             webServer.stop();
         }
 
-        // 🗄️ PILAR 4: Esto debe migrar a un UserRepository en el futuro
+        // 🗄️ PILAR 4: Guardado Seguro Síncrono a través del Repositorio
         for (Player p : server.getOnlinePlayers()) {
-            if (databaseManager != null) {
-                databaseManager.guardarJugadorSync(p);
+            NexoUser user = userManager.getUserOrNull(p.getUniqueId());
+            if (user != null) {
+                userRepository.saveUserSync(user); // Guardamos directamente usando el DAO
             }
         }
 
@@ -98,8 +104,11 @@ public class ServiceBootstrap {
 
     private void registerEvents() {
         var pm = server.getPluginManager();
-        // Nota: En una fase posterior, inyectaremos también los Listeners para que reciban los Managers automáticamente.
-        pm.registerEvents(new PlayerListener(plugin), plugin);
+
+        // 💉 PILAR 3: Usamos Guice para instanciar el PlayerListener
+        pm.registerEvents(injector.getInstance(PlayerListener.class), plugin);
+
+        // Eventos Legacy (Aún no purificados)
         pm.registerEvents(new me.nexo.core.listeners.VoidEssenceListener(plugin), plugin);
         pm.registerEvents(new me.nexo.core.hub.NexoMenuListener(plugin), plugin);
         pm.registerEvents(new me.nexo.core.menus.VoidBlessingMenuListener(), plugin);

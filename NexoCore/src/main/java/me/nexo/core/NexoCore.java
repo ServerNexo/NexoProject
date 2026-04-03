@@ -2,6 +2,7 @@ package me.nexo.core;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import me.nexo.core.database.DatabaseManager;
 import me.nexo.core.di.NexoCoreModule;
 import me.nexo.core.api.ServiceBootstrap;
 import me.nexo.core.config.ConfigManager;
