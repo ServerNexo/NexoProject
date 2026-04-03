@@ -1,54 +1,60 @@
 package me.nexo.core.commands;
 
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import com.google.inject.Inject;
+import me.nexo.core.user.UserRepository;
 import org.bukkit.entity.Player;
-import me.nexo.core.NexoCore;
-import org.bukkit.Bukkit;
+import revxrsal.commands.annotation.Command;
+import revxrsal.commands.annotation.Subcommand;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.util.concurrent.CompletableFuture;
 
-public class WebCommand implements CommandExecutor {
+/**
+ * 🏛️ Nexo Network - Comando Web (Arquitectura Enterprise / Lamp Framework)
+ * Encriptación y guardado 100% asíncrono y reactivo.
+ */
+@Command("web")
+public class WebCommand {
 
-    private final NexoCore plugin;
+    // 💉 PILAR 3: Inyectamos el DAO, ya no necesitamos el NexoCore ni el DatabaseManager
+    private final UserRepository userRepository;
 
-    public WebCommand(NexoCore plugin) {
-        this.plugin = plugin;
+    @Inject
+    public WebCommand(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage("§cSolo los jugadores pueden usar este comando.");
-            return true;
-        }
+    // 💡 PILAR 1: Lamp maneja automáticamente que solo jugadores usen esto
+    // y que obligatoriamente escriban un texto (password).
+    @Subcommand("register")
+    public void register(Player player, String password) {
 
-        if (args.length < 2 || !args[0].equalsIgnoreCase("register")) {
-            player.sendMessage("§c❌ Uso correcto: /web register <tu_contraseña_secreta>");
-            player.sendMessage("§7§o(Esta contraseña servirá para entrar a tu Panel Web)");
-            return true;
-        }
-
-        String rawPassword = args[1];
-
-        // Encriptamos asíncronamente para máxima seguridad y rendimiento
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        // 🚀 PILAR 4: Programación Reactiva Asíncrona (CompletableFuture)
+        CompletableFuture.supplyAsync(() -> {
             try {
-                // 1. Encriptar la contraseña a SHA-256
-                String hashedPassword = hashPassword(rawPassword);
-
-                // 2. Enviar la contraseña encriptada a tu DatabaseManager
-                plugin.getDatabaseManager().actualizarClaveWeb(player, hashedPassword);
-
+                // 1. Encriptamos en un hilo secundario para no congelar el servidor
+                return hashPassword(password);
             } catch (Exception e) {
-                player.sendMessage("§c❌ Error de seguridad al procesar tu clave.");
-                e.printStackTrace();
+                throw new RuntimeException(e);
             }
+        }).thenCompose(hashedPassword ->
+                // 2. Encadenamos el resultado al DAO de la base de datos
+                userRepository.updateWebPassword(player.getUniqueId(), hashedPassword)
+        ).thenAccept(success -> {
+            // 3. Respondemos al jugador según el resultado de Supabase
+            if (success) {
+                player.sendMessage("§d§l[Nexo Web] §a¡Tu Clave del Vacío ha sido registrada con éxito!");
+                player.sendMessage("§7Ya puedes iniciar sesión en el panel web.");
+            } else {
+                player.sendMessage("§c❌ Error: No se encontró tu perfil en la base de datos. ¡Vuelve a entrar al servidor!");
+            }
+        }).exceptionally(ex -> {
+            // 🛡️ Manejo de errores a prueba de balas
+            player.sendMessage("§c❌ Ocurrió un error crítico de seguridad al registrar tu clave.");
+            ex.printStackTrace();
+            return null;
         });
-
-        return true;
     }
 
     // 🔒 Encriptación SHA-256 (Nativa de Java, Cero Dependencias)

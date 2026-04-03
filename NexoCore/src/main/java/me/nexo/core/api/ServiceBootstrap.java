@@ -7,7 +7,7 @@ import com.google.inject.Singleton;
 import me.nexo.core.NexoCore;
 import me.nexo.core.database.DatabaseManager;
 import me.nexo.core.user.UserManager;
-import me.nexo.core.user.UserRepository; // 🛡️ Importamos nuestro nuevo DAO
+import me.nexo.core.user.UserRepository;
 import me.nexo.core.user.NexoUser;
 import me.nexo.core.config.ConfigManager;
 import me.nexo.core.PlayerListener;
@@ -15,7 +15,7 @@ import me.nexo.core.HudTask;
 import me.nexo.core.NexoExpansion;
 import me.nexo.core.commands.ComandoNexo;
 import me.nexo.core.commands.ComandoVoid;
-// Si WebCommand aún no está refactorizado, lo dejamos comentado por ahora.
+import me.nexo.core.commands.WebCommand; // 🌐 Importamos el Comando Web purificado
 
 import org.bukkit.Server;
 import org.bukkit.entity.Player;
@@ -34,7 +34,7 @@ public class ServiceBootstrap {
     // Dependencias inyectadas automáticamente
     private final DatabaseManager databaseManager;
     private final UserManager userManager;
-    private final UserRepository userRepository; // 🛡️ Añadimos el Repositorio
+    private final UserRepository userRepository;
     private final NexoWebServer webServer;
     private final ConfigManager configManager;
 
@@ -49,7 +49,7 @@ public class ServiceBootstrap {
         this.injector = injector;
         this.databaseManager = databaseManager;
         this.userManager = userManager;
-        this.userRepository = userRepository; // 🛡️ Lo guardamos en la variable
+        this.userRepository = userRepository;
         this.webServer = webServer;
         this.configManager = configManager;
     }
@@ -91,7 +91,7 @@ public class ServiceBootstrap {
         for (Player p : server.getOnlinePlayers()) {
             NexoUser user = userManager.getUserOrNull(p.getUniqueId());
             if (user != null) {
-                userRepository.saveUserSync(user); // Guardamos directamente usando el DAO
+                userRepository.saveUserSync(user);
             }
         }
 
@@ -123,7 +123,7 @@ public class ServiceBootstrap {
         handler.register(injector.getInstance(ComandoNexo.class));
         handler.register(injector.getInstance(ComandoVoid.class));
 
-        // Cuando refactoricemos WebCommand, lo descomentas:
-        // handler.register(injector.getInstance(me.nexo.core.commands.WebCommand.class));
+        // 3. 🌐 ¡COMANDO WEB ACTIVADO!
+        handler.register(injector.getInstance(WebCommand.class));
     }
 }
