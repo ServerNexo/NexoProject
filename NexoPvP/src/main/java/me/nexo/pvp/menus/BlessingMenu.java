@@ -145,7 +145,7 @@ public class BlessingMenu extends NexoMenu {
 
     private void aplicarBendicion(Player player, NexoUser user, String blessingId, String successMsg) {
         user.addBlessing(blessingId);
-        core.getDatabaseManager().saveUserBlessings(user); // ⚡ Zero-Main-Thread SQL
+        core.getUserRepository().saveBlessings(user);
 
         player.sendMessage(NexoColor.parse(successMsg));
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 1.5f);

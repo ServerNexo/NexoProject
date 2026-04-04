@@ -7,9 +7,12 @@ description: 'Sistema de combate y pasivas PvP.'
 depend: [NexoCore, NexoProtections, NexoEconomy]
 softdepend: [NexoWar]
 
-commands:
-  pvp:
-    description: Activa o desactiva tu Modo de Guerra
-    aliases: [ modo ]
-    permission: nexopvp.user
-    permission-message: "No tienes permiso para usar este comando."
+# 📚 DICCIONARIO GLOBAL (LuckPerms leerá esto mágicamente)
+permissions:
+  nexopvp.user:
+    description: Permite activar o desactivar el modo PvP.
+    default: true # 'true' para que todos lo tengan por defecto, o 'false'/'op'
+
+  nexopvp.admin:
+    description: Permisos administrativos del módulo PvP.
+    default: op

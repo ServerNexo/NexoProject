@@ -23,7 +23,11 @@ public class MessagesConfig {
         @Setting
         private NexoCoreNode nexocore = new NexoCoreNode();
 
+        @Setting
+        private WebCommandNode web = new WebCommandNode(); // 🌐 El nodo de tu comando web
+
         public NexoCoreNode nexocore() { return nexocore; }
+        public WebCommandNode web() { return web; }
     }
 
     // =========================================
@@ -100,5 +104,23 @@ public class MessagesConfig {
 
         public String titulo() { return titulo; }
         public String subtitulo() { return subtitulo; }
+    }
+
+    // =========================================
+    // NODO: WebCommand (Textos del Comando Web)
+    // =========================================
+    @ConfigSerializable
+    public static class WebCommandNode {
+        @Setting private String exito1 = "&#ff00ff<bold>[Nexo Web]</bold> &#00f5ff¡Tu Clave del Vacío ha sido registrada con éxito!";
+        @Setting private String exito2 = "&#E6CCFFYa puedes iniciar sesión en el panel web.";
+        @Setting("error-db")
+        private String errorDb = "&#8b0000[!] Error: No se encontró tu perfil en la base de datos. ¡Vuelve a entrar al servidor!";
+        @Setting("error-critico")
+        private String errorCritico = "&#8b0000[!] Ocurrió un error crítico de seguridad al registrar tu clave.";
+
+        public String exito1() { return exito1; }
+        public String exito2() { return exito2; }
+        public String errorDb() { return errorDb; }
+        public String errorCritico() { return errorCritico; }
     }
 }
