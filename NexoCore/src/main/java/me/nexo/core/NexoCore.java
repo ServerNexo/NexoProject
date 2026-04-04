@@ -56,4 +56,8 @@ public final class NexoCore extends JavaPlugin {
     public ConfigManager getConfigManager() {
         return injector.getInstance(ConfigManager.class);
     }
+    @Deprecated
+    public me.nexo.core.user.UserRepository getUserRepository() {
+        return injector.getInstance(me.nexo.core.user.UserRepository.class);
+    }
 }

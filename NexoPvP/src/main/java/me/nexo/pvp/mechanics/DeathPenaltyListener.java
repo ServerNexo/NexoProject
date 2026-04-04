@@ -8,7 +8,7 @@ import me.nexo.core.user.NexoUser;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
-import me.nexo.pvp.NexoPvP; // 🌟 IMPORTACIÓN AÑADIDA
+import me.nexo.pvp.NexoPvP;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -19,19 +19,17 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.concurrent.CompletableFuture;
 
 public class DeathPenaltyListener implements Listener {
 
     private final NexoCore core;
-    private final NexoPvP plugin; // 🌟 VARIABLE AÑADIDA
+    private final NexoPvP plugin;
 
     public DeathPenaltyListener() {
         this.core = NexoCore.getPlugin(NexoCore.class);
-        this.plugin = NexoPvP.getPlugin(NexoPvP.class); // Auto-vinculación sin modificar el Main
+        this.plugin = NexoPvP.getPlugin(NexoPvP.class);
     }
 
-    // 🌟 MÉTODO DE LECTURA MÁGICA
     private String getMessage(String path) {
         return plugin.getConfigManager().getMessage(path);
     }
@@ -58,10 +56,10 @@ public class DeathPenaltyListener implements Listener {
 
             // Consumir la bendición de 1 uso si la tiene
             if (user.hasActiveBlessing("VOID_BLESSING")) {
-                CompletableFuture.runAsync(() -> {
-                    user.removeBlessing("VOID_BLESSING");
-                    core.getDatabaseManager().saveUserBlessings(user);
-                });
+                user.removeBlessing("VOID_BLESSING");
+
+                // 🚀 Llamada al nuevo DAO asíncrono (Pilar 4)
+                core.getUserRepository().saveBlessings(user);
             }
 
         } else {
@@ -88,7 +86,6 @@ public class DeathPenaltyListener implements Listener {
             // 3. 💸 PENALIZACIÓN ECONÓMICA ASÍNCRONA (5% del Balance Total)
             NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
             if (ecoPlugin != null) {
-                // Obtenemos la cuenta desde el caché/DB
                 ecoPlugin.getEconomyManager().getAccountAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER).thenAccept(account -> {
                     if (account != null) {
                         BigDecimal currentBalance = account.getCoins();
@@ -100,7 +97,6 @@ public class DeathPenaltyListener implements Listener {
                             // Ejecutamos el débito seguro
                             ecoPlugin.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, loss, false).thenAccept(success -> {
                                 if (success) {
-                                    // 🌟 TEXTO DESDE CONFIG CON VARIABLE DE MONEDAS
                                     String msgCobro = getMessage("mensajes.penalizaciones.cobro-resurreccion").replace("%amount%", loss.toPlainString());
                                     player.sendMessage(NexoColor.parse(msgCobro));
                                 }

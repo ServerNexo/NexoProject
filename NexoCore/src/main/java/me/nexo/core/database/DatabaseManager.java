@@ -1,4 +1,4 @@
-package me.nexo.core.database; // Te sugiero moverlo al paquete database
+package me.nexo.core.database; // 🟢 Paquete corregido
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -23,6 +23,7 @@ public class DatabaseManager {
     private final ConfigManager configManager;
     private HikariDataSource dataSource;
 
+    // 💉 EL INYECTOR VITAL QUE FALTABA
     @Inject
     public DatabaseManager(NexoCore plugin, ConfigManager configManager) {
         this.plugin = plugin;
@@ -32,12 +33,9 @@ public class DatabaseManager {
     public void conectar() {
         try {
             HikariConfig config = new HikariConfig();
-
-            // 💡 Agregamos "config.yml" dentro de los paréntesis
             config.setJdbcUrl(configManager.getConfig("config.yml").getString("database.url"));
             config.setUsername(configManager.getConfig("config.yml").getString("database.username"));
             config.setPassword(configManager.getConfig("config.yml").getString("database.password"));
-
             config.setDriverClassName("org.postgresql.Driver");
 
             config.setMaximumPoolSize(10);
@@ -71,7 +69,6 @@ public class DatabaseManager {
         return dataSource;
     }
 
-    // 🗄️ Inicialización de Esquema
     private void crearTablas() {
         if (dataSource == null) return;
 
