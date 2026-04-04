@@ -1,74 +1,100 @@
 package me.nexo.core.config;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.NexoCore;
+import me.nexo.core.config.nodes.MessagesConfig; // 🌟 Tu nueva clase mágica
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
+import org.spongepowered.configurate.yaml.NodeStyle;
 
 import java.io.File;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Singleton
 public class ConfigManager {
 
     private final NexoCore plugin;
-    private final Map<String, FileConfiguration> configs = new ConcurrentHashMap<>();
+    private final Map<String, FileConfiguration> legacyConfigs = new ConcurrentHashMap<>();
 
+    // 💡 PILAR 2: Nuestra Configuración Type-Safe
+    private MessagesConfig messages;
+
+    @Inject
     public ConfigManager(NexoCore plugin) {
         this.plugin = plugin;
 
-        // ⚙️ Opcional pero recomendado: Cargar los archivos base al iniciar
+        // 1. Extraer archivos físicos si no existen
+        saveDefaultResource("config.yml", false);
+        saveDefaultResource("messages.yml", true);
+
+        // 2. 🚀 INICIAR SPONGE CONFIGURATE
+        loadConfigurate();
+
+        // 3. Iniciar el puente viejo (Para NexoPvP, etc.)
         getConfig("config.yml");
         getConfig("messages.yml");
     }
 
+    // ==========================================
+    // 🚀 NUEVO MOTOR: SPONGE CONFIGURATE
+    // ==========================================
+
+    private void loadConfigurate() {
+        File file = new File(plugin.getDataFolder(), "messages.yml");
+        YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
+                .path(file.toPath())
+                .nodeStyle(NodeStyle.BLOCK)
+                .build();
+        try {
+            // ¡MAGIA! Lee el YAML y lo transforma en nuestro objeto Java
+            this.messages = loader.load().get(MessagesConfig.class);
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error al cargar messages.yml: " + e.getMessage());
+        }
+    }
+
+    public MessagesConfig getMessages() {
+        return messages;
+    }
+
+    // ==========================================
+    // 🌉 PUENTE LEGACY Y UTILIDADES
+    // ==========================================
+
+    private void saveDefaultResource(String fileName, boolean replace) {
+        File file = new File(plugin.getDataFolder(), fileName);
+        if (!file.exists() || replace) {
+            try { plugin.saveResource(fileName, replace); }
+            catch (IllegalArgumentException ignored) {}
+        }
+    }
+
+    @Deprecated
     public FileConfiguration getConfig(String configName) {
-        return configs.computeIfAbsent(configName, this::loadConfig);
+        return legacyConfigs.computeIfAbsent(configName, name -> {
+            File configFile = new File(plugin.getDataFolder(), name);
+            return YamlConfiguration.loadConfiguration(configFile);
+        });
     }
 
-    private FileConfiguration loadConfig(String configName) {
-        File configFile = new File(plugin.getDataFolder(), configName);
-
-        // 🛡️ REGLA OMEGA: ¡Proteger las credenciales de Supabase!
-        if (configName.equalsIgnoreCase("config.yml")) {
-            // Solo se crea si no existe. JAMÁS se sobreescribe.
-            if (!configFile.exists()) {
-                plugin.saveResource(configName, false);
-            }
-        }
-        // 🌟 PROTOCOLO DE ACTUALIZACIÓN: messages.yml y otros archivos
-        else {
-            try {
-                // Siempre extrae la versión más nueva del .jar (Color Lila Iluminado, nuevos textos, etc)
-                plugin.saveResource(configName, true);
-            } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("No se pudo actualizar " + configName + " desde el jar.");
-            }
-        }
-
-        return YamlConfiguration.loadConfiguration(configFile);
+    @Deprecated
+    public String getMessage(String path) {
+        return getMessage("messages.yml", path);
     }
 
-    public void reloadConfig(String configName) {
-        File configFile = new File(plugin.getDataFolder(), configName);
-
-        // Si hacemos reload, también forzamos la actualización de los mensajes desde el .jar
-        if (!configName.equalsIgnoreCase("config.yml")) {
-            try {
-                plugin.saveResource(configName, true);
-            } catch (IllegalArgumentException ignored) {}
-        }
-
-        configs.put(configName, YamlConfiguration.loadConfiguration(configFile));
-    }
-
-    // 🛡️ MÉTODO ORIGINAL (Para cuando quieres leer un archivo específico)
+    @Deprecated
     public String getMessage(String configName, String path) {
         return getConfig(configName).getString(path, "§cMensaje no encontrado: " + path);
     }
 
-    // 🌟 NUEVO MÉTODO MÁGICO (Sobrecarga)
-    // Cuando CommandNexo llama a getMessage("ruta"), entra aquí y busca por defecto en messages.yml
-    public String getMessage(String path) {
-        return getMessage("messages.yml", path);
+    public void reloadConfigs() {
+        saveDefaultResource("messages.yml", true);
+        loadConfigurate(); // Recarga el nuevo motor
+        legacyConfigs.clear(); // Limpia la caché vieja para que se vuelva a cargar
+        getConfig("config.yml");
+        getConfig("messages.yml");
     }
 }

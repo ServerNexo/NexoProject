@@ -1,7 +1,8 @@
 package me.nexo.core.menus;
 
-import me.nexo.core.NexoCore;
+import me.nexo.core.config.ConfigManager;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.user.UserManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -15,22 +16,27 @@ import net.kyori.adventure.text.Component;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 🏛️ Nexo Network - Menú de Bendiciones (Desacoplado)
+ */
 public class VoidBlessingMenu implements InventoryHolder {
 
-    private final NexoCore plugin;
+    private final UserManager userManager;
+    private final ConfigManager configManager;
     private final Player player;
     private Inventory inventory;
 
-    public VoidBlessingMenu(NexoCore plugin, Player player) {
-        this.plugin = plugin;
+    // 🛠️ Constructor Desacoplado: Solo recibe lo que necesita
+    public VoidBlessingMenu(UserManager userManager, ConfigManager configManager, Player player) {
+        this.userManager = userManager;
+        this.configManager = configManager;
         this.player = player;
     }
 
     public void openMenu() {
-        NexoUser user = plugin.getUserManager().getUserOrNull(player.getUniqueId());
+        NexoUser user = userManager.getUserOrNull(player.getUniqueId());
         if (user == null) return;
 
-        // Título Vivid Void con parser Crossplay
         String title = "&#ff00ff✧ &#00f5ffEstado del Vacío";
         this.inventory = Bukkit.createInventory(this, 27, CrossplayUtils.parseCrossplay(player, title));
 
@@ -53,7 +59,6 @@ public class VoidBlessingMenu implements InventoryHolder {
         if (user.isVoidBlessingActive()) {
             statusMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>Bendición del Vacío</bold>"));
 
-            // Cálculos matemáticos locales (Cero Lag)
             long remainingMillis = user.getVoidBlessingUntil() - System.currentTimeMillis();
             String timeFormatted = formatTime(remainingMillis);
 
@@ -61,12 +66,11 @@ public class VoidBlessingMenu implements InventoryHolder {
             lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFTiempo restante: &#ff00ff" + timeFormatted));
             lore.add(Component.empty());
             lore.add(CrossplayUtils.parseCrossplay(player, "&#00f5ff[✧] Beneficios Canalizados:"));
-            // 🔥 CORRECCIÓN: Beneficios activos en Carmesí como solicitaste
             lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000 ▶ Protección Hardcore (0% pérdida de XP/Skills)"));
             lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000 ▶ Void Greed (+15% Nexo Coins en toda la red)"));
             lore.add(CrossplayUtils.parseCrossplay(player, "&#8b0000 ▶ Void Reach (Acceso remoto al mercado negro)"));
         } else {
-            statusItem.setType(Material.COAL); // Cambia el ítem si está inactivo
+            statusItem.setType(Material.COAL);
             statusMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#8b0000<bold>Bendición Inactiva</bold>"));
 
             lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFEstado: &#8b0000DESACTIVADO"));
@@ -79,13 +83,10 @@ public class VoidBlessingMenu implements InventoryHolder {
         statusMeta.lore(lore);
         statusItem.setItemMeta(statusMeta);
 
-        // Colocamos el ítem en el centro del menú
         inventory.setItem(13, statusItem);
-
         player.openInventory(inventory);
     }
 
-    // Formateador visual de tiempo (HH:MM:SS)
     private String formatTime(long millis) {
         long seconds = millis / 1000;
         long h = seconds / 3600;

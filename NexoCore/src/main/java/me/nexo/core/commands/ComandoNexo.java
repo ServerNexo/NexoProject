@@ -13,7 +13,7 @@ import revxrsal.commands.bukkit.annotation.CommandPermission;
 
 /**
  * 🏛️ Nexo Network - Comando Principal (Arquitectura Enterprise / Lamp Framework)
- * Cero 'args.length', cero 'CommandExecutor', inyección limpia.
+ * Cero 'args.length', cero 'CommandExecutor', inyección limpia y TYPE-SAFE CONFIGS.
  */
 @Command({"nexocore", "nexo"})
 @CommandPermission("nexo.admin")
@@ -35,7 +35,8 @@ public class ComandoNexo {
         NexoUser user = userManager.getUserOrNull(objetivo.getUniqueId());
 
         if (user == null) {
-            enviarMensaje(sender, configManager.getMessage("comandos.nexocore.errores.cargando"));
+            // 🛡️ PILAR 2: TYPE-SAFE CONFIGS (Mapeo directo a Objetos)
+            enviarMensaje(sender, configManager.getMessages().comandos().nexocore().errores().cargando());
             return;
         }
 
@@ -46,15 +47,16 @@ public class ComandoNexo {
             xpActual -= (nivelActual * 100);
             nivelActual++;
             CrossplayUtils.sendTitle(objetivo,
-                    configManager.getMessage("comandos.nexocore.subida-nivel.nexo.titulo").replace("%level%", String.valueOf(nivelActual)),
-                    configManager.getMessage("comandos.nexocore.subida-nivel.nexo.subtitulo")
+                    // 🛡️ TYPE-SAFE: Acceso seguro a los títulos
+                    configManager.getMessages().comandos().nexocore().subidaNivel().nexo().titulo().replace("%level%", String.valueOf(nivelActual)),
+                    configManager.getMessages().comandos().nexocore().subidaNivel().nexo().subtitulo()
             );
         }
 
         user.setNexoNivel(nivelActual);
         user.setNexoXp(xpActual);
 
-        enviarMensaje(sender, configManager.getMessage("comandos.nexocore.exito.dar-xp")
+        enviarMensaje(sender, configManager.getMessages().comandos().nexocore().exito().darXp()
                 .replace("%amount%", String.valueOf(cantidad))
                 .replace("%target%", objetivo.getName()));
     }
@@ -64,7 +66,7 @@ public class ComandoNexo {
         NexoUser user = userManager.getUserOrNull(objetivo.getUniqueId());
 
         if (user == null) {
-            enviarMensaje(sender, configManager.getMessage("comandos.nexocore.errores.cargando"));
+            enviarMensaje(sender, configManager.getMessages().comandos().nexocore().errores().cargando());
             return;
         }
 
@@ -75,25 +77,25 @@ public class ComandoNexo {
             xpActual -= (nivelActual * 100);
             nivelActual++;
             CrossplayUtils.sendTitle(objetivo,
-                    configManager.getMessage("comandos.nexocore.subida-nivel.combate.titulo").replace("%level%", String.valueOf(nivelActual)),
-                    configManager.getMessage("comandos.nexocore.subida-nivel.combate.subtitulo")
+                    configManager.getMessages().comandos().nexocore().subidaNivel().combate().titulo().replace("%level%", String.valueOf(nivelActual)),
+                    configManager.getMessages().comandos().nexocore().subidaNivel().combate().subtitulo()
             );
         }
 
         user.setCombateNivel(nivelActual);
         user.setCombateXp(xpActual);
 
-        CrossplayUtils.sendMessage(objetivo, configManager.getMessage("comandos.nexocore.feedback.recibir-combate-xp")
+        CrossplayUtils.sendMessage(objetivo, configManager.getMessages().comandos().nexocore().feedback().recibirCombateXp()
                 .replace("%amount%", String.valueOf(cantidad))
                 .replace("%xp%", String.valueOf(xpActual))
                 .replace("%xpreq%", String.valueOf(nivelActual * 100)));
 
-        enviarMensaje(sender, configManager.getMessage("comandos.nexocore.exito.dar-combate-xp")
+        enviarMensaje(sender, configManager.getMessages().comandos().nexocore().exito().darCombateXp()
                 .replace("%amount%", String.valueOf(cantidad))
                 .replace("%target%", objetivo.getName()));
     }
 
-    // 📱 PILAR 6: Conciencia Cross-Play y soporte para la Consola usando Java 21 Pattern Matching
+    // 📱 PILAR 6: Conciencia Cross-Play y soporte para la Consola usando Java 21
     private void enviarMensaje(CommandSender sender, String mensaje) {
         if (sender instanceof Player player) {
             CrossplayUtils.sendMessage(player, mensaje);

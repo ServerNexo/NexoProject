@@ -1,7 +1,8 @@
 package me.nexo.core.commands;
 
 import com.google.inject.Inject;
-import me.nexo.core.NexoCore;
+import me.nexo.core.config.ConfigManager;
+import me.nexo.core.user.UserManager;
 import me.nexo.core.menus.VoidBlessingMenu;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -10,26 +11,25 @@ import revxrsal.commands.bukkit.annotation.CommandPermission;
 
 /**
  * 🏛️ Nexo Network - Comando Void (Arquitectura Enterprise)
- * Cero CommandExecutor, cero chequeos 'instanceof Player'.
+ * Actúa como una Fábrica: Inyecta dependencias y las pasa al menú.
  */
 public class ComandoVoid {
 
-    // 💉 PILAR 3: Inyección de la instancia principal (ya que VoidBlessingMenu la requiere)
-    private final NexoCore plugin;
+    // 💉 PILAR 3: Inyectamos solo las herramientas exactas
+    private final UserManager userManager;
+    private final ConfigManager configManager;
 
     @Inject
-    public ComandoVoid(NexoCore plugin) {
-        this.plugin = plugin;
+    public ComandoVoid(UserManager userManager, ConfigManager configManager) {
+        this.userManager = userManager;
+        this.configManager = configManager;
     }
 
-    // 💡 PILAR 1: Framework de anotaciones
     @Command("void")
     @CommandPermission("nexocore.commands.void")
     public void invocarVacio(Player player) {
-        // Al poner "Player" como parámetro, Lamp bloquea automáticamente a la consola.
-        // Al poner @CommandPermission, Lamp bloquea a los usuarios sin permiso automáticamente.
-
-        new VoidBlessingMenu(plugin, player).openMenu();
+        // Le pasamos las herramientas al menú, NO el plugin entero.
+        new VoidBlessingMenu(userManager, configManager, player).openMenu();
         player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1.0f, 1.0f);
     }
 }

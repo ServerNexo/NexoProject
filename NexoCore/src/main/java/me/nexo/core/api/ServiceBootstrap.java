@@ -108,10 +108,12 @@ public class ServiceBootstrap {
         // 💉 PILAR 3: Usamos Guice para instanciar el PlayerListener
         pm.registerEvents(injector.getInstance(PlayerListener.class), plugin);
 
+        // 💉 Inyectamos nuestro nuevo Listener purificado
+        pm.registerEvents(injector.getInstance(me.nexo.core.menus.VoidBlessingMenuListener.class), plugin);
+
         // Eventos Legacy (Aún no purificados)
         pm.registerEvents(new me.nexo.core.listeners.VoidEssenceListener(plugin), plugin);
         pm.registerEvents(new me.nexo.core.hub.NexoMenuListener(plugin), plugin);
-        pm.registerEvents(new me.nexo.core.menus.VoidBlessingMenuListener(), plugin);
         pm.registerEvents(new me.nexo.core.menus.MenuGlobalListener(), plugin);
     }
 
