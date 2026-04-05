@@ -1,13 +1,14 @@
 package me.nexo.pvp.menus;
 
-import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.user.UserManager;
+import me.nexo.core.user.UserRepository;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
-import me.nexo.pvp.NexoPvP; // 🌟 IMPORTACIÓN DE TU PLUGIN
+import me.nexo.pvp.NexoPvP;
+import me.nexo.pvp.config.ConfigManager;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -19,31 +20,28 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.stream.Collectors; // 🌟 IMPORTACIÓN AÑADIDA
+import java.util.stream.Collectors;
 
 public class BlessingMenu extends NexoMenu {
 
-    private final NexoCore core;
-    private final NexoPvP plugin; // 🌟 VARIABLE AÑADIDA
+    // 💉 PILAR 3: Dependencias inyectadas desde el comando
+    private final ConfigManager configManager;
+    private final UserManager userManager;
+    private final UserRepository userRepository;
+    private final NexoPvP plugin;
 
-    public BlessingMenu(Player player) {
+    public BlessingMenu(Player player, ConfigManager configManager, UserManager userManager, UserRepository userRepository, NexoPvP plugin) {
         super(player);
-        this.core = NexoCore.getPlugin(NexoCore.class);
-        this.plugin = NexoPvP.getPlugin(NexoPvP.class); // Auto-vinculación al plugin local
-    }
-
-    // 🌟 MÉTODOS MÁGICOS DE LECTURA
-    private String getMessage(String path) {
-        return plugin.getConfigManager().getMessage(path);
-    }
-
-    private List<String> getMessageList(String path) {
-        return plugin.getConfigManager().getMessages().getStringList(path);
+        this.configManager = configManager;
+        this.userManager = userManager;
+        this.userRepository = userRepository;
+        this.plugin = plugin;
     }
 
     @Override
     public String getMenuName() {
-        return getMessage("menus.templo.titulo");
+        // 💡 PILAR 2: Lectura Type-Safe devolviendo el String crudo
+        return configManager.getMessages().menus().templo().titulo();
     }
 
     @Override
@@ -53,16 +51,15 @@ public class BlessingMenu extends NexoMenu {
 
     @Override
     public void setMenuItems() {
-        setFillerGlass(); // Aplica automáticamente el fondo Púrpura Profundo
+        setFillerGlass();
 
         // 🌟 BENDICIÓN ESTÁNDAR (Economía In-Game)
         ItemStack standardBless = new ItemStack(Material.GOLD_NUGGET);
         ItemMeta metaStd = standardBless.getItemMeta();
         if (metaStd != null) {
-            metaStd.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.templo.items.bendicion-menor.nombre")));
+            metaStd.displayName(CrossplayUtils.parseCrossplay(player, configManager.getMessages().menus().templo().items().bendicionMenor().nombre()));
 
-            // Leemos el lore de la config y lo parseamos para crossplay/colores
-            List<net.kyori.adventure.text.Component> loreStd = getMessageList("menus.templo.items.bendicion-menor.lore").stream()
+            List<net.kyori.adventure.text.Component> loreStd = configManager.getMessages().menus().templo().items().bendicionMenor().lore().stream()
                     .map(line -> CrossplayUtils.parseCrossplay(player, line))
                     .collect(Collectors.toList());
 
@@ -75,9 +72,9 @@ public class BlessingMenu extends NexoMenu {
         ItemStack premiumBless = new ItemStack(Material.NETHER_STAR);
         ItemMeta metaPrem = premiumBless.getItemMeta();
         if (metaPrem != null) {
-            metaPrem.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.templo.items.bendicion-premium.nombre")));
+            metaPrem.displayName(CrossplayUtils.parseCrossplay(player, configManager.getMessages().menus().templo().items().bendicionPremium().nombre()));
 
-            List<net.kyori.adventure.text.Component> lorePrem = getMessageList("menus.templo.items.bendicion-premium.lore").stream()
+            List<net.kyori.adventure.text.Component> lorePrem = configManager.getMessages().menus().templo().items().bendicionPremium().lore().stream()
                     .map(line -> CrossplayUtils.parseCrossplay(player, line))
                     .collect(Collectors.toList());
 
@@ -92,7 +89,7 @@ public class BlessingMenu extends NexoMenu {
 
     @Override
     public void handleMenu(InventoryClickEvent event) {
-        event.setCancelled(true); // Bloqueo absoluto contra robos de ítems
+        event.setCancelled(true);
 
         ItemStack item = event.getCurrentItem();
         if (item == null || !item.hasItemMeta()) return;
@@ -103,12 +100,11 @@ public class BlessingMenu extends NexoMenu {
         if (!meta.getPersistentDataContainer().has(actionKey, PersistentDataType.STRING)) return;
         String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
 
-        NexoUser user = core.getUserManager().getUserOrNull(player.getUniqueId());
+        NexoUser user = userManager.getUserOrNull(player.getUniqueId());
         if (user == null) return;
 
-        // Validar si ya la tiene para no cobrarle doble
         if (user.hasActiveBlessing("VOID_BLESSING")) {
-            player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.bendicion-activa")));
+            CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().bendicionActiva());
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             player.closeInventory();
             return;
@@ -123,21 +119,21 @@ public class BlessingMenu extends NexoMenu {
 
             eco.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, cost, false).thenAccept(success -> {
                 if (success) {
-                    aplicarBendicion(player, user, "VOID_BLESSING", getMessage("mensajes.exito.compra-menor"));
+                    aplicarBendicion(player, user, "VOID_BLESSING", configManager.getMessages().mensajes().exito().compraMenor());
                 } else {
-                    player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.sin-monedas")));
+                    CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().sinMonedas());
                     player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                 }
             });
 
         } else if (action.equals("buy_bless_premium")) {
-            // 🌟 COMPRA CON GEMAS (Síncrona en memoria, asíncrona en SQL)
+            // 🌟 COMPRA CON GEMAS
             int gemCost = 150;
             if (user.getGems() >= gemCost) {
                 user.removeGems(gemCost);
-                aplicarBendicion(player, user, "VOID_BLESSING", getMessage("mensajes.exito.compra-premium"));
+                aplicarBendicion(player, user, "VOID_BLESSING", configManager.getMessages().mensajes().exito().compraPremium());
             } else {
-                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.sin-gemas")));
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().sinGemas());
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
             }
         }
@@ -145,9 +141,11 @@ public class BlessingMenu extends NexoMenu {
 
     private void aplicarBendicion(Player player, NexoUser user, String blessingId, String successMsg) {
         user.addBlessing(blessingId);
-        core.getUserRepository().saveBlessings(user);
 
-        player.sendMessage(NexoColor.parse(successMsg));
+        // 🚀 Guardado asíncrono y seguro a la BD
+        userRepository.saveBlessings(user);
+
+        CrossplayUtils.sendMessage(player, successMsg);
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1.0f, 1.5f);
     }
 }

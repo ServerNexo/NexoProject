@@ -52,7 +52,7 @@ public class PvPBootstrap {
         pm.registerEvents(new PvPListener(pvpManager), plugin);
         pm.registerEvents(new PasivasListener(plugin, pasivasManager), plugin);
         pm.registerEvents(new ArmorClassListener(plugin), plugin);
-        pm.registerEvents(new DeathPenaltyListener(), plugin);
+        pm.registerEvents(injector.getInstance(DeathPenaltyListener.class), plugin);
     }
 
     private void registerCommands() {

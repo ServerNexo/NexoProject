@@ -7,12 +7,16 @@ description: 'Sistema de combate y pasivas PvP.'
 depend: [NexoCore, NexoProtections, NexoEconomy]
 softdepend: [NexoWar]
 
-# 📚 DICCIONARIO GLOBAL (LuckPerms leerá esto mágicamente)
+# 📚 DICCIONARIO GLOBAL DE PERMISOS (Para LuckPerms)
 permissions:
   nexopvp.user:
     description: Permite activar o desactivar el modo PvP.
-    default: true # 'true' para que todos lo tengan por defecto, o 'false'/'op'
+    default: true # 'true' hace que los usuarios normales ya lo tengan
+
+  nexopvp.templo:
+    description: Permite abrir el menú del templo de bendiciones.
+    default: true
 
   nexopvp.admin:
     description: Permisos administrativos del módulo PvP.
-    default: op
+    default: op # Solo los OP (operadores) lo tienen por defecto

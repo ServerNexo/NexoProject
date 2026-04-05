@@ -3,6 +3,7 @@ package me.nexo.pvp.pvp;
 import com.google.inject.Inject;
 import org.bukkit.entity.Player;
 import revxrsal.commands.annotation.Command;
+import revxrsal.commands.bukkit.annotation.CommandPermission; // 💡 Importación del permiso
 
 /**
  * 🏛️ NexoPvP - Comando PvP (Arquitectura Enterprise)
@@ -18,11 +19,10 @@ public class ComandoPvP {
         this.manager = manager;
     }
 
-    // 💡 PILAR 1: Framework Lamp
+    // 💡 PILAR 1: Framework Lamp con Permisos Nativos
     @Command("pvp")
+    @CommandPermission("nexopvp.user") // 🔒 Permiso asignado
     public void togglePvP(Player player) {
-        // Al pedir "Player" como parámetro, Lamp bloquea automáticamente a la consola
-        // y envía un mensaje de error si no es un jugador.
         manager.togglePvP(player);
     }
 }
