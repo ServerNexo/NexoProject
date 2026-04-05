@@ -1,12 +1,15 @@
 package me.nexo.pvp.pasivas;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.skill.Skills;
 import dev.aurelium.auraskills.api.user.SkillsUser;
-import me.nexo.pvp.NexoPvP;
-import me.nexo.core.user.NexoAPI;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.user.UserManager;
+import me.nexo.pvp.NexoPvP;
+import me.nexo.pvp.config.ConfigManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
@@ -21,21 +24,33 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 🏛️ NexoPvP - Gestor de Pasivas (Arquitectura Enterprise)
+ * Cero static API calls. Inyección de Dependencias directa.
+ */
+@Singleton
 public class PasivasManager {
 
+    // 💉 PILAR 3: Dependencias inyectadas puras
     private final NexoPvP plugin;
+    private final UserManager userManager;
+    private final ConfigManager configManager;
 
     public final Map<UUID, Long> cdUltimaBatalla = new ConcurrentHashMap<>();
     public final Map<UUID, Long> ultimoTroncoRoto = new ConcurrentHashMap<>();
     public final Map<UUID, Long> invulnerablesUltimaBatalla = new ConcurrentHashMap<>();
 
-    public PasivasManager(NexoPvP plugin) {
+    @Inject
+    public PasivasManager(NexoPvP plugin, UserManager userManager, ConfigManager configManager) {
         this.plugin = plugin;
+        this.userManager = userManager;
+        this.configManager = configManager;
         iniciarTareasPeriodicas();
     }
 
     public int getNivel(Player p, dev.aurelium.auraskills.api.skill.Skill skill) {
-        NexoUser nexoUser = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
+        // 🚀 Búsqueda directa en memoria inyectada (Mucho más rápido que NexoAPI.getInstance())
+        NexoUser nexoUser = userManager.getUserOrNull(p.getUniqueId());
         if (nexoUser != null) {
             if (skill == Skills.FIGHTING) return nexoUser.getCombateNivel();
             if (skill == Skills.MINING) return nexoUser.getMineriaNivel();
@@ -57,6 +72,7 @@ public class PasivasManager {
     }
 
     private void iniciarTareasPeriodicas() {
+        // Reloj Rápido (1 segundo)
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 UUID id = p.getUniqueId();
@@ -68,16 +84,19 @@ public class PasivasManager {
                 if (invulnerablesUltimaBatalla.containsKey(id)) {
                     if (System.currentTimeMillis() > invulnerablesUltimaBatalla.get(id)) {
                         invulnerablesUltimaBatalla.remove(id);
-                        p.sendMessage(NexoColor.parse("&#8b0000[!] Escudo de Emergencia Agotado: &#E6CCFFTu inmunidad táctica se ha desvanecido."));
+
+                        // 💡 PILAR 2: Lectura Type-Safe y Crossplay
+                        CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().pvp().escudoAgotado());
                     }
                 }
             }
         }, 20L, 20L);
 
+        // Reloj Lento (3 segundos) - Crecimiento de Cultivos
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (getNivel(p, Skills.FARMING) >= 50) {
-                    NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
+                    NexoUser user = userManager.getUserOrNull(p.getUniqueId());
                     if (user == null) continue;
 
                     int energia = user.getEnergiaMineria();
@@ -86,6 +105,7 @@ public class PasivasManager {
                     if (energia >= costo) {
                         Block centro = p.getLocation().getBlock();
                         boolean aplico = false;
+
                         buscarCultivo:
                         for (int x = -5; x <= 5; x++) {
                             for (int z = -5; z <= 5; z++) {

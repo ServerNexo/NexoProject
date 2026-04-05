@@ -1,7 +1,10 @@
 package me.nexo.pvp.pvp;
 
-import me.nexo.core.utils.NexoColor;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.pvp.NexoPvP;
+import me.nexo.pvp.config.ConfigManager;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -10,9 +13,14 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 🏛️ NexoPvP - Gestor de Combate (Arquitectura Enterprise)
+ */
+@Singleton
 public class PvPManager {
 
     private final NexoPvP plugin;
+    private final ConfigManager configManager; // 💡 PILAR 2: Motor Type-Safe
 
     public final Set<UUID> pvpActivo = ConcurrentHashMap.newKeySet();
     public final Map<UUID, Long> enCombate = new ConcurrentHashMap<>();
@@ -20,8 +28,11 @@ public class PvPManager {
     public final Map<UUID, Integer> puntosHonor = new ConcurrentHashMap<>();
     public final Map<UUID, Integer> rachaAsesinatos = new ConcurrentHashMap<>();
 
-    public PvPManager(NexoPvP plugin) {
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
+    public PvPManager(NexoPvP plugin, ConfigManager configManager) {
         this.plugin = plugin;
+        this.configManager = configManager;
         iniciarRelojCombate();
     }
 
@@ -33,16 +44,16 @@ public class PvPManager {
         UUID id = p.getUniqueId();
 
         if (estaEnCombate(p)) {
-            p.sendMessage(NexoColor.parse("&#8b0000[!] Error de Seguridad: No puedes desactivar la hostilidad con un enlace de combate activo."));
+            CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().pvp().errorEnCombate());
             return;
         }
 
         if (pvpActivo.contains(id)) {
             pvpActivo.remove(id);
-            p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>PROTOCOLO DE PAZ:</bold> &#E6CCFFHostilidad desactivada. Escudos neuronales activos."));
+            CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().pvp().protocoloPaz());
         } else {
             pvpActivo.add(id);
-            p.sendMessage(NexoColor.parse("&#8b0000[!] <bold>PROTOCOLO DE GUERRA:</bold> &#E6CCFFHostilidad activada. Sistemas de armamento en línea."));
+            CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().pvp().protocoloGuerra());
         }
     }
 
@@ -50,10 +61,10 @@ public class PvPManager {
         long expiracion = System.currentTimeMillis() + 15000L;
 
         if (!estaEnCombate(p1)) {
-            p1.sendMessage(NexoColor.parse("&#8b0000<bold>¡ALERTA DE COMBATE!</bold> &#E6CCFFEnlace táctico detectado (15s). No te desconectes."));
+            CrossplayUtils.sendMessage(p1, configManager.getMessages().mensajes().pvp().alertaCombate());
         }
         if (!estaEnCombate(p2)) {
-            p2.sendMessage(NexoColor.parse("&#8b0000<bold>¡ALERTA DE COMBATE!</bold> &#E6CCFFEnlace táctico detectado (15s). No te desconectes."));
+            CrossplayUtils.sendMessage(p2, configManager.getMessages().mensajes().pvp().alertaCombate());
         }
 
         enCombate.put(p1.getUniqueId(), expiracion);
@@ -72,7 +83,7 @@ public class PvPManager {
                     enCombate.remove(entry.getKey());
                     Player p = Bukkit.getPlayer(entry.getKey());
                     if (p != null) {
-                        p.sendMessage(NexoColor.parse("&#00f5ff[✓] Enlace de combate finalizado. Sistemas estabilizados."));
+                        CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().pvp().finCombate());
                     }
                 }
             }

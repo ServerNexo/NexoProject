@@ -1,8 +1,11 @@
 package me.nexo.pvp.pvp;
 
+import com.google.inject.Inject;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.protections.managers.ClaimManager;
+import me.nexo.pvp.config.ConfigManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -18,29 +21,34 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.UUID;
 
+/**
+ * 🏛️ NexoPvP - Listener de Combate (Arquitectura Enterprise)
+ * Textos centralizados y Dependencias Inyectadas.
+ */
 public class PvPListener implements Listener {
 
     private final PvPManager manager;
+    private final ConfigManager configManager; // 💡 PILAR 2
 
-    public PvPListener(PvPManager manager) {
+    // 💉 PILAR 3: Inyección
+    @Inject
+    public PvPListener(PvPManager manager, ConfigManager configManager) {
         this.manager = manager;
+        this.configManager = configManager;
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onDañoJugadores(EntityDamageByEntityEvent event) {
 
-        // 🌟 CORRECCIÓN: Usamos una variable temporal para determinar quién hizo el daño
         Player tempAtacante = null;
         if (event.getDamager() instanceof Player p) tempAtacante = p;
         else if (event.getDamager() instanceof Projectile proj && proj.getShooter() instanceof Player p) tempAtacante = p;
 
-        // 🌟 CORRECCIÓN: Creamos al Atacante final (Esta es la llave para que el Lambda no crashee)
         final Player atacante = tempAtacante;
 
         if (atacante != null && event.getEntity() instanceof Player victima) {
             if (atacante.equals(victima)) return;
 
-            // Ahora 'atacante' es seguro para usarse dentro de este bloque Lambda
             NexoAPI.getServices().get(ClaimManager.class).ifPresent(claimManager -> {
                 me.nexo.protections.core.ProtectionStone stone = claimManager.getStoneAt(victima.getLocation());
                 if (stone != null && !stone.getFlag("pvp")) {
@@ -49,7 +57,7 @@ public class PvPListener implements Listener {
                         ignorarProteccion = me.nexo.war.NexoWar.getPlugin(me.nexo.war.NexoWar.class).getWarManager().estanEnGuerraActiva(atacante.getUniqueId(), victima.getUniqueId());
                     }
                     if (!ignorarProteccion) {
-                        atacante.sendMessage(NexoColor.parse("&#8b0000[!] Bloqueo de Armamento: &#E6CCFFEl objetivo se encuentra en una zona neutral."));
+                        CrossplayUtils.sendMessage(atacante, configManager.getMessages().mensajes().pvp().bloqueoArmamento());
                         event.setCancelled(true);
                     }
                 }
@@ -80,13 +88,20 @@ public class PvPListener implements Listener {
 
             int honorActual = manager.puntosHonor.getOrDefault(idAsesino, 0) + 1;
             manager.puntosHonor.put(idAsesino, honorActual);
-            asesino.sendMessage(NexoColor.parse("&#ff00ff⚔ <bold>OBJETIVO NEUTRALIZADO:</bold> &#E6CCFF" + victima.getName() + " &#00f5ff(+1 Honor)"));
+
+            // 💡 TYPE-SAFE TEXT
+            CrossplayUtils.sendMessage(asesino, configManager.getMessages().mensajes().pvp().objetivoNeutralizado()
+                    .replace("%victima%", victima.getName()));
 
             int rachaVictima = manager.rachaAsesinatos.getOrDefault(idVictima, 0);
 
             if (rachaVictima >= 3) {
-                Bukkit.broadcast(NexoColor.parse("&#00f5ff<bold>[CAZARRECOMPENSAS]</bold> &#E6CCFF" + asesino.getName() + " &#E6CCFFha cobrado el contrato por la cabeza de &#8b0000" + victima.getName() + "&#E6CCFF!"));
-                asesino.sendMessage(NexoColor.parse("&#00f5ff[💎] <bold>Bounty Reclamado:</bold> &#E6CCFFTransferencia de +5 Honor y recurso primario completada."));
+                Bukkit.broadcast(NexoColor.parse(configManager.getMessages().mensajes().pvp().cazarrecompensasGlobal()
+                        .replace("%asesino%", asesino.getName())
+                        .replace("%victima%", victima.getName())));
+
+                CrossplayUtils.sendMessage(asesino, configManager.getMessages().mensajes().pvp().bountyReclamado());
+
                 manager.puntosHonor.put(idAsesino, honorActual + 5);
                 asesino.getInventory().addItem(new ItemStack(Material.DIAMOND));
                 asesino.playSound(asesino.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
@@ -96,9 +111,12 @@ public class PvPListener implements Listener {
             manager.rachaAsesinatos.put(idAsesino, rachaAsesino);
 
             if (rachaAsesino == 3) {
-                Bukkit.broadcast(NexoColor.parse("&#8b0000<bold>[OBJETIVO PRIORITARIO]</bold> &#E6CCFF" + asesino.getName() + " &#E6CCFFestá en racha letal (3 Kills). ¡Contrato de caza emitido!"));
+                Bukkit.broadcast(NexoColor.parse(configManager.getMessages().mensajes().pvp().rachaTresGlobal()
+                        .replace("%asesino%", asesino.getName())));
             } else if (rachaAsesino > 3) {
-                Bukkit.broadcast(NexoColor.parse("&#8b0000<bold>[AMENAZA NIVEL OMEGA]</bold> &#E6CCFF" + asesino.getName() + " &#E6CCFFha alcanzado " + rachaAsesino + " Kills consecutivas!"));
+                Bukkit.broadcast(NexoColor.parse(configManager.getMessages().mensajes().pvp().rachaMayorGlobal()
+                        .replace("%asesino%", asesino.getName())
+                        .replace("%kills%", String.valueOf(rachaAsesino))));
             }
         }
 
@@ -111,7 +129,8 @@ public class PvPListener implements Listener {
         if (manager.estaEnCombate(p)) {
             p.setHealth(0.0);
             manager.enCombate.remove(p.getUniqueId());
-            Bukkit.broadcast(NexoColor.parse("&#8b0000☠ <bold>DESCONEXIÓN COBARDE:</bold> &#E6CCFF" + p.getName() + " &#E6CCFFevadió el combate y sus sistemas fueron purgados."));
+            Bukkit.broadcast(NexoColor.parse(configManager.getMessages().mensajes().pvp().desconexionCobarde()
+                    .replace("%jugador%", p.getName())));
         }
     }
 }

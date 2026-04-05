@@ -1,10 +1,12 @@
 package me.nexo.pvp.mechanics;
 
+import com.google.inject.Inject;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.skill.Skill;
 import dev.aurelium.auraskills.api.skill.Skills;
 import dev.aurelium.auraskills.api.user.SkillsUser;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.pvp.config.ConfigManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -19,13 +21,23 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * 🏛️ NexoPvP - Estaciones de Entrenamiento (Arquitectura Enterprise)
+ */
 public class TrainingStationListener implements Listener {
 
     private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private final ConfigManager configManager; // 💡 PILAR 2
 
     // ⚖️ BALANCE: Ahora que romper tarda más que hacer clic, subimos la XP
     private final int MAX_TRAINING_LEVEL = 15;
     private final double XP_PER_BREAK = 10.0;
+
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
+    public TrainingStationListener(ConfigManager configManager) {
+        this.configManager = configManager;
+    }
 
     @EventHandler
     public void onTrainingBreak(BlockBreakEvent event) {
@@ -35,45 +47,24 @@ public class TrainingStationListener implements Listener {
         long now = System.currentTimeMillis();
 
         Skill targetSkill = null;
-
-        // 🌟 INTEGRACIÓN DE BLOQUES CUSTOM (O VANILLA)
-        // Nota: Si usas el plugin premium "Nexo" para bloques custom, aquí podrías
-        // validar el ID del bloque con NexoBlocks.isCustomBlock(block)
-
         Material blockType = block.getType();
 
         switch (blockType) {
-            case TARGET: // ⚔️ Combate (Tardan en romperlo con la espada)
-                targetSkill = Skills.FIGHTING;
-                break;
-            case COAL_ORE: // ⛏️ Minería (Cambié Bedrock porque Bedrock es irrompible en survival)
-                targetSkill = Skills.MINING;
-                break;
-            case OAK_LOG: // 🪓 Tala
-                targetSkill = Skills.FORAGING;
-                break;
-            case HAY_BLOCK: // 🌾 Agricultura
-                targetSkill = Skills.FARMING;
-                break;
-            case BOOKSHELF: // 🔮 Encantamiento (Cambiado a Librería para que puedan romperlo con hacha/mano)
-                targetSkill = Skills.ENCHANTING;
-                break;
-            case CAULDRON: // 🧪 Alquimia
-                targetSkill = Skills.ALCHEMY;
-                break;
-            case BARREL: // 🎣 Pesca
-                targetSkill = Skills.FISHING;
-                break;
-            default:
-                return; // Si no es un bloque de entrenamiento, no hacemos nada
+            case TARGET -> targetSkill = Skills.FIGHTING;
+            case COAL_ORE -> targetSkill = Skills.MINING;
+            case OAK_LOG -> targetSkill = Skills.FORAGING;
+            case HAY_BLOCK -> targetSkill = Skills.FARMING;
+            case BOOKSHELF -> targetSkill = Skills.ENCHANTING;
+            case CAULDRON -> targetSkill = Skills.ALCHEMY;
+            case BARREL -> targetSkill = Skills.FISHING;
+            default -> { return; }
         }
 
-        // 🛑 MAGIA CORPORATIVA: Cancelamos el evento para que el bloque NO se rompa.
-        // Esto crea un "Dummy Infinito" sin tener que regenerarlo o usar bases de datos.
+        // 🛑 MAGIA CORPORATIVA: Dummy Infinito
         event.setCancelled(true);
 
         if (cooldowns.containsKey(id) && (now - cooldowns.get(id)) < 500) {
-            return; // Cooldown anti-lag por si usan instamine
+            return; // Cooldown anti-lag por instamine
         }
 
         try {
@@ -83,7 +74,10 @@ public class TrainingStationListener implements Listener {
             // 🛑 SISTEMA ANTI-AFK INFINITO (Hard-Cap)
             if (skillsUser.getSkillLevel(targetSkill) >= MAX_TRAINING_LEVEL) {
                 if (!cooldowns.containsKey(id) || (now - cooldowns.get(id)) > 3000) {
-                    player.sendMessage(NexoColor.parse("&#8b0000[!] Ya eres muy avanzado (" + MAX_TRAINING_LEVEL + "+). ¡Sal al mundo real!"));
+                    // 💡 PILAR 2: Texto Seguro
+                    String msg = configManager.getMessages().mensajes().pvp().entrenamientoMaximo()
+                            .replace("%nivel%", String.valueOf(MAX_TRAINING_LEVEL));
+                    CrossplayUtils.sendMessage(player, msg);
                     player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
                     cooldowns.put(id, now);
                 }
@@ -103,7 +97,6 @@ public class TrainingStationListener implements Listener {
         org.bukkit.Location center = loc.add(0.5, 0.5, 0.5);
         String icon = "[+]";
 
-        // 🌟 PARTÍCULAS ACTUALIZADAS PARA PAPER 1.21
         switch (blockType) {
             case TARGET -> {
                 player.getWorld().spawnParticle(Particle.ENCHANTED_HIT, center, 5);
@@ -142,6 +135,11 @@ public class TrainingStationListener implements Listener {
             }
         }
 
-        player.sendActionBar(NexoColor.parse("&#ff00ff" + icon + " Entrenamiento: &#00f5ff+" + XP_PER_BREAK + " XP"));
+        // 💡 PILAR 2: ActionBar segura con variables
+        String actionMsg = configManager.getMessages().mensajes().pvp().entrenamientoXp()
+                .replace("%icon%", icon)
+                .replace("%xp%", String.valueOf(XP_PER_BREAK));
+
+        CrossplayUtils.sendActionBar(player, actionMsg);
     }
 }

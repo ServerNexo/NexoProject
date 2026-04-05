@@ -1,10 +1,12 @@
 package me.nexo.pvp.pasivas;
 
+import com.google.inject.Inject;
 import dev.aurelium.auraskills.api.skill.Skills;
-import me.nexo.pvp.NexoPvP;
-import me.nexo.core.user.NexoAPI;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.user.UserManager;
+import me.nexo.pvp.NexoPvP;
+import me.nexo.pvp.config.ConfigManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -35,20 +37,30 @@ import org.bukkit.util.Vector;
 
 import java.util.UUID;
 
+/**
+ * 🏛️ NexoPvP - Listener de Pasivas (Arquitectura Enterprise)
+ * Cero static API calls. Type-Safe Configs.
+ */
 public class PasivasListener implements Listener {
 
+    // 💉 PILAR 3: Dependencias Inyectadas
     private final NexoPvP plugin;
     private final PasivasManager manager;
+    private final UserManager userManager;
+    private final ConfigManager configManager;
 
-    public PasivasListener(NexoPvP plugin, PasivasManager manager) {
+    @Inject
+    public PasivasListener(NexoPvP plugin, PasivasManager manager, UserManager userManager, ConfigManager configManager) {
         this.plugin = plugin;
         this.manager = manager;
+        this.userManager = userManager;
+        this.configManager = configManager;
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onCombate(EntityDamageByEntityEvent event) {
         if (event.getDamager() instanceof Player atacante) {
-            NexoUser user = NexoAPI.getInstance().getUserLocal(atacante.getUniqueId());
+            NexoUser user = userManager.getUserOrNull(atacante.getUniqueId());
             int nivel = user != null ? user.getCombateNivel() : 1;
 
             if (nivel >= 25 && event.getEntity() instanceof org.bukkit.entity.LivingEntity victima) {
@@ -72,7 +84,7 @@ public class PasivasListener implements Listener {
                 return;
             }
 
-            NexoUser user = NexoAPI.getInstance().getUserLocal(id);
+            NexoUser user = userManager.getUserOrNull(id);
             int nivel = user != null ? user.getCombateNivel() : 1;
 
             if (nivel >= 50 && event.getFinalDamage() >= victima.getHealth()) {
@@ -88,9 +100,14 @@ public class PasivasListener implements Listener {
                     victima.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, victima.getLocation(), 100);
                     victima.playSound(victima.getLocation(), Sound.ITEM_TOTEM_USE, 1f, 1f);
 
+                    // 💡 PILAR 2 & 6: Título nativo usando Type-Safe y Crossplay
                     victima.sendTitle(
-                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#8b0000<bold>¡ESCUDO DE EMERGENCIA!</bold>")),
-                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#E6CCFFDaño letal anulado. Sistemas en enfriamiento.")),
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(
+                                    CrossplayUtils.parseCrossplay(victima, configManager.getMessages().mensajes().pvp().escudoEmergenciaTitulo())
+                            ),
+                            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(
+                                    CrossplayUtils.parseCrossplay(victima, configManager.getMessages().mensajes().pvp().escudoEmergenciaSub())
+                            ),
                             5, 40, 5
                     );
                 }
@@ -107,7 +124,7 @@ public class PasivasListener implements Listener {
             }
 
             if (event.getCause() == EntityDamageEvent.DamageCause.LAVA || event.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK) {
-                NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
+                NexoUser user = userManager.getUserOrNull(p.getUniqueId());
                 if (user != null && user.getMineriaNivel() >= 25 && p.getInventory().getItemInMainHand().getType().toString().contains("PICKAXE")) {
                     event.setCancelled(true);
                 }
@@ -121,7 +138,7 @@ public class PasivasListener implements Listener {
         Block b = event.getBlock();
         String tipo = b.getType().toString();
 
-        NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
+        NexoUser user = userManager.getUserOrNull(p.getUniqueId());
         if (user == null) return;
 
         int nivelTala = manager.getNivel(p, Skills.FORAGING);
@@ -176,7 +193,7 @@ public class PasivasListener implements Listener {
     @EventHandler
     public void onPisadas(PlayerInteractEvent event) {
         if (event.getAction() == Action.PHYSICAL && event.getClickedBlock() != null) {
-            NexoUser user = NexoAPI.getInstance().getUserLocal(event.getPlayer().getUniqueId());
+            NexoUser user = userManager.getUserOrNull(event.getPlayer().getUniqueId());
             if (event.getClickedBlock().getType() == Material.FARMLAND && user != null && user.getAgriculturaNivel() >= 10) {
                 event.setCancelled(true);
             }
@@ -190,7 +207,7 @@ public class PasivasListener implements Listener {
             int nivel = manager.getNivel(p, Skills.FISHING);
 
             if (nivel >= 10) {
-                NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
+                NexoUser user = userManager.getUserOrNull(p.getUniqueId());
                 if (user != null) {
                     int energiaAct = user.getEnergiaMineria();
                     int maxEnergia = 100 + ((user.getNexoNivel() - 1) * 20) + user.getEnergiaExtraAccesorios();
@@ -202,7 +219,9 @@ public class PasivasListener implements Listener {
                 ItemStack caught = itemEntity.getItemStack();
                 caught.setAmount(caught.getAmount() * 2);
                 itemEntity.setItemStack(caught);
-                p.sendActionBar(NexoColor.parse("&#00f5ff[✓] <bold>EXTRACCIÓN DUPLICADA:</bold> &#E6CCFFRedimensionamiento cuántico aplicado."));
+
+                // 💡 PILAR 2 & 6: ActionBar segura
+                CrossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().pvp().pescaCuantica());
             }
         }
     }
@@ -261,7 +280,7 @@ public class PasivasListener implements Listener {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 p.setLevel(p.getLevel() + event.getExpLevelCost());
                 p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, 1f, 1f);
-                p.sendMessage(NexoColor.parse("&#ff00ff✨ <bold>RETENCIÓN DE ENERGÍA:</bold> &#E6CCFFCosto de ensamblaje reintegrado."));
+                CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().pvp().retencionEnergia());
             }, 1L);
         }
     }

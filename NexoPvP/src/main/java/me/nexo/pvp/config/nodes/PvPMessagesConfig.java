@@ -69,9 +69,15 @@ public class PvPMessagesConfig {
         @Setting private ExitoNode exito = new ExitoNode();
         @Setting private PenalizacionesNode penalizaciones = new PenalizacionesNode();
 
+        // ⚔️ NODO DE COMBATE
+        @Setting private PvpNode pvp = new PvpNode();
+
         public ErroresNode errores() { return errores; }
         public ExitoNode exito() { return exito; }
         public PenalizacionesNode penalizaciones() { return penalizaciones; }
+
+        // ⚔️ GETTER DE COMBATE
+        public PvpNode pvp() { return pvp; }
     }
 
     @ConfigSerializable
@@ -107,5 +113,66 @@ public class PvPMessagesConfig {
         public String cobroResurreccion() { return cobroResurreccion; }
         public String perdidaProgreso() { return perdidaProgreso; }
         public String consejoBendicion() { return consejoBendicion; }
+    }
+
+    // ⚔️ CLASE EXPANDIDA: Textos para todo el módulo PvP
+    @ConfigSerializable
+    public static class PvpNode {
+        // PvPManager
+        @Setting("error-en-combate") private String errorEnCombate = "&#8b0000[!] Error de Seguridad: No puedes desactivar la hostilidad con un enlace de combate activo.";
+        @Setting("protocolo-paz") private String protocoloPaz = "&#00f5ff[✓] <bold>PROTOCOLO DE PAZ:</bold> &#E6CCFFHostilidad desactivada. Escudos neuronales activos.";
+        @Setting("protocolo-guerra") private String protocoloGuerra = "&#8b0000[!] <bold>PROTOCOLO DE GUERRA:</bold> &#E6CCFFHostilidad activada. Sistemas de armamento en línea.";
+        @Setting("alerta-combate") private String alertaCombate = "&#8b0000<bold>¡ALERTA DE COMBATE!</bold> &#E6CCFFEnlace táctico detectado (15s). No te desconectes.";
+        @Setting("fin-combate") private String finCombate = "&#00f5ff[✓] Enlace de combate finalizado. Sistemas estabilizados.";
+
+        // PvPListener (Muerte, Cazarrecompensas, Desconexiones)
+        @Setting("bloqueo-armamento") private String bloqueoArmamento = "&#8b0000[!] Bloqueo de Armamento: &#E6CCFFEl objetivo se encuentra en una zona neutral.";
+        @Setting("objetivo-neutralizado") private String objetivoNeutralizado = "&#ff00ff⚔ <bold>OBJETIVO NEUTRALIZADO:</bold> &#E6CCFF%victima% &#00f5ff(+1 Honor)";
+        @Setting("cazarrecompensas-global") private String cazarrecompensasGlobal = "&#00f5ff<bold>[CAZARRECOMPENSAS]</bold> &#E6CCFF%asesino% &#E6CCFFha cobrado el contrato por la cabeza de &#8b0000%victima%&#E6CCFF!";
+        @Setting("bounty-reclamado") private String bountyReclamado = "&#00f5ff[💎] <bold>Bounty Reclamado:</bold> &#E6CCFFTransferencia de +5 Honor y recurso primario completada.";
+        @Setting("racha-tres-global") private String rachaTresGlobal = "&#8b0000<bold>[OBJETIVO PRIORITARIO]</bold> &#E6CCFF%asesino% &#E6CCFFestá en racha letal (3 Kills). ¡Contrato de caza emitido!";
+        @Setting("racha-mayor-global") private String rachaMayorGlobal = "&#8b0000<bold>[AMENAZA NIVEL OMEGA]</bold> &#E6CCFF%asesino% &#E6CCFFha alcanzado %kills% Kills consecutivas!";
+        @Setting("desconexion-cobarde") private String desconexionCobarde = "&#8b0000☠ <bold>DESCONEXIÓN COBARDE:</bold> &#E6CCFF%jugador% &#E6CCFFevadió el combate y sus sistemas fueron purgados.";
+
+        // 🛡️ PasivasManager & PasivasListener
+        @Setting("escudo-agotado") private String escudoAgotado = "&#8b0000[!] Escudo de Emergencia Agotado: &#E6CCFFTu inmunidad táctica se ha desvanecido.";
+        @Setting("escudo-emergencia-titulo") private String escudoEmergenciaTitulo = "&#8b0000<bold>¡ESCUDO DE EMERGENCIA!</bold>";
+        @Setting("escudo-emergencia-sub") private String escudoEmergenciaSub = "&#E6CCFFDaño letal anulado. Sistemas en enfriamiento.";
+        @Setting("pesca-cuantica") private String pescaCuantica = "&#00f5ff[✓] <bold>EXTRACCIÓN DUPLICADA:</bold> &#E6CCFFRedimensionamiento cuántico aplicado.";
+        @Setting("retencion-energia") private String retencionEnergia = "&#ff00ff✨ <bold>RETENCIÓN DE ENERGÍA:</bold> &#E6CCFFCosto de ensamblaje reintegrado.";
+
+        // 🛡️ Clases de Armadura (ArmorClassListener)
+        @Setting("set-asesino-activo") private String setAsesinoActivo = "&#8b0000[☠] Set de Sombra Activo: Velocidad Máxima, Salud Crítica.";
+        @Setting("set-inquisidor-activo") private String setInquisidorActivo = "&#ff00ff[✧] Set de Inquisidor Activo: Canalización de Maná amplificada.";
+
+        // 🎯 Campo de Entrenamiento (TrainingStationListener)
+        @Setting("entrenamiento-maximo") private String entrenamientoMaximo = "&#8b0000[!] Ya eres muy avanzado (Nivel %nivel%+). ¡Sal al mundo real!";
+        @Setting("entrenamiento-xp") private String entrenamientoXp = "&#ff00ff%icon% Entrenamiento: &#00f5ff+%xp% XP";
+
+        public String errorEnCombate() { return errorEnCombate; }
+        public String protocoloPaz() { return protocoloPaz; }
+        public String protocoloGuerra() { return protocoloGuerra; }
+        public String alertaCombate() { return alertaCombate; }
+        public String finCombate() { return finCombate; }
+
+        public String bloqueoArmamento() { return bloqueoArmamento; }
+        public String objetivoNeutralizado() { return objetivoNeutralizado; }
+        public String cazarrecompensasGlobal() { return cazarrecompensasGlobal; }
+        public String bountyReclamado() { return bountyReclamado; }
+        public String rachaTresGlobal() { return rachaTresGlobal; }
+        public String rachaMayorGlobal() { return rachaMayorGlobal; }
+        public String desconexionCobarde() { return desconexionCobarde; }
+
+        public String escudoAgotado() { return escudoAgotado; }
+        public String escudoEmergenciaTitulo() { return escudoEmergenciaTitulo; }
+        public String escudoEmergenciaSub() { return escudoEmergenciaSub; }
+        public String pescaCuantica() { return pescaCuantica; }
+        public String retencionEnergia() { return retencionEnergia; }
+
+        public String setAsesinoActivo() { return setAsesinoActivo; }
+        public String setInquisidorActivo() { return setInquisidorActivo; }
+
+        public String entrenamientoMaximo() { return entrenamientoMaximo; }
+        public String entrenamientoXp() { return entrenamientoXp; }
     }
 }

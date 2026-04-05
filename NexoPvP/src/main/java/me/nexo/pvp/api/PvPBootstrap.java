@@ -3,6 +3,7 @@ package me.nexo.pvp.api;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
+import me.nexo.pvp.mechanics.TrainingStationListener;
 import me.nexo.pvp.NexoPvP;
 import me.nexo.pvp.classes.ArmorClassListener;
 import me.nexo.pvp.commands.ComandoTemplo;
@@ -49,10 +50,11 @@ public class PvPBootstrap {
     private void registerEvents() {
         var pm = server.getPluginManager();
         // 🌉 PUENTE LEGACY: Mantenemos los eventos viejos funcionando por ahora
-        pm.registerEvents(new PvPListener(pvpManager), plugin);
-        pm.registerEvents(new PasivasListener(plugin, pasivasManager), plugin);
-        pm.registerEvents(new ArmorClassListener(plugin), plugin);
+        pm.registerEvents(injector.getInstance(PvPListener.class), plugin);
+        pm.registerEvents(injector.getInstance(PasivasListener.class), plugin);
+        pm.registerEvents(injector.getInstance(ArmorClassListener.class), plugin);
         pm.registerEvents(injector.getInstance(DeathPenaltyListener.class), plugin);
+        pm.registerEvents(injector.getInstance(TrainingStationListener.class), plugin);
     }
 
     private void registerCommands() {

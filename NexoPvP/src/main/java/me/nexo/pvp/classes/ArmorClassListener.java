@@ -1,7 +1,10 @@
 package me.nexo.pvp.classes;
 
 import com.destroystokyo.paper.event.player.PlayerArmorChangeEvent;
-import me.nexo.core.utils.NexoColor;
+import com.google.inject.Inject;
+import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.pvp.NexoPvP;
+import me.nexo.pvp.config.ConfigManager;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
@@ -15,22 +18,27 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.plugin.Plugin;
 
+/**
+ * 🏛️ NexoPvP - Listener de Clases de Armadura (Arquitectura Enterprise)
+ */
 public class ArmorClassListener implements Listener {
 
-    private final Plugin plugin;
-    private final NamespacedKey classKey;
+    // 💉 PILAR 3: Inyección
+    private final NexoPvP plugin;
+    private final ConfigManager configManager;
 
-    // Llaves únicas para los modificadores (API 1.21+)
+    private final NamespacedKey classKey;
     private final NamespacedKey healthModKey;
     private final NamespacedKey speedModKey;
 
-    public ArmorClassListener(Plugin plugin) {
+    @Inject
+    public ArmorClassListener(NexoPvP plugin, ConfigManager configManager) {
         this.plugin = plugin;
-        // La llave maestra que leeremos del NBT de los items
-        this.classKey = new NamespacedKey("nexoitems", "nexo_class");
+        this.configManager = configManager;
 
+        // La llave maestra que leeremos del NBT de NexoItems
+        this.classKey = new NamespacedKey("nexoitems", "nexo_class");
         this.healthModKey = new NamespacedKey(plugin, "class_health_modifier");
         this.speedModKey = new NamespacedKey(plugin, "class_speed_modifier");
     }
@@ -71,18 +79,18 @@ public class ArmorClassListener implements Listener {
                 if (healthAttr != null) healthAttr.addModifier(new AttributeModifier(healthModKey, -0.5, AttributeModifier.Operation.MULTIPLY_SCALAR_1));
                 if (speedAttr != null) speedAttr.addModifier(new AttributeModifier(speedModKey, 0.4, AttributeModifier.Operation.MULTIPLY_SCALAR_1));
 
-                player.sendActionBar(NexoColor.parse("&#8b0000[☠] Set de Sombra Activo: Velocidad Máxima, Salud Crítica."));
+                // 💡 PILAR 2: Action Bar Type-Safe
+                CrossplayUtils.sendActionBar(player, configManager.getMessages().mensajes().pvp().setAsesinoActivo());
                 player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 0.3f, 2.0f);
                 break;
 
             case "INQUISITOR":
-                // Inquisidor (Mago): Se maneja el maná en el HUD/AuraSkills, pero aquí reducimos su defensa nativa o salud si lo deseas
-                // Ejemplo: -30% Vida, el Mana se multiplica en tu sistema de magia
+                // Inquisidor: -30% Vida
                 if (healthAttr != null) healthAttr.addModifier(new AttributeModifier(healthModKey, -0.3, AttributeModifier.Operation.MULTIPLY_SCALAR_1));
 
-                player.sendActionBar(NexoColor.parse("&#ff00ff[✧] Set de Inquisidor Activo: Canalización de Maná amplificada."));
+                // 💡 PILAR 2: Action Bar Type-Safe
+                CrossplayUtils.sendActionBar(player, configManager.getMessages().mensajes().pvp().setInquisidorActivo());
                 player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1.0f, 0.5f);
-                // Nota: El buff de maná lo leeremos desde el HudTask o el plugin de Magia.
                 break;
         }
     }
