@@ -3,18 +3,16 @@ package me.nexo.pvp.api;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Singleton;
-import me.nexo.pvp.mechanics.TrainingStationListener;
 import me.nexo.pvp.NexoPvP;
 import me.nexo.pvp.classes.ArmorClassListener;
 import me.nexo.pvp.commands.ComandoTemplo;
 import me.nexo.pvp.mechanics.DeathPenaltyListener;
+import me.nexo.pvp.mechanics.TrainingStationListener;
 import me.nexo.pvp.pasivas.PasivasListener;
-import me.nexo.pvp.pasivas.PasivasManager;
 import me.nexo.pvp.pvp.ComandoPvP;
 import me.nexo.pvp.pvp.PvPListener;
-import me.nexo.pvp.pvp.PvPManager;
 import org.bukkit.Server;
-import revxrsal.commands.bukkit.BukkitCommandHandler; // 💡 Importación de Lamp añadida
+import revxrsal.commands.bukkit.BukkitCommandHandler;
 
 @Singleton
 public class PvPBootstrap {
@@ -22,16 +20,13 @@ public class PvPBootstrap {
     private final NexoPvP plugin;
     private final Server server;
     private final Injector injector;
-    private final PvPManager pvpManager;
-    private final PasivasManager pasivasManager;
 
+    // 💉 PILAR 3: Inyección Limpia (Solo pedimos lo que usamos)
     @Inject
-    public PvPBootstrap(NexoPvP plugin, Injector injector, PvPManager pvpManager, PasivasManager pasivasManager) {
+    public PvPBootstrap(NexoPvP plugin, Injector injector) {
         this.plugin = plugin;
         this.server = plugin.getServer();
         this.injector = injector;
-        this.pvpManager = pvpManager;
-        this.pasivasManager = pasivasManager;
     }
 
     public void startServices() {
@@ -49,7 +44,8 @@ public class PvPBootstrap {
 
     private void registerEvents() {
         var pm = server.getPluginManager();
-        // 🌉 PUENTE LEGACY: Mantenemos los eventos viejos funcionando por ahora
+
+        // 🚀 Eventos Purificados y Desacoplados
         pm.registerEvents(injector.getInstance(PvPListener.class), plugin);
         pm.registerEvents(injector.getInstance(PasivasListener.class), plugin);
         pm.registerEvents(injector.getInstance(ArmorClassListener.class), plugin);
@@ -60,6 +56,11 @@ public class PvPBootstrap {
     private void registerCommands() {
         // 💡 Inicializamos el motor de Lamp para NexoPvP
         BukkitCommandHandler handler = BukkitCommandHandler.create(plugin);
+
+        // 🛡️ CONTROL GLOBAL DE PERMISOS (Mensaje personalizado)
+        handler.registerExceptionHandler(revxrsal.commands.exception.NoPermissionException.class, (actor, exception) -> {
+            actor.error("§c❌ No tienes autorización táctica para este comando.");
+        });
 
         // 💉 Usamos a Guice para construir e inyectar los comandos
         handler.register(injector.getInstance(ComandoPvP.class));
