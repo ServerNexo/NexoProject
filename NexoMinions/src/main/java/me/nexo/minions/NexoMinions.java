@@ -1,65 +1,68 @@
 package me.nexo.minions;
 
-import me.nexo.core.user.NexoAPI;
-import me.nexo.minions.commands.ComandoMinion;
-import me.nexo.minions.commands.ComandoMinionTabCompleter;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.TiersConfig;
 import me.nexo.minions.data.UpgradesConfig;
-import me.nexo.minions.listeners.ExplosionListener;
-import me.nexo.minions.listeners.MinionInteractListener;
-import me.nexo.minions.listeners.MinionLoadListener;
+import me.nexo.minions.di.MinionsModule;
 import me.nexo.minions.manager.MinionManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class NexoMinions extends JavaPlugin {
 
-    private MinionManager minionManager;
-    private TiersConfig tiersConfig;
-    private UpgradesConfig upgradesConfig;
+    private Injector injector;
+    private MinionsBootstrap bootstrap;
 
     @Override
     public void onEnable() {
-        this.minionManager = new MinionManager(this);
-        this.tiersConfig = new TiersConfig(this);
-        this.upgradesConfig = new UpgradesConfig(this);
+        getLogger().info("========================================");
+        getLogger().info("🤖 Iniciando NexoMinions (Motor Enterprise)...");
 
-        NexoAPI.getServices().register(MinionManager.class, this.minionManager);
-
-        getServer().getPluginManager().registerEvents(new MinionInteractListener(this), this);
-        getServer().getPluginManager().registerEvents(new MinionLoadListener(this), this);
-
-
-        // 🌟 CORRECCIÓN: Le pasamos 'this' al ExplosionListener
-        getServer().getPluginManager().registerEvents(new ExplosionListener(this), this);
-
-        if (getCommand("minion") != null) {
-            getCommand("minion").setExecutor(new ComandoMinion(this));
-            getCommand("minion").setTabCompleter(new ComandoMinionTabCompleter());
+        if (getServer().getPluginManager().getPlugin("NexoCore") == null) {
+            getLogger().severe("❌ NexoCore no detectado. Apagando...");
+            getServer().getPluginManager().disablePlugin(this);
+            return;
         }
 
-        getServer().getScheduler().runTaskTimer(this, () -> minionManager.tickAll(System.currentTimeMillis()), 20L, 20L);
+        // 💉 Inicializar Inyección
+        this.injector = Guice.createInjector(new MinionsModule(this));
 
-        getLogger().info("NexoMinions ha sido habilitado.");
+        // Forzamos la carga de configuraciones
+        injector.getInstance(TiersConfig.class);
+        injector.getInstance(UpgradesConfig.class);
+
+        // 🚀 Arrancar Orquestador
+        this.bootstrap = injector.getInstance(MinionsBootstrap.class);
+        this.bootstrap.startServices();
+
+        getLogger().info("✅ ¡NexoMinions cargado y operativo!");
+        getLogger().info("========================================");
     }
 
     @Override
     public void onDisable() {
-        if (minionManager != null) {
-            minionManager.saveAllMinionsSync();
+        if (this.bootstrap != null) {
+            this.bootstrap.stopServices();
         }
-        NexoAPI.getServices().unregister(MinionManager.class);
-        getLogger().info("NexoMinions ha sido deshabilitado.");
     }
 
+    // ==========================================
+    // 💡 GETTERS PARA APIS Y MENÚS EXTERNOS
+    // ==========================================
     public MinionManager getMinionManager() {
-        return minionManager;
+        return injector.getInstance(MinionManager.class);
     }
 
     public TiersConfig getTiersConfig() {
-        return tiersConfig;
+        return injector.getInstance(TiersConfig.class);
     }
 
     public UpgradesConfig getUpgradesConfig() {
-        return upgradesConfig;
+        return injector.getInstance(UpgradesConfig.class);
+    }
+
+    public ConfigManager getConfigManager() {
+        return injector.getInstance(ConfigManager.class);
     }
 }

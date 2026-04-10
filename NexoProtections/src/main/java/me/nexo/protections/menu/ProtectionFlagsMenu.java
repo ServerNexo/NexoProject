@@ -1,8 +1,11 @@
 package me.nexo.protections.menu;
 
 import me.nexo.core.menus.NexoMenu;
+import me.nexo.core.user.NexoAPI;
 import me.nexo.protections.NexoProtections;
+import me.nexo.protections.config.ConfigManager;
 import me.nexo.protections.core.ProtectionStone;
+import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -15,29 +18,25 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 🛡️ NexoProtections - Menú de Leyes del Dominio (Arquitectura Enterprise)
+ */
 public class ProtectionFlagsMenu extends NexoMenu {
 
     private final ProtectionStone stone;
     private final NexoProtections plugin;
+    private final ConfigManager configManager;
 
     public ProtectionFlagsMenu(Player player, NexoProtections plugin, ProtectionStone stone) {
         super(player);
         this.plugin = plugin;
         this.stone = stone;
-    }
-
-    // 🌟 MÉTODOS MÁGICOS DE LECTURA
-    private String getMessage(String path) {
-        return plugin.getConfigManager().getMessage(path);
-    }
-
-    private List<String> getMessageList(String path) {
-        return plugin.getConfigManager().getMessages().getStringList(path);
+        this.configManager = plugin.getConfigManager(); // 💡 Obtenemos la configuración segura en RAM
     }
 
     @Override
     public String getMenuName() {
-        return getMessage("menus.leyes.titulo");
+        return configManager.getMessages().menus().leyes().titulo();
     }
 
     @Override
@@ -49,30 +48,35 @@ public class ProtectionFlagsMenu extends NexoMenu {
     public void setMenuItems() {
         setFillerGlass();
 
+        // Extraemos los nodos base para hacer el código más limpio
+        var flags = configManager.getMessages().menus().leyes().flags();
+
         // Fila 1: Entorno General
-        createFlagItem(10, Material.NETHERITE_SWORD, getMessage("menus.leyes.flags.pvp"), "pvp");
-        createFlagItem(11, Material.ZOMBIE_HEAD, getMessage("menus.leyes.flags.mob-spawning"), "mob-spawning");
-        createFlagItem(12, Material.TNT, getMessage("menus.leyes.flags.tnt-damage"), "tnt-damage");
-        createFlagItem(13, Material.FLINT_AND_STEEL, getMessage("menus.leyes.flags.fire-spread"), "fire-spread");
-        createFlagItem(14, Material.LEATHER, getMessage("menus.leyes.flags.animal-damage"), "animal-damage");
+        createFlagItem(10, Material.NETHERITE_SWORD, flags.pvp(), "pvp");
+        createFlagItem(11, Material.ZOMBIE_HEAD, flags.mobSpawning(), "mob-spawning");
+        createFlagItem(12, Material.TNT, flags.tntDamage(), "tnt-damage");
+        createFlagItem(13, Material.FLINT_AND_STEEL, flags.fireSpread(), "fire-spread");
+        createFlagItem(14, Material.LEATHER, flags.animalDamage(), "animal-damage");
 
         // Fila 2: Interacciones de Forasteros
-        createFlagItem(19, Material.OAK_DOOR, getMessage("menus.leyes.flags.interact"), "interact");
-        createFlagItem(20, Material.CHEST, getMessage("menus.leyes.flags.containers"), "containers");
-        createFlagItem(21, Material.HOPPER, getMessage("menus.leyes.flags.item-pickup"), "item-pickup");
-        createFlagItem(22, Material.ROTTEN_FLESH, getMessage("menus.leyes.flags.item-drop"), "item-drop");
-        createFlagItem(23, Material.IRON_DOOR, getMessage("menus.leyes.flags.ENTRY"), "ENTRY");
+        createFlagItem(19, Material.OAK_DOOR, flags.interact(), "interact");
+        createFlagItem(20, Material.CHEST, flags.containers(), "containers");
+        createFlagItem(21, Material.HOPPER, flags.itemPickup(), "item-pickup");
+        createFlagItem(22, Material.ROTTEN_FLESH, flags.itemDrop(), "item-drop");
+        createFlagItem(23, Material.IRON_DOOR, flags.entry(), "ENTRY");
 
         // Botón Volver
-        setItem(getSlots() - 5, Material.ENDER_PEARL, getMessage("menus.leyes.items.volver.nombre"), null);
+        setItem(getSlots() - 5, Material.ENDER_PEARL, configManager.getMessages().menus().leyes().items().volver().nombre(), null);
     }
 
     private void createFlagItem(int slot, Material mat, String nombre, String flagId) {
         boolean activo = stone.getFlag(flagId);
-        String estadoColor = activo ? getMessage("menus.leyes.items.flag.estado-permitido") : getMessage("menus.leyes.items.flag.estado-bloqueado");
+
+        var flagNode = configManager.getMessages().menus().leyes().items().flag();
+        String estadoColor = activo ? flagNode.estadoPermitido() : flagNode.estadoBloqueado();
 
         // Formateamos el lore dinámicamente
-        List<String> lore = getMessageList("menus.leyes.items.flag.lore").stream()
+        List<String> lore = flagNode.lore().stream()
                 .map(line -> line.replace("%status%", estadoColor))
                 .collect(Collectors.toList());
 
@@ -113,7 +117,9 @@ public class ProtectionFlagsMenu extends NexoMenu {
             boolean actual = stone.getFlag(flagId);
 
             stone.setFlag(flagId, !actual); // Invierte la ley
-            plugin.getClaimManager().saveStoneDataAsync(stone);
+
+            // 🛡️ Guardado seguro y desacoplado usando nuestro ServiceManager
+            NexoAPI.getServices().get(ClaimManager.class).ifPresent(cm -> cm.saveStoneDataAsync(stone));
 
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, 1f, 0.5f);
 

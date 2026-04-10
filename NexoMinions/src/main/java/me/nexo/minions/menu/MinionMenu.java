@@ -1,10 +1,11 @@
 package me.nexo.minions.menu;
 
-import me.nexo.core.NexoCore;
+import me.nexo.colecciones.api.ColeccionesExpansion;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.minions.NexoMinions;
+import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.manager.ActiveMinion;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
@@ -23,11 +24,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 🤖 NexoMinions - Menú Principal de Granjas (Arquitectura Enterprise)
+ */
 public class MinionMenu extends NexoMenu {
 
     private final ActiveMinion minion;
     private final NexoMinions plugin;
-    private final NexoCore core;
+    private final ConfigManager configManager;
 
     public static final int[] UPGRADE_SLOTS = {10, 11, 15, 16};
 
@@ -35,20 +39,12 @@ public class MinionMenu extends NexoMenu {
         super(player);
         this.plugin = plugin;
         this.minion = minion;
-        this.core = NexoCore.getPlugin(NexoCore.class);
-    }
-
-    private String getMessage(String path) {
-        return core.getConfigManager().getMessage("minions_messages.yml", path);
-    }
-
-    private List<String> getMessageList(String path) {
-        return core.getConfigManager().getConfig("minions_messages.yml").getStringList(path);
+        this.configManager = plugin.getConfigManager(); // 💡 Memoria RAM Segura
     }
 
     @Override
     public String getMenuName() {
-        return getMessage("menu.titulo");
+        return configManager.getMessages().menu().titulo();
     }
 
     @Override
@@ -60,10 +56,10 @@ public class MinionMenu extends NexoMenu {
     public void setMenuItems() {
         setFillerGlass();
 
-        crearIconoGuia(1, Material.COAL, "combustible");
-        crearIconoGuia(2, Material.DROPPER, "compresion");
-        crearIconoGuia(6, Material.CHEST, "almacenamiento");
-        crearIconoGuia(7, Material.HOPPER, "vinculo");
+        crearIconoGuia(1, Material.COAL, configManager.getMessages().menu().iconosGuia().combustible());
+        crearIconoGuia(2, Material.DROPPER, configManager.getMessages().menu().iconosGuia().compresion());
+        crearIconoGuia(6, Material.CHEST, configManager.getMessages().menu().iconosGuia().almacenamiento());
+        crearIconoGuia(7, Material.HOPPER, configManager.getMessages().menu().iconosGuia().vinculo());
 
         for (int i = 0; i < 4; i++) {
             ItemStack upgrade = minion.getUpgrades()[i];
@@ -76,14 +72,14 @@ public class MinionMenu extends NexoMenu {
 
         // --- STATS ---
         List<String> loreStats = new ArrayList<>();
-        loreStats.add(getMessage("menu.stats.lore.materia-devorada").replace("%items%", String.valueOf(minion.getStoredItems())));
+        loreStats.add(configManager.getMessages().menu().stats().lore().materiaDevorada().replace("%items%", String.valueOf(minion.getStoredItems())));
         double vel = (1.0 - minion.getSpeedMultiplier()) * 100;
-        String eficiencia = vel > 0 ? getMessage("menu.stats.lore.eficiencia-activa").replace("%speed%", String.valueOf((int) vel)) : getMessage("menu.stats.lore.eficiencia-base");
-        loreStats.add(getMessage("menu.stats.lore.eficiencia") + eficiencia);
-        if (minion.tieneMejora("COMPACTOR")) loreStats.add(getMessage("menu.stats.lore.sello-amalgama"));
-        if (minion.tieneMejora("STORAGE_LINK")) loreStats.add(getMessage("menu.stats.lore.nexo-logistico"));
+        String eficiencia = vel > 0 ? configManager.getMessages().menu().stats().lore().eficienciaActiva().replace("%speed%", String.valueOf((int) vel)) : configManager.getMessages().menu().stats().lore().eficienciaBase();
+        loreStats.add(configManager.getMessages().menu().stats().lore().eficiencia() + eficiencia);
+        if (minion.tieneMejora("COMPACTOR")) loreStats.add(configManager.getMessages().menu().stats().lore().selloAmalgama());
+        if (minion.tieneMejora("STORAGE_LINK")) loreStats.add(configManager.getMessages().menu().stats().lore().nexoLogistico());
 
-        String statsTitle = getMessage("menu.stats.titulo")
+        String statsTitle = configManager.getMessages().menu().stats().titulo()
                 .replace("%type%", minion.getType().getDisplayName())
                 .replace("%tier%", String.valueOf(minion.getTier()));
         setItem(13, minion.getType().getTargetMaterial(), statsTitle, loreStats);
@@ -91,19 +87,19 @@ public class MinionMenu extends NexoMenu {
         // --- EVOLUCIÓN ---
         int sigNivel = minion.getTier() + 1;
         if (sigNivel > 12) {
-            setItem(22, Material.NETHER_STAR, getMessage("menu.evolucion.max-nivel"), new ArrayList<>());
+            setItem(22, Material.NETHER_STAR, configManager.getMessages().menu().evolucion().maxNivel(), new ArrayList<>());
         } else {
-            List<String> loreEvo = new ArrayList<>(getMessageList("menu.evolucion.lore"));
+            List<String> loreEvo = new ArrayList<>(configManager.getMessages().menu().evolucion().lore());
             ConfigurationSection costo = plugin.getTiersConfig().getCostoEvolucion(minion.getType(), sigNivel);
             if (costo != null) {
                 String reqName = costo.getString("nexo_id", costo.getString("material", "Alma Perdida"));
-                loreEvo.add(getMessage("menu.evolucion.costo-ritual")
+                loreEvo.add(configManager.getMessages().menu().evolucion().costoRitual()
                         .replace("%amount%", String.valueOf(costo.getInt("cantidad")))
                         .replace("%item%", reqName));
             } else {
-                loreEvo.add(getMessage("menu.evolucion.error-ritual"));
+                loreEvo.add(configManager.getMessages().menu().evolucion().errorRitual());
             }
-            String evoTitle = getMessage("menu.evolucion.titulo").replace("%level%", String.valueOf(sigNivel));
+            String evoTitle = configManager.getMessages().menu().evolucion().titulo().replace("%level%", String.valueOf(sigNivel));
             setItem(22, Material.NETHER_STAR, evoTitle, loreEvo);
         }
 
@@ -111,6 +107,7 @@ public class MinionMenu extends NexoMenu {
         String tipoMinion = minion.getType().name();
         int xpAcumulada = minion.getStoredItems() * 2;
         final String tipoSkillFinal;
+
         if (tipoMinion.contains("WHEAT") || tipoMinion.contains("CARROT") || tipoMinion.contains("POTATO") || tipoMinion.contains("MELON") || tipoMinion.contains("PUMPKIN") || tipoMinion.contains("SUGAR_CANE")) {
             tipoSkillFinal = "Agricultura";
         } else if (tipoMinion.contains("ORE") || tipoMinion.contains("COBBLESTONE") || tipoMinion.contains("STONE") || tipoMinion.contains("OBSIDIAN")) {
@@ -119,26 +116,25 @@ public class MinionMenu extends NexoMenu {
             tipoSkillFinal = "";
         }
 
-        List<String> loreExtraer = getMessageList("menu.cosechar.lore").stream()
+        List<String> loreExtraer = configManager.getMessages().menu().cosechar().lore().stream()
                 .map(line -> line.replace("%items%", String.valueOf(minion.getStoredItems()))
                         .replace("%skill%", tipoSkillFinal)
                         .replace("%xp%", String.valueOf(xpAcumulada)))
                 .collect(Collectors.toList());
 
         if (tipoSkillFinal.isEmpty() || minion.getStoredItems() == 0) {
-            loreExtraer.removeIf(line -> line.contains("Conocimiento Arcano"));
+            loreExtraer.removeIf(line -> line.contains("Conocimiento Arcano") || line.contains("XP"));
         }
-        setItem(getSlots() - 5, Material.HOPPER, getMessage("menu.cosechar.titulo"), loreExtraer);
+        setItem(getSlots() - 5, Material.HOPPER, configManager.getMessages().menu().cosechar().titulo(), loreExtraer);
 
         // --- DESTERRAR ---
-        setItem(getSlots() - 1, Material.BARRIER, getMessage("menu.desterrar.titulo"), null);
+        setItem(getSlots() - 1, Material.BARRIER, configManager.getMessages().menu().desterrar().titulo(), null);
     }
 
-    private void crearIconoGuia(int slot, Material mat, String key) {
-        // 🌟 CORRECCIÓN DE COLOR: Aplicado el lila iluminado para no forzar la vista
-        List<String> loreConfig = getMessageList("menu.iconos-guia." + key + ".lore").stream()
+    private void crearIconoGuia(int slot, Material mat, me.nexo.minions.config.nodes.MinionsMessagesConfig.MenuItem configItem) {
+        List<String> loreConfig = configItem.lore().stream()
                 .map(line -> "&#E6CCFF" + line).collect(Collectors.toList());
-        setItem(slot, mat, getMessage("menu.iconos-guia." + key + ".titulo"), loreConfig);
+        setItem(slot, mat, configItem.titulo(), loreConfig);
     }
 
     @Override
@@ -153,16 +149,14 @@ public class MinionMenu extends NexoMenu {
         // ==========================================
         if (event.getClickedInventory() != null && event.getClickedInventory().equals(player.getInventory())) {
 
-            // 🛡️ PARCHE DE SEGURIDAD 1: ¡Validar que realmente sea una Mejora oficial de NexoMinions!
             if (plugin.getUpgradesConfig().getUpgradeData(clickedItem) == null) {
-                player.sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFEse objeto no es un sello de mejora compatible."));
+                CrossplayUtils.sendMessage(player, configManager.getMessages().manager().mejoraInvalida());
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             for (int i = 0; i < 4; i++) {
                 if (minion.getUpgrades()[i] == null || minion.getUpgrades()[i].getType() == Material.AIR) {
-                    // 🛡️ PARCHE DE SEGURIDAD 2: Solo extraer 1 mejora de la pila, evitando el consumo masivo
                     ItemStack upgradeToApply = clickedItem.clone();
                     upgradeToApply.setAmount(1);
                     minion.setUpgrade(i, upgradeToApply);
@@ -173,7 +167,7 @@ public class MinionMenu extends NexoMenu {
                     return;
                 }
             }
-            player.sendMessage(NexoColor.parse("&#FF3366[!] Las ranuras de mejora están llenas."));
+            CrossplayUtils.sendMessage(player, configManager.getMessages().manager().ranurasLlenas());
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             return;
         }
@@ -203,7 +197,7 @@ public class MinionMenu extends NexoMenu {
         if (clickedItem.getType() == Material.HOPPER && plainName.contains("COSECHAR")) {
             int cantidad = minion.getStoredItems();
             if (cantidad <= 0) {
-                player.sendMessage(NexoColor.parse("&#FF3366[!] Herejía: &#E6CCFFLas fauces de la criatura están vacías."));
+                CrossplayUtils.sendMessage(player, configManager.getMessages().manager().faucesVacias());
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
@@ -211,7 +205,7 @@ public class MinionMenu extends NexoMenu {
             boolean tieneCompactador = minion.tieneMejoraActiva("ITEM_UPGRADES");
             HashMap<Integer, ItemStack> sobrante = new HashMap<>();
 
-            // 🛡️ PARCHE DE SEGURIDAD 3: Descomposición de Stacks (Evita el crasheo de IllegalArgumentException)
+            // 🛡️ PARCHE DE SEGURIDAD 3: Descomposición de Stacks
             if (tieneCompactador) {
                 int bloques = cantidad / 9;
                 int sueltos = cantidad % 9;
@@ -242,18 +236,24 @@ public class MinionMenu extends NexoMenu {
             if (!skillAura.isEmpty()) {
                 String comando = "skill xp add " + player.getName() + " " + skillAura + " " + (int)xpGanada + " silent";
                 Bukkit.getServer().dispatchCommand(Bukkit.getConsoleSender(), comando);
-                player.sendMessage(NexoColor.parse("&#9933FF✨ Conocimiento Arcano: +" + (int)xpGanada + " XP en " + nombreSkill));
+
+                String msg = configManager.getMessages().manager().conocimientoArcano()
+                        .replace("%xp%", String.valueOf((int)xpGanada))
+                        .replace("%skill%", nombreSkill);
+                CrossplayUtils.sendMessage(player, msg);
             }
 
             if (Bukkit.getPluginManager().getPlugin("NexoColecciones") != null) {
-                me.nexo.colecciones.NexoColecciones.getPlugin(me.nexo.colecciones.NexoColecciones.class)
-                        .getCollectionManager().addProgress(player, minion.getType().getTargetMaterial().name(), cantidad);
+                // 💡 Usando inyección a través de las APIs en lugar de singletons estáticos
+                me.nexo.colecciones.NexoColecciones pluginCol = org.bukkit.plugin.java.JavaPlugin.getPlugin(me.nexo.colecciones.NexoColecciones.class);
+                pluginCol.getCollectionManager().addProgress(player, minion.getType().getTargetMaterial().name(), cantidad);
             }
 
             minion.setStoredItems(0);
             minion.getEntity().getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, 0);
 
-            player.sendMessage(NexoColor.parse("&#CC66FF[✓] <bold>TRIBUTO COSECHADO:</bold> &#E6CCFFHas reclamado las ofrendas" + (tieneCompactador ? " &#9933FF(Compactadas)" : "") + "."));
+            String compactText = tieneCompactador ? configManager.getMessages().manager().textoCompactadas() : "";
+            CrossplayUtils.sendMessage(player, configManager.getMessages().manager().tributoCosechado().replace("%compactadas%", compactText));
             player.playSound(player.getLocation(), Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f, 2f);
 
             player.closeInventory();
@@ -271,19 +271,19 @@ public class MinionMenu extends NexoMenu {
 
             ConfigurationSection costo = plugin.getTiersConfig().getCostoEvolucion(minion.getType(), sigNivel);
             if (costo == null) {
-                player.sendMessage(NexoColor.parse("&#FF3366[!] Error Arcano: &#E6CCFFEl ritual no está en los textos sagrados."));
+                CrossplayUtils.sendMessage(player, configManager.getMessages().manager().errorArcano());
                 return;
             }
 
             if (!cobrarItems(player, costo.getInt("cantidad"), costo.getString("material", ""), costo.getString("nexo_id", ""))) {
-                player.sendMessage(NexoColor.parse("&#FF3366[!] Ritual Fallido: &#E6CCFFNo posees los sacrificios necesarios para la ascensión."));
+                CrossplayUtils.sendMessage(player, configManager.getMessages().manager().ritualFallido());
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
                 return;
             }
 
             minion.setTier(sigNivel);
             player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.5f, 1.5f);
-            player.sendMessage(NexoColor.parse("&#9933FF[✓] <bold>RITUAL COMPLETADO:</bold> &#E6CCFFEl esclavo ha ascendido a Nivel " + sigNivel + "."));
+            CrossplayUtils.sendMessage(player, configManager.getMessages().manager().ritualCompletado().replace("%tier%", String.valueOf(sigNivel)));
             minion.getEntity().getWorld().spawnParticle(org.bukkit.Particle.SCULK_SOUL, minion.getEntity().getLocation().add(0, 1, 0), 50, 0.5, 0.5, 0.5, 0.1);
 
             player.closeInventory();
@@ -291,7 +291,6 @@ public class MinionMenu extends NexoMenu {
         }
     }
 
-    // 🛡️ PARCHE DE SEGURIDAD 3: Método protector contra Stacks Imposibles
     private void darItemsSeguros(Player player, Material mat, int amount, HashMap<Integer, ItemStack> sobrante) {
         int maxStack = mat.getMaxStackSize();
         while (amount > 0) {

@@ -1,11 +1,11 @@
 package me.nexo.mechanics.skills;
 
+import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
-import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor;
 import me.nexo.mechanics.NexoMechanics;
+import me.nexo.mechanics.config.ConfigManager;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -15,6 +15,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.permissions.PermissionAttachment;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.HashMap;
 import java.util.List;
@@ -22,30 +23,26 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * ⚙️ NexoMechanics - Menú de Árbol de Habilidades (Arquitectura Enterprise)
+ */
 public class SkillTreeMenu extends NexoMenu {
 
     private final NexoMechanics plugin;
+    private final ConfigManager configManager;
 
-    // Tu registro original de permisos temporales
+    // Registro de permisos temporales de la sesión actual
     private static final Map<UUID, PermissionAttachment> perms = new HashMap<>();
 
     public SkillTreeMenu(Player player, NexoMechanics plugin) {
         super(player);
         this.plugin = plugin;
-    }
-
-    // 🌟 MÉTODOS MÁGICOS DE LECTURA
-    private String getMessage(String path) {
-        return plugin.getConfigManager().getMessage(path);
-    }
-
-    private List<String> getMessageList(String path) {
-        return plugin.getConfigManager().getMessages().getStringList(path);
+        this.configManager = plugin.getConfigManager(); // 💡 Acceso a memoria RAM segura
     }
 
     @Override
     public String getMenuName() {
-        return getMessage("menus.skills.titulo");
+        return configManager.getMessages().menus().skillTree().titulo();
     }
 
     @Override
@@ -57,22 +54,23 @@ public class SkillTreeMenu extends NexoMenu {
     public void setMenuItems() {
         setFillerGlass(); // Fondo de la Arquitectura Omega
 
-        NexoUser user = NexoAPI.getInstance().getUserLocal(player.getUniqueId());
+        // 🌟 Desacoplado con el Service Locator (Sin estáticos duros)
+        NexoUser user = JavaPlugin.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
         int kp = user != null ? user.getKnowledgePoints() : 0;
 
         // 🌟 ÍTEM DE INFORMACIÓN DEL JUGADOR
-        String infoName = getMessage("menus.skills.items.info.nombre").replace("%kp%", String.valueOf(kp));
-        List<String> infoLore = getMessageList("menus.skills.items.info.lore");
+        String infoName = configManager.getMessages().menus().skillTree().items().info().nombre().replace("%kp%", String.valueOf(kp));
+        List<String> infoLore = configManager.getMessages().menus().skillTree().items().info().lore();
         setItem(4, Material.ENCHANTED_BOOK, infoName, infoLore);
 
         // 🌟 NODO DE EJEMPLO (Minería)
         ItemStack miningNode = new ItemStack(Material.DIAMOND_PICKAXE);
         ItemMeta miningMeta = miningNode.getItemMeta();
         if (miningMeta != null) {
-            String nodeName = getMessage("menus.skills.nodos.mineria.nombre");
+            String nodeName = configManager.getMessages().menus().skillTree().nodos().mineria().nombre();
             miningMeta.displayName(CrossplayUtils.parseCrossplay(player, nodeName));
 
-            List<net.kyori.adventure.text.Component> lore = getMessageList("menus.skills.nodos.mineria.lore").stream()
+            List<net.kyori.adventure.text.Component> lore = configManager.getMessages().menus().skillTree().nodos().mineria().lore().stream()
                     .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%cost%", "5")))
                     .collect(Collectors.toList());
 
@@ -114,14 +112,13 @@ public class SkillTreeMenu extends NexoMenu {
     }
 
     // ==========================================
-    // 🧠 TU LÓGICA ORIGINAL INTACTA
+    // 🧠 LÓGICA DE DESBLOQUEO PURIFICADA
     // ==========================================
-    public static void desbloquearNodo(Player p, String permiso, int costo) {
-        NexoMechanics mechPlugin = NexoMechanics.getPlugin(NexoMechanics.class);
-        NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
+    private void desbloquearNodo(Player p, String permiso, int costo) {
+        NexoUser user = JavaPlugin.getPlugin(NexoCore.class).getUserManager().getUserOrNull(p.getUniqueId());
 
         if (user == null) {
-            p.sendMessage(NexoColor.parse(mechPlugin.getConfigManager().getMessage("mensajes.errores.sincronizacion-incompleta")));
+            CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().errores().sincronizacionIncompleta());
             return;
         }
 
@@ -129,20 +126,21 @@ public class SkillTreeMenu extends NexoMenu {
             user.removeKnowledgePoints(costo);
 
             PermissionAttachment attachment = perms.computeIfAbsent(p.getUniqueId(),
-                    k -> p.addAttachment(me.nexo.core.NexoCore.getPlugin(me.nexo.core.NexoCore.class)));
+                    k -> p.addAttachment(JavaPlugin.getPlugin(NexoCore.class)));
 
             attachment.setPermission(permiso, true);
 
-            p.sendMessage(NexoColor.parse(mechPlugin.getConfigManager().getMessage("mensajes.exito.nodo-desbloqueado")));
-            p.sendMessage(NexoColor.parse(mechPlugin.getConfigManager().getMessage("mensajes.exito.puntos-restantes").replace("%kp%", String.valueOf(user.getKnowledgePoints()))));
+            CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().exito().nodoDesbloqueado());
+            CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().exito().puntosRestantes().replace("%kp%", String.valueOf(user.getKnowledgePoints())));
             p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
 
         } else {
-            p.sendMessage(NexoColor.parse(mechPlugin.getConfigManager().getMessage("mensajes.errores.conocimiento-insuficiente")));
+            CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().errores().conocimientoInsuficiente());
             p.playSound(p.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
         }
     }
 
+    // Limpieza de memoria (Ejecutado al desconectarse el jugador en otro listener)
     public static void limpiarCachePermisos(UUID uuid) {
         perms.remove(uuid);
     }

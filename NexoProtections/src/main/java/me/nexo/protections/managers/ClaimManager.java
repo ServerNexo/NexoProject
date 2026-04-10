@@ -1,5 +1,8 @@
 package me.nexo.protections.managers;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import me.nexo.core.NexoCore;
 import me.nexo.protections.core.ClaimBox;
 import me.nexo.protections.core.ProtectionStone;
 import org.bukkit.Location;
@@ -10,10 +13,17 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Singleton
 public class ClaimManager {
 
+    private final NexoCore core; // 💉 Inyectado
     private final Map<String, List<ProtectionStone>> spatialGrid = new ConcurrentHashMap<>();
     private final Map<UUID, ProtectionStone> stonesById = new ConcurrentHashMap<>();
+
+    @Inject
+    public ClaimManager(NexoCore core) {
+        this.core = core;
+    }
 
     public boolean hasOverlappingClaim(ClaimBox newBox) {
         int minChunkX = newBox.minX() >> 4;
@@ -84,19 +94,15 @@ public class ClaimManager {
     public Map<UUID, ProtectionStone> getAllStones() { return stonesById; }
 
     // =========================================================================
-    // 🌟 NUEVO: GUARDAR MIEMBROS Y LEYES ASÍNCRONAMENTE EN SUPABASE
+    // 🌟 GUARDAR MIEMBROS Y LEYES ASÍNCRONAMENTE EN SUPABASE
     // =========================================================================
     public void saveStoneDataAsync(ProtectionStone stone) {
-        me.nexo.core.NexoCore core = me.nexo.core.NexoCore.getPlugin(me.nexo.core.NexoCore.class);
         java.util.concurrent.CompletableFuture.runAsync(() -> {
-
-            // Convertimos la lista de amigos a texto: "uuid1,uuid2,"
             StringBuilder membersStr = new StringBuilder();
             for (UUID uuid : stone.getTrustedFriends()) {
                 membersStr.append(uuid.toString()).append(",");
             }
 
-            // Convertimos las flags a texto: "pvp:false,interact:true,"
             StringBuilder flagsStr = new StringBuilder();
             for (Map.Entry<String, Boolean> entry : stone.getFlags().entrySet()) {
                 flagsStr.append(entry.getKey()).append(":").append(entry.getValue()).append(",");
@@ -114,9 +120,9 @@ public class ClaimManager {
     }
 
     // =========================================================================
-    // 🌟 ACTUALIZADO: CARGAR DESDE SUPABASE
+    // 🌟 CARGAR DESDE SUPABASE
     // =========================================================================
-    public void loadAllStonesAsync(me.nexo.core.NexoCore core) {
+    public void loadAllStonesAsync() {
         java.util.concurrent.CompletableFuture.runAsync(() -> {
             String sql = "SELECT * FROM nexo_protections";
             try (java.sql.Connection conn = core.getDatabaseManager().getConnection();
@@ -138,14 +144,13 @@ public class ClaimManager {
                     int maxY = rs.getInt("max_y");
                     int maxZ = rs.getInt("max_z");
 
-                    me.nexo.protections.core.ClaimBox box = new me.nexo.protections.core.ClaimBox(world, minX, minY, minZ, maxX, maxY, maxZ);
+                    ClaimBox box = new ClaimBox(world, minX, minY, minZ, maxX, maxY, maxZ);
                     ProtectionStone stone = new ProtectionStone(stoneId, ownerId, clanId, box);
 
                     stone.drainEnergy(100000);
                     stone.setMaxEnergy(rs.getDouble("max_energy"));
                     stone.addEnergy(rs.getDouble("current_energy"));
 
-                    // 🌑 CARGAR ACÓLITOS
                     String membersStr = rs.getString("members");
                     if (membersStr != null && !membersStr.isEmpty()) {
                         for (String uuidStr : membersStr.split(",")) {
@@ -153,7 +158,6 @@ public class ClaimManager {
                         }
                     }
 
-                    // 🌑 CARGAR LEYES DEL DOMINIO
                     String flagsStr = rs.getString("flags");
                     if (flagsStr != null && !flagsStr.isEmpty()) {
                         for (String flagData : flagsStr.split(",")) {

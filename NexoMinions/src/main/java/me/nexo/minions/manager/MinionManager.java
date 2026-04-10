@@ -1,9 +1,12 @@
 package me.nexo.minions.manager;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import com.nexomc.nexo.api.NexoItems;
 import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.minions.NexoMinions;
+import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
 import org.bukkit.Location;
@@ -18,20 +21,24 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 🤖 NexoMinions - Gestor de Minions (Arquitectura Enterprise)
+ */
+@Singleton
 public class MinionManager {
 
     private final NexoMinions plugin;
     private final NexoCore core;
+    private final ConfigManager configManager;
     private final ConcurrentHashMap<UUID, ActiveMinion> minionsActivos = new ConcurrentHashMap<>();
 
-    public MinionManager(NexoMinions plugin) {
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
+    public MinionManager(NexoMinions plugin, NexoCore core, ConfigManager configManager) {
         this.plugin = plugin;
-        this.core = NexoCore.getPlugin(NexoCore.class);
+        this.core = core;
+        this.configManager = configManager;
         MinionKeys.init(plugin);
-    }
-
-    private String getMessage(String path) {
-        return core.getConfigManager().getMessage("minions_messages.yml", path);
     }
 
     public void spawnMinion(Location loc, UUID ownerId, MinionType type, int tier) {
@@ -64,7 +71,9 @@ public class MinionManager {
             TextDisplay holograma = loc.getWorld().spawn(holoLoc, TextDisplay.class, holo -> {
                 holo.setBillboard(TextDisplay.Billboard.CENTER);
                 holo.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 0));
-                holo.text(CrossplayUtils.parseCrossplay(null, getMessage("manager.iniciando-sistemas")));
+
+                // 💡 Lectura Type-Safe Directa
+                holo.text(CrossplayUtils.parseCrossplay(null, configManager.getMessages().manager().iniciandoSistemas()));
             });
 
             pdc.set(new NamespacedKey(plugin, "minion_holo_id"), PersistentDataType.STRING, holograma.getUniqueId().toString());
@@ -97,7 +106,7 @@ public class MinionManager {
                     }
                     cantidad -= dar;
                 }
-                CrossplayUtils.sendMessage(player, getMessage("manager.extraccion-remota").replace("%items%", String.valueOf(minion.getStoredItems())));
+                CrossplayUtils.sendMessage(player, configManager.getMessages().manager().extraccionRemota().replace("%items%", String.valueOf(minion.getStoredItems())));
             }
 
             if (minion.getEntity() != null) minion.getEntity().remove();
@@ -108,15 +117,15 @@ public class MinionManager {
             if (owner != null && owner.isOnline()) {
                 addPlacedMinion(owner, -1);
                 if (owner.getUniqueId().equals(player.getUniqueId())) {
-                    CrossplayUtils.sendMessage(owner, getMessage("manager.desmantelamiento-exitoso")
+                    CrossplayUtils.sendMessage(owner, configManager.getMessages().manager().desmantelamientoExitoso()
                             .replace("%placed%", String.valueOf(getPlacedMinions(owner)))
                             .replace("%max%", String.valueOf(getMaxMinions(owner))));
                 } else {
-                    CrossplayUtils.sendMessage(owner, getMessage("manager.alerta-desmantelamiento-admin"));
-                    CrossplayUtils.sendMessage(player, getMessage("manager.desmantelamiento-admin"));
+                    CrossplayUtils.sendMessage(owner, configManager.getMessages().manager().alertaDesmantelamientoAdmin());
+                    CrossplayUtils.sendMessage(player, configManager.getMessages().manager().desmantelamientoAdmin());
                 }
             } else {
-                CrossplayUtils.sendMessage(player, getMessage("manager.propietario-offline"));
+                CrossplayUtils.sendMessage(player, configManager.getMessages().manager().propietarioOffline());
             }
             plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), "minion give " + player.getName() + " " + minion.getType().name() + " " + minion.getTier());
         }

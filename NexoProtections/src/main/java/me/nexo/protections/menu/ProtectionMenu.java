@@ -1,8 +1,9 @@
 package me.nexo.protections.menu;
 
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
-import me.nexo.core.utils.NexoColor;
 import me.nexo.protections.NexoProtections;
+import me.nexo.protections.config.ConfigManager;
 import me.nexo.protections.core.ProtectionStone;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -14,29 +15,26 @@ import org.bukkit.inventory.ItemStack;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 🛡️ NexoProtections - Menú Principal del Monolito (Arquitectura Enterprise)
+ */
 public class ProtectionMenu extends NexoMenu {
 
     private final ProtectionStone stone;
     private final NexoProtections plugin;
+    private final ConfigManager configManager;
 
     public ProtectionMenu(Player player, NexoProtections plugin, ProtectionStone stone) {
         super(player);
         this.plugin = plugin;
         this.stone = stone;
-    }
-
-    // 🌟 MÉTODOS PARA LEER LA CONFIGURACIÓN LOCAL DE FORMA RÁPIDA
-    private String getMessage(String path) {
-        return plugin.getConfigManager().getMessage(path);
-    }
-
-    private List<String> getMessageList(String path) {
-        return plugin.getConfigManager().getMessages().getStringList(path);
+        this.configManager = plugin.getConfigManager(); // 💡 Obtenemos la config en RAM
     }
 
     @Override
     public String getMenuName() {
-        return getMessage("menus.principal.titulo");
+        // 💡 Lectura Type-Safe
+        return configManager.getMessages().menus().principal().titulo();
     }
 
     @Override
@@ -48,15 +46,17 @@ public class ProtectionMenu extends NexoMenu {
     public void setMenuItems() {
         setFillerGlass(); // Cristal morado por defecto del NexoMenu
 
-        // SLOT 11: ACÓLITOS
-        setItem(11, Material.WITHER_SKELETON_SKULL, getMessage("menus.principal.acolitos.nombre"), getMessageList("menus.principal.acolitos.lore"));
+        // 🌟 SLOT 11: ACÓLITOS
+        setItem(11, Material.WITHER_SKELETON_SKULL,
+                configManager.getMessages().menus().principal().acolitos().nombre(),
+                configManager.getMessages().menus().principal().acolitos().lore());
 
-        // SLOT 13: NÚCLEO
+        // 🌟 SLOT 13: NÚCLEO
         double porcentaje = (stone.getCurrentEnergy() / stone.getMaxEnergy()) * 100;
         String colorEnergia = porcentaje > 50 ? "&#00f5ff" : (porcentaje > 20 ? "&#ff00ff" : "&#8b0000");
         String ownerName = Bukkit.getOfflinePlayer(stone.getOwnerId()).getName();
 
-        List<String> infoLore = getMessageList("menus.principal.nucleo.lore").stream()
+        List<String> infoLore = configManager.getMessages().menus().principal().nucleo().lore().stream()
                 .map(line -> line.replace("%owner%", ownerName != null ? ownerName : "Desconocido")
                         .replace("%type%", stone.getClanId() == null ? "Solitario" : "Sindicato")
                         .replace("%energy_color%", colorEnergia)
@@ -64,13 +64,17 @@ public class ProtectionMenu extends NexoMenu {
                         .replace("%max_energy%", String.valueOf(stone.getMaxEnergy())))
                 .collect(Collectors.toList());
 
-        setItem(13, Material.LODESTONE, getMessage("menus.principal.nucleo.nombre"), infoLore);
+        setItem(13, Material.LODESTONE, configManager.getMessages().menus().principal().nucleo().nombre(), infoLore);
 
-        // SLOT 15: FLAGS
-        setItem(15, Material.SOUL_TORCH, getMessage("menus.principal.leyes.nombre"), getMessageList("menus.principal.leyes.lore"));
+        // 🌟 SLOT 15: FLAGS
+        setItem(15, Material.SOUL_TORCH,
+                configManager.getMessages().menus().principal().leyes().nombre(),
+                configManager.getMessages().menus().principal().leyes().lore());
 
-        // SLOT 22: RECARGA
-        setItem(22, Material.ECHO_SHARD, getMessage("menus.principal.recarga.nombre"), getMessageList("menus.principal.recarga.lore"));
+        // 🌟 SLOT 22: RECARGA
+        setItem(22, Material.ECHO_SHARD,
+                configManager.getMessages().menus().principal().recarga().nombre(),
+                configManager.getMessages().menus().principal().recarga().lore());
     }
 
     @Override
@@ -84,7 +88,7 @@ public class ProtectionMenu extends NexoMenu {
         }
         else if (slot == 15) { // Leyes
             if (!stone.getOwnerId().equals(player.getUniqueId())) {
-                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.solo-dueno")));
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().soloDueno());
                 return;
             }
             player.playSound(player.getLocation(), Sound.BLOCK_RESPAWN_ANCHOR_CHARGE, 1f, 1f);
@@ -92,7 +96,7 @@ public class ProtectionMenu extends NexoMenu {
         }
         else if (slot == 22) { // Recarga
             if (stone.getCurrentEnergy() >= stone.getMaxEnergy()) {
-                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.monolito-lleno")));
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().monolitoLleno());
                 return;
             }
             if (player.getInventory().contains(Material.ECHO_SHARD)) {
@@ -104,14 +108,14 @@ public class ProtectionMenu extends NexoMenu {
                 stone.addEnergy(100);
                 recargaExitosa();
             } else {
-                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.ofrenda-rechazada")));
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().ofrendaRechazada());
                 player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             }
         }
     }
 
     private void recargaExitosa() {
-        player.sendMessage(NexoColor.parse(getMessage("mensajes.exito.recarga-exitosa")));
+        CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().exito().recargaExitosa());
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, 1f, 0.5f);
         setMenuItems(); // Actualizamos la visual de la energía sin cerrar el menú
     }

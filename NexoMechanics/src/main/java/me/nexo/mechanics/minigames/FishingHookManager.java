@@ -1,9 +1,12 @@
 package me.nexo.mechanics.minigames;
 
-import me.nexo.core.utils.NexoColor;
-import me.nexo.mechanics.NexoMechanics;
-import me.nexo.core.user.NexoAPI;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import me.nexo.core.NexoCore;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
+import me.nexo.mechanics.NexoMechanics;
+import me.nexo.mechanics.config.ConfigManager;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -12,12 +15,18 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerFishEvent;
 import org.bukkit.inventory.ItemStack;
 
+@Singleton
 public class FishingHookManager implements Listener {
 
     private final NexoMechanics plugin;
+    private final ConfigManager configManager;
+    private final NexoCore core;
 
-    public FishingHookManager(NexoMechanics plugin) {
+    @Inject
+    public FishingHookManager(NexoMechanics plugin, ConfigManager configManager, NexoCore core) {
         this.plugin = plugin;
+        this.configManager = configManager;
+        this.core = core;
     }
 
     @EventHandler
@@ -40,14 +49,14 @@ public class FishingHookManager implements Listener {
 
                 if (esPezCustom) {
                     Player p = event.getPlayer();
-                    NexoUser user = NexoAPI.getInstance().getUserLocal(p.getUniqueId());
+                    NexoUser user = core.getUserManager().getUserOrNull(p.getUniqueId());
 
                     if (user != null) {
                         int energiaAct = user.getEnergiaMineria();
                         int maxEnergia = 100 + ((user.getNexoNivel() - 1) * 20) + user.getEnergiaExtraAccesorios();
 
                         user.setEnergiaMineria(Math.min(energiaAct + 5, maxEnergia));
-                        p.sendMessage(NexoColor.parse("&#00f5ff[✓] <bold>EXTRACCIÓN ACUÁTICA:</bold> &#E6CCFFReservas recargadas &#ff00ff(+5⚡)"));
+                        CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().minijuegos().pesca().extraccionAcuatica());
                     }
                 }
             }

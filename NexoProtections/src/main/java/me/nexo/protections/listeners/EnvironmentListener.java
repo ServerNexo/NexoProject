@@ -1,6 +1,8 @@
 package me.nexo.protections.listeners;
 
+import com.google.inject.Inject;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.protections.config.ConfigManager;
 import me.nexo.protections.core.ClaimAction;
 import me.nexo.protections.core.ProtectionStone;
 import me.nexo.protections.managers.ClaimManager;
@@ -17,14 +19,19 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
-import java.util.Iterator;
-
+/**
+ * 🛡️ NexoProtections - Listener de Entorno (Arquitectura Enterprise)
+ */
 public class EnvironmentListener implements Listener {
 
     private final ClaimManager claimManager;
+    private final ConfigManager configManager;
 
-    public EnvironmentListener(ClaimManager claimManager) {
+    // 💉 PILAR 3: Inyección
+    @Inject
+    public EnvironmentListener(ClaimManager claimManager, ConfigManager configManager) {
         this.claimManager = claimManager;
+        this.configManager = configManager;
     }
 
     // 🛡️ BLOQUEAR EXPLOSIONES (CREEPERS, TNT, ETC) DENTRO DE LOS DOMINIOS
@@ -77,7 +84,7 @@ public class EnvironmentListener implements Listener {
             // Si la ley "containers" está en false, lo bloqueamos
             if (!stone.getFlag("containers")) {
                 event.setCancelled(true);
-                CrossplayUtils.sendMessage(player, "&#FF3366[!] Herejía: &#E6CCFFLos tesoros de este dominio están sellados.");
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().tesorosSellados());
                 return;
             }
         }
@@ -89,7 +96,7 @@ public class EnvironmentListener implements Listener {
             // Si la ley "interact" está en false, lo bloqueamos
             if (!stone.getFlag("interact")) {
                 event.setCancelled(true);
-                CrossplayUtils.sendMessage(player, "&#FF3366[!] Herejía: &#E6CCFFNo tienes permiso para interactuar aquí.");
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().sinInteractuar());
             }
         }
     }
@@ -107,7 +114,7 @@ public class EnvironmentListener implements Listener {
         // Si la ley "item-drop" está en false, bloqueamos que ensucie el suelo
         if (!stone.getFlag("item-drop")) {
             event.setCancelled(true);
-            CrossplayUtils.sendMessage(player, "&#FF3366[!] Dominio Puro: &#E6CCFFNo puedes arrojar ofrendas al suelo en tierras ajenas.");
+            CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().noArrojarOfrendas());
         }
     }
 }

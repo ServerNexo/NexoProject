@@ -1,10 +1,12 @@
 package me.nexo.war.listeners;
 
-import me.nexo.core.NexoCore;
-import me.nexo.core.crossplay.CrossplayUtils; // 🌟 TRADUCTOR UNIVERSAL
+import com.google.inject.Inject;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
-import me.nexo.war.NexoWar;
+import me.nexo.core.user.UserManager;
+import me.nexo.war.config.ConfigManager;
 import me.nexo.war.core.WarContract;
+import me.nexo.war.managers.WarManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -17,12 +19,22 @@ import org.geysermc.floodgate.api.FloodgateApi;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * ⚔️ NexoWar - Listener Principal de Combate (Arquitectura Enterprise)
+ * Cero static API calls. Inyectado con Guice.
+ */
 public class WarListener implements Listener {
 
-    private final NexoWar plugin;
+    // 💉 PILAR 3: Inyección pura
+    private final WarManager warManager;
+    private final UserManager userManager;
+    private final ConfigManager configManager;
 
-    public WarListener(NexoWar plugin) {
-        this.plugin = plugin;
+    @Inject
+    public WarListener(WarManager warManager, UserManager userManager, ConfigManager configManager) {
+        this.warManager = warManager;
+        this.userManager = userManager;
+        this.configManager = configManager;
     }
 
     // ==========================================
@@ -32,8 +44,9 @@ public class WarListener implements Listener {
     public void onWarCombat(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof Player victima && event.getDamager() instanceof Player atacante) {
 
-            NexoUser uVictima = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(victima.getUniqueId());
-            NexoUser uAtacante = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(atacante.getUniqueId());
+            // 🚀 Lectura hiper-rápida desde la RAM inyectada
+            NexoUser uVictima = userManager.getUserOrNull(victima.getUniqueId());
+            NexoUser uAtacante = userManager.getUserOrNull(atacante.getUniqueId());
 
             if (uVictima == null || !uVictima.hasClan() || uAtacante == null || !uAtacante.hasClan()) return;
 
@@ -42,7 +55,7 @@ public class WarListener implements Listener {
 
             if (clanVictima.equals(clanAtacante)) return; // Fuego amigo anulado
 
-            Optional<WarContract> guerraOpt = plugin.getWarManager().getGuerraEntre(clanAtacante, clanVictima);
+            Optional<WarContract> guerraOpt = warManager.getGuerraEntre(clanAtacante, clanVictima);
 
             if (guerraOpt.isPresent() && guerraOpt.get().status() == WarContract.WarStatus.ACTIVE) {
                 WarContract guerra = guerraOpt.get();
@@ -59,7 +72,9 @@ public class WarListener implements Listener {
                     atacante.setVelocity(pushback);
 
                     String plataforma = atacanteIsBedrock ? "Táctil/Consola" : "PC (Java)";
-                    CrossplayUtils.sendActionBar(atacante, "&#FF5555🛡️ Protocolo Nexo: El escuadrón de " + plataforma + " de tu Sindicato ya está lleno.");
+                    String msg = configManager.getMessages().errores().escuadronLleno().replace("%plataforma%", plataforma);
+
+                    CrossplayUtils.sendActionBar(atacante, msg);
                 }
             }
         }
@@ -75,8 +90,8 @@ public class WarListener implements Listener {
 
         if (asesino == null) return;
 
-        NexoUser uVictima = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(victima.getUniqueId());
-        NexoUser uAsesino = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(asesino.getUniqueId());
+        NexoUser uVictima = userManager.getUserOrNull(victima.getUniqueId());
+        NexoUser uAsesino = userManager.getUserOrNull(asesino.getUniqueId());
 
         if (uVictima == null || !uVictima.hasClan()) return;
         if (uAsesino == null || !uAsesino.hasClan()) return;
@@ -85,10 +100,10 @@ public class WarListener implements Listener {
         UUID clanAsesino = uAsesino.getClanId();
 
         // Verificamos si sus clanes están matándose formalmente
-        Optional<WarContract> guerraOpt = plugin.getWarManager().getGuerraEntre(clanAsesino, clanVictima);
+        Optional<WarContract> guerraOpt = warManager.getGuerraEntre(clanAsesino, clanVictima);
 
         if (guerraOpt.isPresent() && guerraOpt.get().status() == WarContract.WarStatus.ACTIVE) {
-            plugin.getWarManager().registrarBaja(guerraOpt.get(), clanAsesino, asesino, victima);
+            warManager.registrarBaja(guerraOpt.get(), clanAsesino, asesino, victima);
         }
     }
 }

@@ -1,7 +1,10 @@
 package me.nexo.mechanics.minigames;
 
-import me.nexo.core.utils.NexoColor;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.mechanics.NexoMechanics;
+import me.nexo.mechanics.config.ConfigManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.WorldBorder;
@@ -16,16 +19,20 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Singleton
 public class CombatComboManager implements Listener {
 
     private final NexoMechanics plugin;
+    private final ConfigManager configManager;
 
     private final Map<UUID, Integer> combos = new ConcurrentHashMap<>();
     private final Map<UUID, Long> ultimoKill = new ConcurrentHashMap<>();
     public final Map<UUID, Long> enFrenesi = new ConcurrentHashMap<>();
 
-    public CombatComboManager(NexoMechanics plugin) {
+    @Inject
+    public CombatComboManager(NexoMechanics plugin, ConfigManager configManager) {
         this.plugin = plugin;
+        this.configManager = configManager;
         iniciarDecadenciaCombos();
     }
 
@@ -41,7 +48,7 @@ public class CombatComboManager implements Listener {
             ultimoKill.put(id, ahora);
 
             p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f + (comboActual * 0.1f));
-            p.sendActionBar(NexoColor.parse("&#8b0000<bold>⚔ ¡RACHA DE COMBATE x" + comboActual + "!</bold>"));
+            CrossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().minijuegos().combate().rachaCombate().replace("%combo%", String.valueOf(comboActual)));
 
             if (comboActual == 10) {
                 activarFrenesi(p);
@@ -54,10 +61,9 @@ public class CombatComboManager implements Listener {
         UUID id = p.getUniqueId();
         enFrenesi.put(id, System.currentTimeMillis() + 10000L);
 
-        p.sendTitle(
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#8b0000<bold>¡FRENESÍ!</bold>")),
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#ff00ffEnergía de Núcleo Infinita")),
-                5, 40, 5
+        CrossplayUtils.sendTitle(p,
+                configManager.getMessages().mensajes().minijuegos().combate().frenesiTitulo(),
+                configManager.getMessages().mensajes().minijuegos().combate().frenesiSubtitulo()
         );
         p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 1.5f);
         p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 200, 1, false, false, true));
@@ -71,7 +77,7 @@ public class CombatComboManager implements Listener {
         Bukkit.getScheduler().runTaskLater(plugin, () -> {
             if (p.isOnline()) {
                 p.setWorldBorder(null);
-                p.sendMessage(NexoColor.parse("&#E6CCFFEl Frenesí se ha desvanecido. Sistemas retornando a la normalidad."));
+                CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().minijuegos().combate().frenesiDesvanecido());
                 enFrenesi.remove(id);
             }
         }, 200L);
@@ -84,7 +90,7 @@ public class CombatComboManager implements Listener {
                 if (ahora - ultimoKill.getOrDefault(id, 0L) > 3000) {
                     combos.remove(id);
                     Player p = Bukkit.getPlayer(id);
-                    if (p != null) p.sendActionBar(NexoColor.parse("&#E6CCFFRacha de combate finalizada."));
+                    if (p != null) CrossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().minijuegos().combate().rachaFinalizada());
                 }
             }
         }, 10L, 10L);

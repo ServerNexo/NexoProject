@@ -1,9 +1,12 @@
 package me.nexo.protections.menu;
 
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.user.NexoAPI;
 import me.nexo.protections.NexoProtections;
+import me.nexo.protections.config.ConfigManager;
 import me.nexo.protections.core.ProtectionStone;
+import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -19,29 +22,25 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * 🛡️ NexoProtections - Menú de Acólitos (Arquitectura Enterprise)
+ */
 public class ProtectionMembersMenu extends NexoMenu {
 
     private final ProtectionStone stone;
     private final NexoProtections plugin;
+    private final ConfigManager configManager;
 
     public ProtectionMembersMenu(Player player, NexoProtections plugin, ProtectionStone stone) {
         super(player);
         this.plugin = plugin;
         this.stone = stone;
-    }
-
-    // 🌟 MÉTODOS MÁGICOS DE LECTURA
-    private String getMessage(String path) {
-        return plugin.getConfigManager().getMessage(path);
-    }
-
-    private List<String> getMessageList(String path) {
-        return plugin.getConfigManager().getMessages().getStringList(path);
+        this.configManager = plugin.getConfigManager(); // 💡 Lectura ultra-rápida en RAM
     }
 
     @Override
     public String getMenuName() {
-        return getMessage("menus.miembros.titulo");
+        return configManager.getMessages().menus().miembros().titulo();
     }
 
     @Override
@@ -61,9 +60,9 @@ public class ProtectionMembersMenu extends NexoMenu {
             OfflinePlayer target = Bukkit.getOfflinePlayer(uuid);
             String targetName = target.getName() != null ? target.getName() : "Alma Desconocida";
 
-            // Leemos el nombre y lore desde config
-            String headName = getMessage("menus.miembros.items.cabeza.nombre").replace("%player%", targetName);
-            List<String> lore = getMessageList("menus.miembros.items.cabeza.lore");
+            // Leemos el nombre y lore desde config Type-Safe
+            String headName = configManager.getMessages().menus().miembros().items().cabeza().nombre().replace("%player%", targetName);
+            List<String> lore = configManager.getMessages().menus().miembros().items().cabeza().lore();
 
             setItem(slot, Material.PLAYER_HEAD, headName, lore);
 
@@ -78,10 +77,13 @@ public class ProtectionMembersMenu extends NexoMenu {
         }
 
         // Botón Volver
-        setItem(getSlots() - 6, Material.ENDER_PEARL, getMessage("menus.miembros.items.volver.nombre"), null);
+        setItem(getSlots() - 6, Material.ENDER_PEARL,
+                configManager.getMessages().menus().miembros().items().volver().nombre(), null);
 
         // Botón Invocar (Información)
-        setItem(getSlots() - 4, Material.WRITABLE_BOOK, getMessage("menus.miembros.items.invocar.nombre"), getMessageList("menus.miembros.items.invocar.lore"));
+        setItem(getSlots() - 4, Material.WRITABLE_BOOK,
+                configManager.getMessages().menus().miembros().items().invocar().nombre(),
+                configManager.getMessages().menus().miembros().items().invocar().lore());
     }
 
     @Override
@@ -109,9 +111,11 @@ public class ProtectionMembersMenu extends NexoMenu {
             UUID targetUuid = UUID.fromString(targetUuidStr);
 
             stone.removeFriend(targetUuid);
-            plugin.getClaimManager().saveStoneDataAsync(stone);
 
-            player.sendMessage(NexoColor.parse(getMessage("mensajes.exito.destierro")));
+            // 🛡️ Guardado seguro y desacoplado usando nuestro ServiceManager
+            NexoAPI.getServices().get(ClaimManager.class).ifPresent(cm -> cm.saveStoneDataAsync(stone));
+
+            CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().exito().destierro());
             player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1f);
 
             // Refresca el menú al instante, sin tirones visuales

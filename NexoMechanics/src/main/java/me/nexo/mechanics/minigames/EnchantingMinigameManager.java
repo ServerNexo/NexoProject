@@ -1,7 +1,11 @@
 package me.nexo.mechanics.minigames;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.mechanics.NexoMechanics;
+import me.nexo.mechanics.config.ConfigManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
@@ -19,15 +23,19 @@ import org.bukkit.scheduler.BukkitRunnable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Singleton
 public class EnchantingMinigameManager implements Listener {
 
     private final NexoMechanics plugin;
+    private final ConfigManager configManager;
 
     private final Map<UUID, List<ArmorStand>> runasActivas = new ConcurrentHashMap<>();
     public final Set<UUID> encantamientosGratis = ConcurrentHashMap.newKeySet();
 
-    public EnchantingMinigameManager(NexoMechanics plugin) {
+    @Inject
+    public EnchantingMinigameManager(NexoMechanics plugin, ConfigManager configManager) {
         this.plugin = plugin;
+        this.configManager = configManager;
     }
 
     @EventHandler
@@ -64,10 +72,9 @@ public class EnchantingMinigameManager implements Listener {
         runasActivas.put(p.getUniqueId(), runas);
         p.playSound(p.getLocation(), Sound.BLOCK_PORTAL_TRIGGER, 0.5f, 2f);
 
-        p.sendTitle(
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#ff00ff<bold>¡PUZZLE DE ENLACE!</bold>")),
-                net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#E6CCFFGolpea: &#00f5ffAzul &#E6CCFF> &#8b0000Rojo &#E6CCFF> &#00f5ffVerde")),
-                5, 60, 5
+        CrossplayUtils.sendTitle(p,
+                configManager.getMessages().mensajes().minijuegos().encantamiento().puzzleTitulo(),
+                configManager.getMessages().mensajes().minijuegos().encantamiento().puzzleSubtitulo()
         );
 
         new BukkitRunnable() {
@@ -111,12 +118,12 @@ public class EnchantingMinigameManager implements Listener {
                 if (runas.isEmpty()) {
                     encantamientosGratis.add(p.getUniqueId());
                     runasActivas.remove(p.getUniqueId());
-                    p.sendMessage(NexoColor.parse("&#ff00ff✨ <bold>SISTEMA HACKEADO:</bold> &#E6CCFFTu próximo ensamblaje será 100% &#00f5ff<bold>GRATUITO</bold>&#E6CCFF."));
+                    CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().minijuegos().encantamiento().sistemaHackeado());
                     p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1.5f);
                 }
             } else {
                 p.playSound(p.getLocation(), Sound.ENTITY_ITEM_BREAK, 1f, 0.5f);
-                p.sendMessage(NexoColor.parse("&#8b0000[!] Secuencia biométrica incorrecta. La energía se ha dispersado."));
+                CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().minijuegos().encantamiento().secuenciaIncorrecta());
                 limpiarRunas(p.getUniqueId());
             }
         }

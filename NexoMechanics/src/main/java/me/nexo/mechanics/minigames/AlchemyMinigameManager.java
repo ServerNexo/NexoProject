@@ -1,7 +1,10 @@
 package me.nexo.mechanics.minigames;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.mechanics.NexoMechanics;
+import me.nexo.mechanics.config.ConfigManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -21,9 +24,14 @@ import org.bukkit.potion.PotionEffect;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * ⚙️ NexoMechanics - Minijuego de Alquimia (Arquitectura Enterprise)
+ */
+@Singleton
 public class AlchemyMinigameManager implements Listener {
 
     private final NexoMechanics plugin;
+    private final ConfigManager configManager;
     private final Map<Location, MezclaVolatil> mezclas = new ConcurrentHashMap<>();
 
     private static class MezclaVolatil {
@@ -36,8 +44,10 @@ public class AlchemyMinigameManager implements Listener {
         }
     }
 
-    public AlchemyMinigameManager(NexoMechanics plugin) {
+    @Inject
+    public AlchemyMinigameManager(NexoMechanics plugin, ConfigManager configManager) {
         this.plugin = plugin;
+        this.configManager = configManager;
         iniciarReloj();
     }
 
@@ -45,6 +55,7 @@ public class AlchemyMinigameManager implements Listener {
     public void alDestilar(BrewEvent event) {
         Block b = event.getBlock();
 
+        // 10% de probabilidad de que ocurra el minijuego
         if (Math.random() <= 0.10) {
             if (!(b.getState() instanceof BrewingStand stand)) return;
 
@@ -60,7 +71,11 @@ public class AlchemyMinigameManager implements Listener {
 
             for (Player p : b.getWorld().getPlayers()) {
                 if (p.getLocation().distance(b.getLocation()) <= 5) {
-                    CrossplayUtils.sendTitle(p, "&#8b0000<bold>! PELIGRO !</bold>", "&#ff00ffMezcla Inestable. Agáchate (Shift) x3 para estabilizar.");
+                    // 💡 Ruta corregida: mensajes() -> minijuegos() -> alquimia()
+                    CrossplayUtils.sendTitle(p,
+                            configManager.getMessages().mensajes().minijuegos().alquimia().peligroTitulo(),
+                            configManager.getMessages().mensajes().minijuegos().alquimia().peligroSubtitulo()
+                    );
                 }
             }
         }
@@ -75,6 +90,8 @@ public class AlchemyMinigameManager implements Listener {
 
         for (Map.Entry<Location, MezclaVolatil> entry : mezclas.entrySet()) {
             Location locSoporte = entry.getKey();
+
+            // Verifica que estén en el mismo mundo y cerca
             if (locSoporte.getWorld().equals(pLoc.getWorld()) && locSoporte.distance(pLoc) <= 3) {
 
                 MezclaVolatil mezcla = entry.getValue();
@@ -83,14 +100,17 @@ public class AlchemyMinigameManager implements Listener {
                 p.playSound(locSoporte, Sound.ITEM_BUCKET_FILL, 0.5f, 1f + (mezcla.bombeos * 0.2f));
                 locSoporte.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, locSoporte.clone().add(0.5, 1, 0.5), 5);
 
+                // Si se completa el minijuego
                 if (mezcla.bombeos >= 3) {
                     p.playSound(locSoporte, Sound.ENTITY_PLAYER_LEVELUP, 1f, 2f);
-                    CrossplayUtils.sendMessage(p, "&#00f5ff[✓] <bold>MEZCLA ESTABILIZADA:</bold> &#E6CCFFLa pureza de los químicos ha sido potenciada.");
+
+                    // 💡 Ruta corregida
+                    CrossplayUtils.sendMessage(p, configManager.getMessages().mensajes().minijuegos().alquimia().mezclaEstabilizada());
 
                     aplicarPremio(locSoporte, mezcla.pocionesOriginales);
                     mezclas.remove(locSoporte);
                 }
-                break;
+                break; // Solo puede bombear una mesa a la vez
             }
         }
     }
@@ -104,6 +124,7 @@ public class AlchemyMinigameManager implements Listener {
                     if (meta.hasCustomEffects()) {
                         for (PotionEffect effect : meta.getCustomEffects()) {
                             meta.removeCustomEffect(effect.getType());
+                            // Multiplica la duración por 2 como premio
                             meta.addCustomEffect(new PotionEffect(effect.getType(), effect.getDuration() * 2, effect.getAmplifier()), true);
                         }
                     }
@@ -119,6 +140,7 @@ public class AlchemyMinigameManager implements Listener {
             for (int i = 0; i < 3; i++) {
                 ItemStack item = stand.getInventory().getItem(i);
                 if (item != null && item.getType() != Material.AIR) {
+                    // Se arruina la poción
                     stand.getInventory().setItem(i, new ItemStack(Material.GLASS_BOTTLE));
                 }
             }
@@ -141,6 +163,6 @@ public class AlchemyMinigameManager implements Listener {
                     mezclas.remove(loc);
                 }
             }
-        }, 20L, 20L);
+        }, 20L, 20L); // Se ejecuta cada segundo
     }
 }

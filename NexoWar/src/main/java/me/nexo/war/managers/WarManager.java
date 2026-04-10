@@ -1,12 +1,16 @@
 package me.nexo.war.managers;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.clans.core.ClanManager;
 import me.nexo.clans.core.NexoClan;
 import me.nexo.core.NexoCore;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.user.UserManager;
 import me.nexo.war.NexoWar;
+import me.nexo.war.config.ConfigManager;
 import me.nexo.war.core.WarContract;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
@@ -21,32 +25,40 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * ⚔️ NexoWar - Gestor Táctico (Arquitectura Enterprise)
+ * Sin static API calls. Inyección de dependencias total.
+ */
+@Singleton
 public class WarManager {
 
     private final NexoWar plugin;
-    private final Map<UUID, WarContract> guerrasActivas = new ConcurrentHashMap<>();
+    private final ConfigManager configManager;
+    private final UserManager userManager;
+    private final NexoCore core;
 
-    // 🌟 TEMÁTICA GOTHIC VOID: Requerimos Fragmentos de Almas o Ítems del Vacío para la guerra
+    private final Map<UUID, WarContract> guerrasActivas = new ConcurrentHashMap<>();
     private final NamespacedKey voidEssenceKey;
 
-    private final long GRACE_PERIOD_MILLIS = 5 * 60 * 1000L; // 5 Minutos
+    private final long GRACE_PERIOD_MILLIS = 5 * 60 * 1000L;
     private final int KILLS_TO_WIN = 20;
     private final int COSTO_SUMINISTROS = 100;
 
-    public WarManager(NexoWar plugin) {
+    // 💉 PILAR 3: Inyección
+    @Inject
+    public WarManager(NexoWar plugin, ConfigManager configManager, UserManager userManager, NexoCore core) {
         this.plugin = plugin;
-        this.voidEssenceKey = new NamespacedKey(plugin, "void_essence"); // Ajustado a la temática
+        this.configManager = configManager;
+        this.userManager = userManager;
+        this.core = core;
+        this.voidEssenceKey = new NamespacedKey(plugin, "void_essence");
         iniciarRelojDeGuerras();
-    }
-
-    // 🌟 LECTOR MÁGICO DE MENSAJES
-    private String getMessage(String path) {
-        return plugin.getConfigManager().getMessage(path);
     }
 
     public void iniciarDesafio(Player leader, NexoClan atacante, NexoClan defensor, BigDecimal apuesta) {
         if (atacante.getBankBalance().compareTo(apuesta) < 0 || defensor.getBankBalance().compareTo(apuesta) < 0) {
-            leader.sendMessage(NexoColor.parse(getMessage("mensajes.errores.objetivo-sin-fondos").replace("%apuesta%", apuesta.toPlainString())));
+            String msg = configManager.getMessages().errores().objetivoSinFondos().replace("%apuesta%", apuesta.toPlainString());
+            CrossplayUtils.sendMessage(leader, msg);
             return;
         }
 
@@ -58,12 +70,11 @@ public class WarManager {
         }
 
         if (contadorSuministros < COSTO_SUMINISTROS) {
-            leader.sendMessage(NexoColor.parse(getMessage("mensajes.errores.sin-esencia-guerra")));
-            leader.sendMessage(NexoColor.parse("&#E6CCFFRequerido: &#ff00ff" + COSTO_SUMINISTROS + "x Esencia del Vacío &#E6CCFF(Obtenible en Monolitos)."));
+            CrossplayUtils.sendMessage(leader, configManager.getMessages().errores().sinEsenciaGuerra());
+            CrossplayUtils.sendMessage(leader, configManager.getMessages().errores().requisitoEsencia().replace("%costo%", String.valueOf(COSTO_SUMINISTROS)));
             return;
         }
 
-        // Consumir el costo
         int faltanPorCobrar = COSTO_SUMINISTROS;
         for (ItemStack item : leader.getInventory().getContents()) {
             if (faltanPorCobrar <= 0) break;
@@ -95,12 +106,11 @@ public class WarManager {
         guerrasActivas.put(warId, contrato);
         saveWarToDatabase(contrato);
 
-        // 🌟 ANUNCIO GLOBAL DEL PACTO
-        for (String line : plugin.getConfigManager().getMessages().getStringList("mensajes.alertas.pacto-iniciado")) {
+        for (String line : configManager.getMessages().alertas().pactoIniciado()) {
             String broadcast = line.replace("%atacante%", atacante.getName())
                     .replace("%defensor%", defensor.getName())
                     .replace("%total%", apuesta.multiply(BigDecimal.valueOf(2)).toPlainString());
-            Bukkit.broadcast(NexoColor.parse(broadcast));
+            Bukkit.broadcast(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(broadcast));
         }
     }
 
@@ -120,9 +130,10 @@ public class WarManager {
                             guerrasActivas.put(guerra.warId(), activa);
                             actualizarGuerraEnBD(activa);
 
-                            // 🌟 ANUNCIO DE QUE LA GUERRA EMPEZÓ
-                            for (String line : plugin.getConfigManager().getMessages().getStringList("mensajes.alertas.guerra-activa")) {
-                                Bukkit.broadcast(NexoColor.parse(line.replace("%kills%", String.valueOf(KILLS_TO_WIN))));
+                            for (String line : configManager.getMessages().alertas().guerraActiva()) {
+                                Bukkit.broadcast(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(
+                                        line.replace("%kills%", String.valueOf(KILLS_TO_WIN))
+                                ));
                             }
                         }
                     }
@@ -139,8 +150,8 @@ public class WarManager {
     }
 
     public boolean estanEnGuerraActiva(UUID player1, UUID player2) {
-        NexoUser u1 = NexoAPI.getInstance().getUserLocal(player1);
-        NexoUser u2 = NexoAPI.getInstance().getUserLocal(player2);
+        NexoUser u1 = userManager.getUserOrNull(player1);
+        NexoUser u2 = userManager.getUserOrNull(player2);
         if (u1 == null || !u1.hasClan() || u2 == null || !u2.hasClan()) return false;
 
         Optional<WarContract> guerra = getGuerraEntre(u1.getClanId(), u2.getClanId());
@@ -158,9 +169,10 @@ public class WarManager {
         );
         guerrasActivas.put(guerra.warId(), actualizada);
 
-        // 🌟 MENSAJE DE BAJA CONFIRMADA
         int killsActuales = esAtacante ? killsA : killsD;
-        asesino.sendMessage(NexoColor.parse(getMessage("mensajes.exito.baja-confirmada").replace("%actual%", String.valueOf(killsActuales)).replace("%meta%", String.valueOf(KILLS_TO_WIN))));
+        CrossplayUtils.sendMessage(asesino, configManager.getMessages().exito().bajaConfirmada()
+                .replace("%actual%", String.valueOf(killsActuales))
+                .replace("%meta%", String.valueOf(KILLS_TO_WIN)));
 
         if (killsA >= KILLS_TO_WIN || killsD >= KILLS_TO_WIN) {
             terminarGuerra(actualizada, clanAsesino);
@@ -181,21 +193,20 @@ public class WarManager {
                     clan.depositMoney(premio.doubleValue());
                     clanManager.saveBankAsync(clan);
 
-                    // 🌟 ANUNCIO DE VICTORIA
-                    for (String line : plugin.getConfigManager().getMessages().getStringList("mensajes.alertas.victoria")) {
-                        Bukkit.broadcast(NexoColor.parse(line.replace("%ganador%", clan.getName()).replace("%premio%", premio.toPlainString())));
+                    for (String line : configManager.getMessages().alertas().victoria()) {
+                        Bukkit.broadcast(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(
+                                line.replace("%ganador%", clan.getName()).replace("%premio%", premio.toPlainString())
+                        ));
                     }
                 }
             });
         });
     }
 
-    // ... (Mantén aquí abajo tus métodos saveWarToDatabase y actualizarGuerraEnBD intactos) ...
-
     private void saveWarToDatabase(WarContract war) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             String sql = "INSERT INTO nexo_wars (id, attacker_id, defender_id, bet_amount, status, kills_attacker, kills_defender) VALUES (CAST(? AS UUID), CAST(? AS UUID), CAST(? AS UUID), ?, ?, ?, ?)";
-            try (java.sql.Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
+            try (java.sql.Connection conn = core.getDatabaseManager().getConnection();
                  java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, war.warId().toString());
                 ps.setString(2, war.clanAtacante().toString());
@@ -212,7 +223,7 @@ public class WarManager {
     private void actualizarGuerraEnBD(WarContract war) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             String sql = "UPDATE nexo_wars SET status = ?, kills_attacker = ?, kills_defender = ? WHERE id = CAST(? AS UUID)";
-            try (java.sql.Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
+            try (java.sql.Connection conn = core.getDatabaseManager().getConnection();
                  java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, war.status().name());
                 ps.setInt(2, war.killsAtacante());

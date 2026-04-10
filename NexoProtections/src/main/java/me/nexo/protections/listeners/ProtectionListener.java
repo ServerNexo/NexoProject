@@ -1,15 +1,18 @@
 package me.nexo.protections.listeners;
 
+import com.google.inject.Inject;
 import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORTACIÓN AÑADIDA
+import me.nexo.core.user.UserManager;
 import me.nexo.protections.NexoProtections;
+import me.nexo.protections.config.ConfigManager;
 import me.nexo.protections.core.ClaimAction;
 import me.nexo.protections.core.ClaimBox;
 import me.nexo.protections.core.ProtectionStone;
 import me.nexo.protections.managers.ClaimManager;
 import me.nexo.protections.managers.LimitManager;
+import me.nexo.protections.menu.ProtectionMenu;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -24,31 +27,43 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.Vector;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.util.List; // 🌟 IMPORTACIÓN AÑADIDA
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * 🛡️ NexoProtections - Listener Principal (Arquitectura Enterprise)
+ * Cero llamadas estáticas.
+ */
 public class ProtectionListener implements Listener {
 
     private final ClaimManager claimManager;
     private final LimitManager limitManager;
+    private final ConfigManager configManager;
     private final NexoCore core;
     private final NexoProtections plugin;
+    private final UserManager userManager;
+
     private final NamespacedKey isProtectionStoneKey;
 
-    public ProtectionListener(ClaimManager claimManager, LimitManager limitManager) {
+    // 💉 PILAR 3: Inyección masiva
+    @Inject
+    public ProtectionListener(ClaimManager claimManager, LimitManager limitManager, ConfigManager configManager, NexoCore core, NexoProtections plugin) {
         this.claimManager = claimManager;
         this.limitManager = limitManager;
-        this.core = NexoCore.getPlugin(NexoCore.class);
-        this.plugin = NexoProtections.getPlugin(NexoProtections.class);
-        this.isProtectionStoneKey = new NamespacedKey(NexoProtections.getPlugin(NexoProtections.class), "is_protection_stone");
+        this.configManager = configManager;
+        this.core = core;
+        this.plugin = plugin;
+        this.userManager = core.getUserManager();
+        this.isProtectionStoneKey = new NamespacedKey(plugin, "is_protection_stone");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -61,6 +76,7 @@ public class ProtectionListener implements Listener {
             if (stone.getOwnerId().equals(player.getUniqueId())) {
                 stone.removeHologram();
                 claimManager.removeStoneFromCache(stone);
+
                 CompletableFuture.runAsync(() -> {
                     try (Connection conn = core.getDatabaseManager().getConnection();
                          PreparedStatement ps = conn.prepareStatement("DELETE FROM nexo_protections WHERE stone_id = CAST(? AS UUID)")) {
@@ -69,38 +85,35 @@ public class ProtectionListener implements Listener {
                     } catch (Exception e) { e.printStackTrace(); }
                 });
 
-                // 🌟 CORRECCIÓN: Cancelamos el drop normal y creamos el Sello del Abismo
                 event.setDropItems(false);
 
                 ItemStack stoneItem = new ItemStack(Material.LODESTONE);
                 ItemMeta meta = stoneItem.getItemMeta();
                 if (meta != null) {
-                    meta.displayName(NexoColor.parse("&#9933FF<bold>SELLO DEL ABISMO</bold>"));
-                    meta.lore(List.of(
-                            NexoColor.parse("&#E6CCFFColoca este altar antiguo para reclamar"),
-                            NexoColor.parse("&#E6CCFFun fragmento del mundo y sellarlo"),
-                            NexoColor.parse("&#E6CCFFcon el poder del Vacío."),
-                            NexoColor.parse(" "),
-                            NexoColor.parse("&#CC66FF► Clic derecho para invocar el dominio")
+                    meta.displayName(net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(
+                            configManager.getMessages().mensajes().items().selloAbismoNombre()
                     ));
+                    meta.lore(configManager.getMessages().mensajes().items().selloAbismoLore().stream()
+                            .map(line -> net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().deserialize(line))
+                            .toList());
                     meta.getPersistentDataContainer().set(isProtectionStoneKey, PersistentDataType.BYTE, (byte) 1);
                     stoneItem.setItemMeta(meta);
                 }
                 block.getWorld().dropItemNaturally(block.getLocation(), stoneItem);
 
-                CrossplayUtils.sendMessage(player, "&#ff00ff[✓] <bold>RITUAL DESHECHO:</bold> &#E6CCFFEl Monolito del Vacío ha sido desmantelado con éxito.");
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().exito().ritualDeshecho());
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1f, 0.5f);
                 return;
             } else {
                 event.setCancelled(true);
-                CrossplayUtils.sendMessage(player, "&#8b0000[!] Herejía: &#E6CCFFSolo el Señor de este Dominio puede destruir el Monolito.");
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().noDestruirAjeno());
                 return;
             }
         }
 
         if (stone != null && !stone.hasPermission(player.getUniqueId(), ClaimAction.BREAK)) {
             event.setCancelled(true);
-            CrossplayUtils.sendMessage(player, "&#8b0000[!] Dominio Sellado: &#E6CCFFEl vacío protege estas tierras. No puedes alterar su forma.");
+            CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().dominioSellado());
         }
     }
 
@@ -112,7 +125,7 @@ public class ProtectionListener implements Listener {
         ProtectionStone existingStone = claimManager.getStoneAt(block.getLocation());
         if (existingStone != null && !existingStone.hasPermission(player.getUniqueId(), ClaimAction.BUILD)) {
             event.setCancelled(true);
-            CrossplayUtils.sendMessage(player, "&#8b0000[!] Dominio Sellado: &#E6CCFFNo puedes invocar estructuras en tierras ajenas.");
+            CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().sinConstruirAjeno());
             return;
         }
 
@@ -126,14 +139,14 @@ public class ProtectionListener implements Listener {
             Location loc = block.getLocation();
             int radius = limitManager.getProtectionRadius(player);
             UUID newStoneId = UUID.randomUUID();
-            NexoUser user = core.getUserManager().getUserOrNull(player.getUniqueId());
+            NexoUser user = userManager.getUserOrNull(player.getUniqueId());
             UUID clanId = (user != null && user.hasClan()) ? user.getClanId() : null;
 
             ClaimBox newBox = new ClaimBox(loc.getWorld().getName(), loc.getBlockX()-radius, -64, loc.getBlockZ()-radius, loc.getBlockX()+radius, 320, loc.getBlockZ()+radius);
 
             if (claimManager.hasOverlappingClaim(newBox)) {
                 event.setCancelled(true);
-                CrossplayUtils.sendMessage(player, "&#8b0000[!] Energía Corrupta: &#E6CCFFEl aura de este Monolito colisiona con otro sello cercano. Aléjate más.");
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().colisionEnergia());
                 return;
             }
 
@@ -145,19 +158,19 @@ public class ProtectionListener implements Listener {
 
             limitManager.canPlaceNewStone(player).thenAccept(canPlace -> {
                 if (!canPlace) {
-                    Bukkit.getScheduler().runTask(NexoProtections.getPlugin(NexoProtections.class), () -> {
+                    Bukkit.getScheduler().runTask(plugin, () -> {
                         block.setType(Material.AIR);
                         newStone.removeHologram();
                         claimManager.removeStoneFromCache(newStone);
                         ItemStack refundItem = itemInHand.clone();
                         refundItem.setAmount(1);
                         player.getInventory().addItem(refundItem);
-                        CrossplayUtils.sendMessage(player, "&#8b0000[!] Límite Alcanzado: &#E6CCFFTu alma no soporta mantener más Monolitos.");
+                        CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().limiteAlcanzado());
                     });
                     return;
                 }
 
-                CrossplayUtils.sendMessage(player, "&#00f5ff[✓] <bold>SELLO INVOCADO:</bold> &#E6CCFFEl Vacío ahora reclama un radio de &#ff00ff" + radius + " bloques&#E6CCFF.");
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().exito().selloInvocado().replace("%radio%", String.valueOf(radius)));
                 player.playSound(loc, Sound.BLOCK_RESPAWN_ANCHOR_SET_SPAWN, 1f, 0.5f);
 
                 CompletableFuture.runAsync(() -> {
@@ -196,16 +209,16 @@ public class ProtectionListener implements Listener {
                 event.setCancelled(true);
 
                 if (stone.getOwnerId().equals(player.getUniqueId()) || stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) {
-                    new me.nexo.protections.menu.ProtectionMenu(player, plugin, stone).open();
+                    new ProtectionMenu(player, plugin, stone).open();
                 } else {
-                    CrossplayUtils.sendMessage(player, "&#8b0000[!] Herejía: &#E6CCFFEl Monolito rechaza tu tacto.");
+                    CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().monolitoRechaza());
                 }
             }
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
-    public void onPlayerMove(org.bukkit.event.player.PlayerMoveEvent event) {
+    public void onPlayerMove(PlayerMoveEvent event) {
         if (event.getTo() == null) return;
 
         if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
@@ -224,9 +237,9 @@ public class ProtectionListener implements Listener {
             if (toClaim != null) {
 
                 if (!toClaim.getFlag("ENTRY") && !toClaim.getOwnerId().equals(player.getUniqueId()) && !toClaim.hasPermission(player.getUniqueId(), ClaimAction.INTERACT) && !player.hasPermission("nexoprotections.admin")) {
-                    CrossplayUtils.sendMessage(player, "&#8b0000[!] Campo de Fuerza: &#E6CCFFEste dominio está cerrado para extraños.");
+                    CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().campoFuerza());
 
-                    org.bukkit.util.Vector pushback = event.getFrom().toVector().subtract(event.getTo().toVector()).normalize().multiply(0.5);
+                    Vector pushback = event.getFrom().toVector().subtract(event.getTo().toVector()).normalize().multiply(0.5);
                     pushback.setY(0.1);
                     player.setVelocity(pushback);
 
@@ -234,13 +247,13 @@ public class ProtectionListener implements Listener {
                     return;
                 }
 
-                String ownerName = org.bukkit.Bukkit.getOfflinePlayer(toClaim.getOwnerId()).getName();
+                String ownerName = Bukkit.getOfflinePlayer(toClaim.getOwnerId()).getName();
                 if (ownerName == null) ownerName = "Desconocido";
-                CrossplayUtils.sendActionBar(player, "&#00f5ff🌿 Has entrado al dominio de " + ownerName);
+                CrossplayUtils.sendActionBar(player, configManager.getMessages().mensajes().exito().zonaProtegida().replace("%owner%", ownerName));
             }
 
             if (fromClaim != null && toClaim == null) {
-                CrossplayUtils.sendActionBar(player, "&#8b0000🌲 Has entrado a Zona Salvaje");
+                CrossplayUtils.sendActionBar(player, configManager.getMessages().mensajes().exito().zonaSalvaje());
             }
         }
     }

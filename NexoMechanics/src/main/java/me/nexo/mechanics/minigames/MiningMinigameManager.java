@@ -1,11 +1,13 @@
 package me.nexo.mechanics.minigames;
 
-import me.nexo.core.NexoCore;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.economy.core.EconomyManager;
 import me.nexo.economy.core.NexoAccount;
 import me.nexo.mechanics.NexoMechanics;
+import me.nexo.mechanics.config.ConfigManager;
 import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -26,15 +28,19 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Singleton
 public class MiningMinigameManager implements Listener {
 
     private final NexoMechanics plugin;
+    private final ConfigManager configManager;
     private final Map<UUID, VetaActiva> vetasActivas = new ConcurrentHashMap<>();
 
     private record VetaActiva(Location loc, long expiracion, Material tipoOriginal) {}
 
-    public MiningMinigameManager(NexoMechanics plugin) {
+    @Inject
+    public MiningMinigameManager(NexoMechanics plugin, ConfigManager configManager) {
         this.plugin = plugin;
+        this.configManager = configManager;
         iniciarLimpiador();
     }
 
@@ -71,8 +77,8 @@ public class MiningMinigameManager implements Listener {
                 NexoAPI.getServices().get(EconomyManager.class).ifPresent(eco ->
                         eco.updateBalanceAsync(p.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, recompensaMonedas, true));
 
-                // 🌟 CORRECCIÓN: Llamamos a NexoCore para obtener el ConfigManager
-                CrossplayUtils.sendActionBar(p, NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("eventos.mineria.extraccion-rentable").replace("%amount%", String.valueOf(monedasRandom)));
+                String msg = configManager.getMessages().mensajes().minijuegos().mineria().extraccionRentable().replace("%amount%", String.valueOf(monedasRandom));
+                CrossplayUtils.sendActionBar(p, msg);
 
                 generarVetaContigua(p, b);
                 return;
@@ -95,8 +101,7 @@ public class MiningMinigameManager implements Listener {
                 p.playSound(contiguo.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1.5f);
                 p.getWorld().spawnParticle(Particle.WAX_ON, contiguo.getLocation().add(0.5, 0.5, 0.5), 10);
 
-                // 🌟 CORRECCIÓN: Llamamos a NexoCore para obtener el ConfigManager
-                CrossplayUtils.sendActionBar(p, NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("eventos.mineria.anomalia-geologica"));
+                CrossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().minijuegos().mineria().anomaliaGeologica());
                 vetasActivas.put(p.getUniqueId(), new VetaActiva(contiguo.getLocation(), System.currentTimeMillis() + 4000L, contiguo.getType()));
                 break;
             }
@@ -112,9 +117,7 @@ public class MiningMinigameManager implements Listener {
                     if (p != null) {
                         p.sendBlockChange(entry.getValue().loc(), Bukkit.createBlockData(entry.getValue().tipoOriginal()));
                         p.playSound(p.getLocation(), Sound.BLOCK_FIRE_EXTINGUISH, 0.5f, 1f);
-
-                        // 🌟 CORRECCIÓN: Llamamos a NexoCore para obtener el ConfigManager
-                        CrossplayUtils.sendActionBar(p, NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("eventos.mineria.anomalia-estabilizada"));
+                        CrossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().minijuegos().mineria().anomaliaEstabilizada());
                     }
                     vetasActivas.remove(entry.getKey());
                 }

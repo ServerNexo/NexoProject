@@ -1,17 +1,21 @@
 package me.nexo.war.commands;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.clans.core.ClanManager;
 import me.nexo.clans.core.NexoClan;
 import me.nexo.core.NexoCore;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor;
-import me.nexo.war.NexoWar;
+import me.nexo.core.user.UserManager;
+import me.nexo.war.config.ConfigManager;
+import me.nexo.war.managers.WarManager;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import revxrsal.commands.annotation.Command;
+import revxrsal.commands.annotation.DefaultFor;
+import revxrsal.commands.annotation.Subcommand;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -23,146 +27,158 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ComandoWar implements CommandExecutor {
+/**
+ * ⚔️ NexoWar - Comando Principal (Arquitectura Enterprise)
+ * Cero CommandExecutor. 100% Lamp, Guice y Type-Safe.
+ */
+@Singleton
+@Command({"war", "guerra"})
+public class ComandoWar {
 
-    private final NexoWar plugin;
+    private final UserManager userManager;
+    private final ConfigManager configManager;
+    private final WarManager warManager;
+    private final NexoCore core;
+
     private final Map<UUID, DesafioPendiente> desafiosPendientes = new ConcurrentHashMap<>();
-
-    public ComandoWar(NexoWar plugin) {
-        this.plugin = plugin;
-    }
-
-    // 🌟 LECTOR MÁGICO DE MENSAJES (Arquitectura Omega)
-    private String getMessage(String path) {
-        return plugin.getConfigManager().getMessage(path);
-    }
-
     private record DesafioPendiente(UUID clanAtacanteId, BigDecimal apuesta) {}
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) return true;
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
+    public ComandoWar(UserManager userManager, ConfigManager configManager, WarManager warManager, NexoCore core) {
+        this.userManager = userManager;
+        this.configManager = configManager;
+        this.warManager = warManager;
+        this.core = core;
+    }
 
-        NexoUser user = NexoAPI.getInstance().getUserLocal(player.getUniqueId());
+    // 💡 PILAR 1: Lamp maneja el comando base automáticamente con "~"
+    @DefaultFor("~")
+    public void ayuda(Player player) {
+        for (String line : configManager.getMessages().ayuda().comandoWar()) {
+            CrossplayUtils.sendMessage(player, line);
+        }
+    }
+
+    // 💡 Lamp autoconvierte el argumento "apuesta" en un BigDecimal
+    @Subcommand("challenge")
+    public void challenge(Player player, String targetTag, BigDecimal apuesta) {
+        NexoUser user = userManager.getUserOrNull(player.getUniqueId());
 
         if (user == null || !user.hasClan()) {
-            player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.sin-clan")));
-            return true;
+            CrossplayUtils.sendMessage(player, configManager.getMessages().errores().sinClan());
+            return;
         }
 
-        // En un culto, LIDER = Señor Oscuro, OFICIAL = Apóstol/Sacerdote
         if (!user.getClanRole().equals("LIDER") && !user.getClanRole().equals("OFICIAL")) {
-            player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.rango-insuficiente")));
-            return true;
+            CrossplayUtils.sendMessage(player, configManager.getMessages().errores().rangoInsuficiente());
+            return;
         }
 
-        if (args.length == 0) {
-            for (String line : plugin.getConfigManager().getMessages().getStringList("mensajes.ayuda-comando")) {
-                player.sendMessage(NexoColor.parse(line));
-            }
-            return true;
+        if (apuesta.compareTo(BigDecimal.ZERO) <= 0) {
+            CrossplayUtils.sendMessage(player, configManager.getMessages().errores().apuestaInvalida());
+            return;
         }
 
-        String sub = args[0].toLowerCase();
         Optional<ClanManager> clanManagerOpt = NexoAPI.getServices().get(ClanManager.class);
         if (clanManagerOpt.isEmpty()) {
-            player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.servicio-clanes-offline")));
-            return true;
+            CrossplayUtils.sendMessage(player, configManager.getMessages().errores().servicioClanesOffline());
+            return;
         }
         ClanManager clanManager = clanManagerOpt.get();
 
-        if (sub.equals("challenge")) {
-            if (args.length < 3) {
-                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.sintaxis-challenge")));
-                return true;
-            }
+        Optional<NexoClan> atacanteOpt = clanManager.getClanFromCache(user.getClanId());
+        if (atacanteOpt.isEmpty()) return;
+        NexoClan atacante = atacanteOpt.get();
 
-            String targetTag = args[1].toUpperCase();
-            BigDecimal apuesta;
-            try {
-                apuesta = new BigDecimal(args[2]);
-                if (apuesta.compareTo(BigDecimal.ZERO) <= 0) throw new NumberFormatException();
-            } catch (NumberFormatException e) {
-                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.apuesta-invalida")));
-                return true;
-            }
+        if (atacante.getBankBalance().compareTo(apuesta) < 0) {
+            CrossplayUtils.sendMessage(player, configManager.getMessages().errores().fondosInsuficientes());
+            return;
+        }
 
-            Optional<NexoClan> atacanteOpt = clanManager.getClanFromCache(user.getClanId());
-            if (atacanteOpt.isEmpty()) return true;
-            NexoClan atacante = atacanteOpt.get();
+        CrossplayUtils.sendMessage(player, configManager.getMessages().procesos().escaneandoRed());
 
-            if (atacante.getBankBalance().compareTo(apuesta) < 0) {
-                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.fondos-insuficientes")));
-                return true;
-            }
+        // 🚀 PILAR 4: Operación a la BD Asíncrona pura
+        CompletableFuture.runAsync(() -> {
+            String sql = "SELECT id FROM nexo_clans WHERE tag = ?";
+            try (Connection conn = core.getDatabaseManager().getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            player.sendMessage(NexoColor.parse(getMessage("mensajes.procesos.escaneando-red")));
-            CompletableFuture.runAsync(() -> {
-                String sql = "SELECT id FROM nexo_clans WHERE tag = ?";
-                try (Connection conn = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getConnection();
-                     PreparedStatement ps = conn.prepareStatement(sql)) {
-                    ps.setString(1, targetTag);
-                    ResultSet rs = ps.executeQuery();
+                ps.setString(1, targetTag);
+                ResultSet rs = ps.executeQuery();
 
-                    if (rs.next()) {
-                        UUID targetId = UUID.fromString(rs.getString("id"));
-                        if (targetId.equals(atacante.getId())) {
-                            player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.auto-ataque")));
+                if (rs.next()) {
+                    UUID targetId = UUID.fromString(rs.getString("id"));
+                    if (targetId.equals(atacante.getId())) {
+                        CrossplayUtils.sendMessage(player, configManager.getMessages().errores().autoAtaque());
+                        return;
+                    }
+
+                    clanManager.loadClanAsync(targetId, defensor -> {
+                        if (defensor == null) return;
+                        if (defensor.getBankBalance().compareTo(apuesta) < 0) {
+                            String msg = configManager.getMessages().errores().objetivoSinFondos().replace("%apuesta%", apuesta.toPlainString());
+                            CrossplayUtils.sendMessage(player, msg);
                             return;
                         }
 
-                        clanManager.loadClanAsync(targetId, defensor -> {
-                            if (defensor == null) return;
-                            if (defensor.getBankBalance().compareTo(apuesta) < 0) {
-                                String msg = getMessage("mensajes.errores.objetivo-sin-fondos").replace("%apuesta%", apuesta.toPlainString());
-                                player.sendMessage(NexoColor.parse(msg));
-                                return;
-                            }
+                        desafiosPendientes.put(targetId, new DesafioPendiente(atacante.getId(), apuesta));
+                        String msgEmitido = configManager.getMessages().exito().contratoEmitido().replace("%defensor%", defensor.getName());
+                        CrossplayUtils.sendMessage(player, msgEmitido);
 
-                            desafiosPendientes.put(targetId, new DesafioPendiente(atacante.getId(), apuesta));
-                            String msgEmitido = getMessage("mensajes.exito.contrato-emitido").replace("%defensor%", defensor.getName());
-                            player.sendMessage(NexoColor.parse(msgEmitido));
-
-                            // ALERTA AL CULTO DEFENSOR
-                            for (Player p : Bukkit.getOnlinePlayers()) {
-                                NexoUser tu = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(p.getUniqueId());
-                                if (tu != null && tu.getClanId() != null && tu.getClanId().equals(targetId) && (tu.getClanRole().equals("LIDER") || tu.getClanRole().equals("OFICIAL"))) {
-                                    for (String line : plugin.getConfigManager().getMessages().getStringList("mensajes.alertas.declaracion-guerra")) {
-                                        String alertMsg = line.replace("%atacante%", atacante.getName()).replace("%apuesta%", apuesta.toPlainString());
-                                        p.sendMessage(NexoColor.parse(alertMsg));
-                                    }
+                        // ALERTA AL CULTO DEFENSOR
+                        for (Player p : Bukkit.getOnlinePlayers()) {
+                            NexoUser tu = userManager.getUserOrNull(p.getUniqueId());
+                            if (tu != null && tu.getClanId() != null && tu.getClanId().equals(targetId) && (tu.getClanRole().equals("LIDER") || tu.getClanRole().equals("OFICIAL"))) {
+                                for (String line : configManager.getMessages().alertas().declaracionGuerra()) {
+                                    String alertMsg = line.replace("%atacante%", atacante.getName()).replace("%apuesta%", apuesta.toPlainString());
+                                    CrossplayUtils.sendMessage(p, alertMsg);
                                 }
                             }
-                        });
-                    } else {
-                        String msgNoEncontrado = getMessage("mensajes.errores.objetivo-no-encontrado").replace("%tag%", targetTag);
-                        player.sendMessage(NexoColor.parse(msgNoEncontrado));
-                    }
-                } catch (Exception e) {
-                    player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.error-base-datos")));
+                        }
+                    });
+                } else {
+                    String msgNoEncontrado = configManager.getMessages().errores().objetivoNoEncontrado().replace("%tag%", targetTag);
+                    CrossplayUtils.sendMessage(player, msgNoEncontrado);
+                }
+            } catch (Exception e) {
+                CrossplayUtils.sendMessage(player, configManager.getMessages().errores().errorBaseDatos());
+            }
+        });
+    }
+
+    @Subcommand("accept")
+    public void accept(Player player) {
+        NexoUser user = userManager.getUserOrNull(player.getUniqueId());
+
+        if (user == null || !user.hasClan()) {
+            CrossplayUtils.sendMessage(player, configManager.getMessages().errores().sinClan());
+            return;
+        }
+
+        if (!user.getClanRole().equals("LIDER") && !user.getClanRole().equals("OFICIAL")) {
+            CrossplayUtils.sendMessage(player, configManager.getMessages().errores().rangoInsuficiente());
+            return;
+        }
+
+        DesafioPendiente desafio = desafiosPendientes.remove(user.getClanId());
+        if (desafio == null) {
+            CrossplayUtils.sendMessage(player, configManager.getMessages().errores().sinContratos());
+            return;
+        }
+
+        CrossplayUtils.sendMessage(player, configManager.getMessages().procesos().iniciandoDespliegue());
+
+        Optional<ClanManager> clanManagerOpt = NexoAPI.getServices().get(ClanManager.class);
+        if (clanManagerOpt.isEmpty()) return;
+        ClanManager clanManager = clanManagerOpt.get();
+
+        clanManager.getClanFromCache(user.getClanId()).ifPresent(defensor -> {
+            clanManager.loadClanAsync(desafio.clanAtacanteId(), atacante -> {
+                if (atacante != null) {
+                    warManager.iniciarDesafio(player, atacante, defensor, desafio.apuesta());
                 }
             });
-            return true;
-        }
-
-        if (sub.equals("accept")) {
-            DesafioPendiente desafio = desafiosPendientes.remove(user.getClanId());
-            if (desafio == null) {
-                player.sendMessage(NexoColor.parse(getMessage("mensajes.errores.sin-contratos")));
-                return true;
-            }
-
-            player.sendMessage(NexoColor.parse(getMessage("mensajes.procesos.iniciando-despliegue")));
-            clanManager.getClanFromCache(user.getClanId()).ifPresent(defensor -> {
-                clanManager.loadClanAsync(desafio.clanAtacanteId(), atacante -> {
-                    if (atacante != null) {
-                        plugin.getWarManager().iniciarDesafio(player, atacante, defensor, desafio.apuesta());
-                    }
-                });
-            });
-            return true;
-        }
-
-        return true;
+        });
     }
 }

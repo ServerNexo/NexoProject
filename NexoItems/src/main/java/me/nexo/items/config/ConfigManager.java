@@ -1,62 +1,65 @@
 package me.nexo.items.config;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.items.NexoItems;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import me.nexo.items.config.nodes.ItemsMessagesConfig;
+import org.spongepowered.configurate.yaml.NodeStyle;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 
+/**
+ * 🎒 NexoItems - Config Manager Purificado (Arquitectura Enterprise)
+ */
+@Singleton
 public class ConfigManager {
 
     private final NexoItems plugin;
-    private FileConfiguration messagesConfig = null;
-    private File messagesFile = null;
+    private ItemsMessagesConfig messages;
 
+    @Inject
     public ConfigManager(NexoItems plugin) {
         this.plugin = plugin;
-        saveDefaultMessages();
+
+        // Generamos todos los archivos del módulo
+        saveDefaultResource("messages.yml");
+        saveDefaultResource("armas.yml");
+        saveDefaultResource("armaduras.yml");
+        saveDefaultResource("artefactos.yml");
+        saveDefaultResource("herramientas.yml");
+        saveDefaultResource("encantamientos.yml");
+        saveDefaultResource("reforjas.yml");
+
+        loadConfigurate();
+    }
+
+    private void saveDefaultResource(String fileName) {
+        File file = new File(plugin.getDataFolder(), fileName);
+        if (!file.exists()) {
+            plugin.saveResource(fileName, false);
+        }
+    }
+
+    private void loadConfigurate() {
+        File file = new File(plugin.getDataFolder(), "messages.yml");
+        YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
+                .path(file.toPath())
+                .nodeStyle(NodeStyle.BLOCK)
+                .build();
+        try {
+            this.messages = loader.load().get(ItemsMessagesConfig.class);
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error al cargar messages.yml en NexoItems: " + e.getMessage());
+        }
     }
 
     public void reloadMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-
-        // 🌟 Recargamos la configuración desde el archivo recién actualizado
-        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-
-        InputStream defaultStream = plugin.getResource("messages.yml");
-        if (defaultStream != null) {
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defaultStream));
-            messagesConfig.setDefaults(defaultConfig);
-        }
+        loadConfigurate();
     }
 
-    public FileConfiguration getMessages() {
-        if (messagesConfig == null) {
-            reloadMessages();
-        }
-        return messagesConfig;
-    }
-
-    public void saveDefaultMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-
-        // 🌟 PROTOCOLO OMEGA ACTIVADO:
-        // Eliminamos el if(!exists) y forzamos la actualización a "true".
-        // Siempre extraerá el messages.yml más reciente de tu código fuente.
-        try {
-            plugin.saveResource("messages.yml", true);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("No se pudo actualizar messages.yml desde el jar.");
-        }
-    }
-
-    public String getMessage(String path) {
-        return getMessages().getString(path, "&cMessage not found: " + path);
+    // 💡 PILAR 2: Acceso Type-Safe Ultra Rápido
+    public ItemsMessagesConfig getMessages() {
+        return messages;
     }
 }

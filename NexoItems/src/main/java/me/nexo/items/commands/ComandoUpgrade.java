@@ -1,40 +1,44 @@
 package me.nexo.items.commands;
 
-import me.nexo.core.crossplay.CrossplayUtils;
-import me.nexo.core.utils.NexoColor;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.items.NexoItems;
+import me.nexo.items.config.ConfigManager;
 import me.nexo.items.estaciones.UpgradeMenu;
 import org.bukkit.Sound;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import revxrsal.commands.annotation.Command;
+import revxrsal.commands.annotation.Default;
+import revxrsal.commands.bukkit.annotation.CommandPermission;
 
-public class ComandoUpgrade implements CommandExecutor {
+/**
+ * 🎒 NexoItems - Comando de Forja/Upgrade (Arquitectura Enterprise)
+ */
+@Singleton
+@Command({"forja", "upgrade", "upgradeitem"})
+public class ComandoUpgrade {
 
     private final NexoItems plugin;
+    private final ConfigManager configManager;
 
-    public ComandoUpgrade(NexoItems plugin) {
+    @Inject
+    public ComandoUpgrade(NexoItems plugin, ConfigManager configManager) {
         this.plugin = plugin;
+        this.configManager = configManager;
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
-            sender.sendMessage(NexoColor.parse("&#FF5555[!] Solo los operarios humanos pueden abrir la Forja."));
-            return true;
-        }
+    /**
+     * 🌟 Abre la interfaz de la Forja Omega.
+     * Lamp valida automáticamente que sea un Player.
+     * Si quieres restringir el comando a un permiso, descomenta la línea de abajo.
+     */
+    @Default
+    // @CommandPermission("nexo.items.forja.remota")
+    public void openForja(Player player) {
 
-        // Si quieres que solo VIPs o Admins la abran con comando, descomenta esto:
-        // if (!player.hasPermission("nexo.forja.comando")) {
-        //     CrossplayUtils.sendMessage(player, "&#FF5555[!] No tienes permiso para invocar la Forja remotamente.");
-        //     return true;
-        // }
-
-        // 🌟 Invocamos nuestra nueva interfaz Omega
+        // Invocamos el menú inyectando la instancia del plugin
         new UpgradeMenu(player, plugin).open();
-        player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_PLACE, 0.5f, 1.2f);
 
-        return true;
+        player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_PLACE, 0.5f, 1.2f);
     }
 }

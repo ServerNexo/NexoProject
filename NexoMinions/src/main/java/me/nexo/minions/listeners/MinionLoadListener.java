@@ -1,10 +1,13 @@
 package me.nexo.minions.listeners;
 
-import me.nexo.core.utils.NexoColor; // 🌟 IMPORT AÑADIDO PARA LA PALETA CIBERPUNK
+import com.google.inject.Inject;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.minions.NexoMinions;
+import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionType;
 import me.nexo.minions.manager.ActiveMinion;
+import me.nexo.minions.manager.MinionManager;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Entity;
@@ -18,11 +21,21 @@ import org.bukkit.persistence.PersistentDataType;
 
 import java.util.UUID;
 
+/**
+ * 🤖 NexoMinions - Listener de Carga de Chunks (Arquitectura Enterprise)
+ */
 public class MinionLoadListener implements Listener {
-    private final NexoMinions plugin;
 
-    public MinionLoadListener(NexoMinions plugin) {
+    private final NexoMinions plugin;
+    private final MinionManager minionManager;
+    private final ConfigManager configManager;
+
+    // 💉 PILAR 3: Inyección
+    @Inject
+    public MinionLoadListener(NexoMinions plugin, MinionManager minionManager, ConfigManager configManager) {
         this.plugin = plugin;
+        this.minionManager = minionManager;
+        this.configManager = configManager;
     }
 
     @EventHandler
@@ -38,7 +51,7 @@ public class MinionLoadListener implements Listener {
             if (!pdc.has(MinionKeys.OWNER, PersistentDataType.STRING)) continue;
 
             // Si ya está en la memoria (Manager), lo ignoramos
-            if (plugin.getMinionManager().getMinion(display.getUniqueId()) != null) continue;
+            if (minionManager.getMinion(display.getUniqueId()) != null) continue;
 
             // ¡Es un Minion huérfano! Lo leemos y lo reconectamos
             UUID ownerId = UUID.fromString(pdc.get(MinionKeys.OWNER, PersistentDataType.STRING));
@@ -73,14 +86,15 @@ public class MinionLoadListener implements Listener {
                 }
             }
 
-            // 🌟 3. SISTEMA ANTI-ERRORES: Si el holograma se borró por error, lo recreamos (Con Paleta Ciberpunk)
+            // 🌟 3. SISTEMA ANTI-ERRORES: Si el holograma se borró por error, lo recreamos
             if (holograma == null) {
                 Location holoLoc = display.getLocation().clone().add(0, 1.2, 0);
                 holograma = display.getWorld().spawn(holoLoc, TextDisplay.class, holo -> {
                     holo.setBillboard(TextDisplay.Billboard.CENTER);
                     holo.setBackgroundColor(org.bukkit.Color.fromARGB(100, 0, 0, 0));
-                    // Parseo Nativo de Paper 1.21 en HEX
-                    holo.text(NexoColor.parse("&#FFAA00Iniciando Sistemas..."));
+
+                    // 💡 Lectura Type-Safe Directa
+                    holo.text(NexoColor.parse(configManager.getMessages().manager().iniciandoSistemas()));
                 });
                 // Actualizamos la ID del nuevo holograma en el Minion
                 pdc.set(new NamespacedKey(plugin, "minion_holo_id"), PersistentDataType.STRING, holograma.getUniqueId().toString());
@@ -93,7 +107,7 @@ public class MinionLoadListener implements Listener {
             minion.calcularTrabajoOffline(currentTime);
 
             // Lo metemos de vuelta a la memoria RAM del servidor
-            plugin.getMinionManager().getMinionsActivos().put(display.getUniqueId(), minion);
+            minionManager.getMinionsActivos().put(display.getUniqueId(), minion);
         }
     }
 }

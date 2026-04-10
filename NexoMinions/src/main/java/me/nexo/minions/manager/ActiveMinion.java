@@ -1,6 +1,8 @@
 package me.nexo.minions.manager;
 
 import me.nexo.colecciones.NexoColecciones;
+import me.nexo.core.NexoCore;
+import me.nexo.core.user.NexoUser;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
@@ -19,12 +21,16 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.Transformation;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
 import java.util.UUID;
 
+/**
+ * 🤖 NexoMinions - Modelo de Minion Activo (Arquitectura Enterprise)
+ */
 public class ActiveMinion {
     private final NexoMinions plugin;
     private final ItemDisplay entity;
@@ -41,6 +47,9 @@ public class ActiveMinion {
     private InventoryHolder cachedStorage = null;
     private long lastStorageCheckTime = 0;
 
+    // 💡 Caché transitoria para llamadas seguras a NexoCore
+    private transient NexoCore coreCache;
+
     public ActiveMinion(NexoMinions plugin, ItemDisplay entity, Interaction hitbox, TextDisplay holograma, UUID ownerId, MinionType type, int tier, long nextActionTime, int storedItems) {
         this.plugin = plugin;
         this.entity = entity;
@@ -56,6 +65,11 @@ public class ActiveMinion {
             byte[] bytes = entity.getPersistentDataContainer().get(MinionKeys.UPGRADES[i], PersistentDataType.BYTE_ARRAY);
             if (bytes != null) this.upgrades[i] = ItemStack.deserializeBytes(bytes);
         }
+    }
+
+    private NexoCore getCore() {
+        if (coreCache == null) coreCache = JavaPlugin.getPlugin(NexoCore.class);
+        return coreCache;
     }
 
     public int getRealMaxStorage() {
@@ -75,6 +89,8 @@ public class ActiveMinion {
         long tiempoPasado = currentTimeMillis - this.nextActionTime;
         if (tiempoPasado > 0) {
             long tiempoPorAccion = (long) (MinionTier.getDelayMillis(this.tier) * getSpeedMultiplier());
+            if (tiempoPorAccion <= 0) tiempoPorAccion = 1000;
+
             int trabajosPerdidos = (int) (tiempoPasado / tiempoPorAccion);
 
             int maxStorage = getRealMaxStorage();
@@ -120,11 +136,20 @@ public class ActiveMinion {
     private void actualizarHolograma(int maxStorage) {
         if (holograma == null || holograma.isDead()) return;
 
+        // 💡 Lectura desde el motor Type-Safe
         if (storedItems >= maxStorage && !tieneMejoraPorTipo("STORAGE_LINK")) {
-            holograma.text(NexoColor.parse("&#FF3366<bold>¡ENTIDAD SACIADA!</bold>\n&#E6CCFFMateria: &#CC66FF" + storedItems + " / " + maxStorage));
+            String msg = plugin.getConfigManager().getMessages().manager().hologramaSaciado()
+                    .replace("%items%", String.valueOf(storedItems))
+                    .replace("%max%", String.valueOf(maxStorage));
+            holograma.text(NexoColor.parse(msg));
         } else {
             String nombreBonito = type.name().replace("MINION_", "").replace("_", " ");
-            holograma.text(NexoColor.parse("&#9933FF<bold>Esclavo " + nombreBonito + "</bold> &#E6CCFF(Nv. " + tier + ")\n&#E6CCFFMateria: &#CC66FF" + storedItems + " / " + maxStorage));
+            String msg = plugin.getConfigManager().getMessages().manager().hologramaNormal()
+                    .replace("%name%", nombreBonito)
+                    .replace("%tier%", String.valueOf(tier))
+                    .replace("%items%", String.valueOf(storedItems))
+                    .replace("%max%", String.valueOf(maxStorage));
+            holograma.text(NexoColor.parse(msg));
         }
     }
 
@@ -145,10 +170,10 @@ public class ActiveMinion {
 
                 Player owner = Bukkit.getPlayer(ownerId);
                 if (owner != null && owner.isOnline()) {
-                    org.bukkit.Bukkit.dispatchCommand(org.bukkit.Bukkit.getConsoleSender(), "eco give " + owner.getName() + " " + precio);
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + owner.getName() + " " + precio);
 
                     if (Bukkit.getPluginManager().isPluginEnabled("NexoColecciones")) {
-                        NexoColecciones.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, type.getTargetMaterial().name(), 1);
+                        JavaPlugin.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, type.getTargetMaterial().name(), 1);
                     }
                 }
 
@@ -170,7 +195,7 @@ public class ActiveMinion {
         if (owner != null && owner.isOnline() && !tieneMejoraActiva("AUTO_SELL")) {
             if (Bukkit.getPluginManager().isPluginEnabled("NexoColecciones")) {
                 String blockId = type.getTargetMaterial().name();
-                NexoColecciones.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, blockId, 1);
+                JavaPlugin.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, blockId, 1);
             }
         }
     }
@@ -306,18 +331,14 @@ public class ActiveMinion {
     public int getStoredItems() { return storedItems; }
     public void setStoredItems(int storedItems) { this.storedItems = storedItems; }
 
-    /**
-     * 💾 PROTOCOLO DE APAGADO DE EMERGENCIA:
-     * Guarda toda la RAM del Minion en la entidad física antes de que el servidor se apague.
-     */
     public void saveData() {
         if (entity == null || !entity.isValid()) return;
         var pdc = entity.getPersistentDataContainer();
-        
+
         pdc.set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
         pdc.set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, this.nextActionTime);
         pdc.set(MinionKeys.TIER, PersistentDataType.INTEGER, this.tier);
-        
+
         for (int i = 0; i < 4; i++) {
             if (upgrades[i] != null && !upgrades[i].getType().isAir()) {
                 pdc.set(MinionKeys.UPGRADES[i], PersistentDataType.BYTE_ARRAY, upgrades[i].serializeAsBytes());

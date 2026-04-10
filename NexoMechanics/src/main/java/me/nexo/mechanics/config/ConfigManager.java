@@ -1,59 +1,56 @@
 package me.nexo.mechanics.config;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.mechanics.NexoMechanics;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import me.nexo.mechanics.config.nodes.MechanicsMessagesConfig;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
+import org.spongepowered.configurate.yaml.NodeStyle;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 
+/**
+ * ⚙️ NexoMechanics - Config Manager Purificado (Arquitectura Enterprise)
+ */
+@Singleton
 public class ConfigManager {
 
     private final NexoMechanics plugin;
-    private FileConfiguration messagesConfig = null;
-    private File messagesFile = null;
+    private MechanicsMessagesConfig messages;
 
+    @Inject
     public ConfigManager(NexoMechanics plugin) {
         this.plugin = plugin;
-        saveDefaultMessages();
+        saveDefaultResource("messages.yml");
+        loadConfigurate();
+    }
+
+    private void saveDefaultResource(String fileName) {
+        File file = new File(plugin.getDataFolder(), fileName);
+        if (!file.exists()) {
+            plugin.saveResource(fileName, false);
+        }
+    }
+
+    private void loadConfigurate() {
+        File file = new File(plugin.getDataFolder(), "messages.yml");
+        YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
+                .path(file.toPath())
+                .nodeStyle(NodeStyle.BLOCK)
+                .build();
+        try {
+            this.messages = loader.load().get(MechanicsMessagesConfig.class);
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error al cargar messages.yml en NexoMechanics: " + e.getMessage());
+        }
     }
 
     public void reloadMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-
-        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-
-        InputStream defaultStream = plugin.getResource("messages.yml");
-        if (defaultStream != null) {
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defaultStream));
-            messagesConfig.setDefaults(defaultConfig);
-        }
+        loadConfigurate();
     }
 
-    public FileConfiguration getMessages() {
-        if (messagesConfig == null) {
-            reloadMessages();
-        }
-        return messagesConfig;
-    }
-
-    public void saveDefaultMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-
-        // 🌟 PROTOCOLO OMEGA ACTIVADO
-        try {
-            plugin.saveResource("messages.yml", true);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("No se pudo actualizar messages.yml desde el jar.");
-        }
-    }
-
-    public String getMessage(String path) {
-        return getMessages().getString(path, "&cMessage not found: " + path);
+    // 💡 PILAR 2: Acceso Type-Safe
+    public MechanicsMessagesConfig getMessages() {
+        return messages;
     }
 }

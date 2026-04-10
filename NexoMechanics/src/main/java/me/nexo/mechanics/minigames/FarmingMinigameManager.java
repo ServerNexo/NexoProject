@@ -1,9 +1,11 @@
 package me.nexo.mechanics.minigames;
 
-import me.nexo.core.NexoCore;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.mechanics.NexoMechanics;
+import me.nexo.mechanics.config.ConfigManager;
 import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.Material;
 import org.bukkit.Particle;
@@ -24,13 +26,17 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Singleton
 public class FarmingMinigameManager implements Listener {
 
     private final NexoMechanics plugin;
+    private final ConfigManager configManager;
     private final Map<UUID, Integer> plagasActivas = new ConcurrentHashMap<>();
 
-    public FarmingMinigameManager(NexoMechanics plugin) {
+    @Inject
+    public FarmingMinigameManager(NexoMechanics plugin, ConfigManager configManager) {
         this.plugin = plugin;
+        this.configManager = configManager;
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
@@ -62,18 +68,15 @@ public class FarmingMinigameManager implements Listener {
             plaga.getEquipment().setHelmet(new ItemStack(Material.WEEPING_VINES));
         }
 
-        // 🌟 CORRECCIÓN APLICADA: Obtenemos el ConfigManager directamente desde tu NexoCore
-        NexoCore core = NexoCore.getPlugin(NexoCore.class);
-
-        plaga.customName(CrossplayUtils.parseCrossplay(p, core.getConfigManager().getMessage("eventos.farming.plaga-biologica")));
+        plaga.customName(CrossplayUtils.parseCrossplay(p, configManager.getMessages().mensajes().minijuegos().agricultura().plagaBiologica()));
         plaga.setCustomNameVisible(true);
 
         plagasActivas.put(plaga.getUniqueId(), 0);
         p.playSound(loc, Sound.ENTITY_SILVERFISH_AMBIENT, 1f, 0.5f);
 
         CrossplayUtils.sendTitle(p,
-                core.getConfigManager().getMessage("eventos.farming.anomalia-biologica.titulo"),
-                core.getConfigManager().getMessage("eventos.farming.anomalia-biologica.subtitulo")
+                configManager.getMessages().mensajes().minijuegos().agricultura().anomaliaBiologicaTitulo(),
+                configManager.getMessages().mensajes().minijuegos().agricultura().anomaliaBiologicaSubtitulo()
         );
 
         new BukkitRunnable() {
@@ -117,9 +120,7 @@ public class FarmingMinigameManager implements Listener {
 
                     plaga.getWorld().dropItemNaturally(plaga.getLocation(), new ItemStack(Material.PITCHER_POD, 3));
 
-                    // 🌟 CORRECCIÓN APLICADA AQUÍ TAMBIÉN
-                    NexoCore core = NexoCore.getPlugin(NexoCore.class);
-                    CrossplayUtils.sendActionBar(p, core.getConfigManager().getMessage("eventos.farming.amenaza-erradicada"));
+                    CrossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().minijuegos().agricultura().amenazaErradicada());
                 } else {
                     plagasActivas.put(plaga.getUniqueId(), golpes);
                 }

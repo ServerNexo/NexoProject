@@ -1,62 +1,58 @@
 package me.nexo.minions.config;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.minions.NexoMinions;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import me.nexo.minions.config.nodes.MinionsMessagesConfig;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
+import org.spongepowered.configurate.yaml.NodeStyle;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 
+/**
+ * 🤖 NexoMinions - Config Manager Purificado (Arquitectura Enterprise)
+ */
+@Singleton
 public class ConfigManager {
 
     private final NexoMinions plugin;
-    private FileConfiguration messagesConfig = null;
-    private File messagesFile = null;
+    private MinionsMessagesConfig messages;
 
+    @Inject
     public ConfigManager(NexoMinions plugin) {
         this.plugin = plugin;
-        saveDefaultMessages();
+        saveDefaultResource("messages.yml");
+        saveDefaultResource("upgrades.yml");
+        saveDefaultResource("tiers.yml");
+        loadConfigurate();
+    }
+
+    private void saveDefaultResource(String fileName) {
+        File file = new File(plugin.getDataFolder(), fileName);
+        if (!file.exists()) {
+            plugin.saveResource(fileName, false);
+        }
+    }
+
+    private void loadConfigurate() {
+        File file = new File(plugin.getDataFolder(), "messages.yml");
+        YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
+                .path(file.toPath())
+                .nodeStyle(NodeStyle.BLOCK)
+                .build();
+        try {
+            this.messages = loader.load().get(MinionsMessagesConfig.class);
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error al cargar messages.yml en NexoMinions: " + e.getMessage());
+        }
     }
 
     public void reloadMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-
-        // 🌟 Recargamos la configuración desde el archivo recién actualizado
-        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-
-        InputStream defaultStream = plugin.getResource("messages.yml");
-        if (defaultStream != null) {
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defaultStream));
-            messagesConfig.setDefaults(defaultConfig);
-        }
+        loadConfigurate();
     }
 
-    public FileConfiguration getMessages() {
-        if (messagesConfig == null) {
-            reloadMessages();
-        }
-        return messagesConfig;
-    }
-
-    public void saveDefaultMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-
-        // 🌟 PROTOCOLO OMEGA ACTIVADO:
-        // Eliminamos el if(!exists) y forzamos la actualización a "true".
-        // Siempre extraerá el messages.yml más reciente de tu código fuente.
-        try {
-            plugin.saveResource("messages.yml", true);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("No se pudo actualizar messages.yml desde el jar.");
-        }
-    }
-
-    public String getMessage(String path) {
-        return getMessages().getString(path, "&cMessage not found: " + path);
+    // 💡 PILAR 2: Acceso Type-Safe
+    public MinionsMessagesConfig getMessages() {
+        return messages;
     }
 }

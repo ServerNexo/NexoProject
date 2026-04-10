@@ -1,10 +1,13 @@
 package me.nexo.mechanics.minigames;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
 import me.nexo.mechanics.NexoMechanics;
+import me.nexo.mechanics.config.ConfigManager;
 import me.nexo.protections.managers.ClaimManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -17,21 +20,26 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDamageEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Singleton
 public class WoodcuttingMinigameManager implements Listener {
 
     private final NexoMechanics plugin;
+    private final ConfigManager configManager;
+    private final NexoCore core;
     private final Map<UUID, NucleoActivo> nucleos = new ConcurrentHashMap<>();
 
     private record NucleoActivo(Block bloque, long expiracion, Material tipoOriginal) {}
 
-    public WoodcuttingMinigameManager(NexoMechanics plugin) {
+    @Inject
+    public WoodcuttingMinigameManager(NexoMechanics plugin, ConfigManager configManager, NexoCore core) {
         this.plugin = plugin;
+        this.configManager = configManager;
+        this.core = core;
         iniciarLimpiador();
     }
 
@@ -58,8 +66,6 @@ public class WoodcuttingMinigameManager implements Listener {
                 talarArbol(b);
                 b.getWorld().dropItemNaturally(b.getLocation(), new ItemStack(Material.HONEYCOMB, 2));
 
-                // 🌟 CORRECCIÓN 1: Instanciamos NexoCore y evitamos el Singleton problemático de la API
-                NexoCore core = NexoCore.getPlugin(NexoCore.class);
                 NexoUser user = core.getUserManager().getUserOrNull(id);
 
                 if (user != null) {
@@ -67,10 +73,9 @@ public class WoodcuttingMinigameManager implements Listener {
                     int nuevaEnergia = Math.min(user.getEnergiaMineria() + 10, maxEnergia);
                     user.setEnergiaMineria(nuevaEnergia);
 
-                    // 🌟 CORRECCIÓN 2: Leemos el mensaje usando ConfigManager de NexoCore
-                    CrossplayUtils.sendActionBar(p, core.getConfigManager().getMessage("eventos.tala.nucleo-destruido-energia"));
+                    CrossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().minijuegos().tala().nucleoDestruidoEnergia());
                 } else {
-                    CrossplayUtils.sendActionBar(p, core.getConfigManager().getMessage("eventos.tala.nucleo-destruido"));
+                    CrossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().minijuegos().tala().nucleoDestruido());
                 }
                 p.sendBlockChange(b.getLocation(), Bukkit.createBlockData(Material.AIR));
                 nucleos.remove(id);
@@ -95,8 +100,7 @@ public class WoodcuttingMinigameManager implements Listener {
             p.playSound(objetivo.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1.5f);
             p.getWorld().spawnParticle(Particle.WAX_ON, objetivo.getLocation().add(0.5, 0.5, 0.5), 15);
 
-            // 🌟 CORRECCIÓN 3: ConfigManager desde NexoCore
-            CrossplayUtils.sendActionBar(p, NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("eventos.tala.anomalia-botanica"));
+            CrossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().minijuegos().tala().anomaliaBotanica());
             nucleos.put(p.getUniqueId(), new NucleoActivo(objetivo, System.currentTimeMillis() + 3000L, objetivo.getType()));
         }
     }
@@ -118,9 +122,7 @@ public class WoodcuttingMinigameManager implements Listener {
                     if (p != null) {
                         p.sendBlockChange(entry.getValue().bloque().getLocation(), Bukkit.createBlockData(entry.getValue().tipoOriginal()));
                         p.playSound(p.getLocation(), Sound.BLOCK_CANDLE_EXTINGUISH, 0.5f, 1f);
-
-                        // 🌟 CORRECCIÓN 4: ConfigManager desde NexoCore
-                        CrossplayUtils.sendActionBar(p, NexoCore.getPlugin(NexoCore.class).getConfigManager().getMessage("eventos.tala.biomasa-endurecida"));
+                        CrossplayUtils.sendActionBar(p, configManager.getMessages().mensajes().minijuegos().tala().biomasaEndurecida());
                     }
                     nucleos.remove(entry.getKey());
                 }

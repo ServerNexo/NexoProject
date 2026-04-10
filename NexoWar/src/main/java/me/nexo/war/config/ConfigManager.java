@@ -1,61 +1,55 @@
 package me.nexo.war.config;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.war.NexoWar;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import me.nexo.war.config.nodes.WarMessagesConfig;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
+import org.spongepowered.configurate.yaml.NodeStyle;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 
+@Singleton
 public class ConfigManager {
 
     private final NexoWar plugin;
-    private FileConfiguration messagesConfig = null;
-    private File messagesFile = null;
+    private WarMessagesConfig messages;
 
+    @Inject
     public ConfigManager(NexoWar plugin) {
         this.plugin = plugin;
-        saveDefaultMessages();
+        saveDefaultResource("config.yml");
+        saveDefaultResource("messages.yml");
+        loadConfigurate();
     }
 
-    public void reloadMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-
-        // Recargamos la configuración desde el archivo recién actualizado
-        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
-
-        InputStream defaultStream = plugin.getResource("messages.yml");
-        if (defaultStream != null) {
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defaultStream));
-            messagesConfig.setDefaults(defaultConfig);
+    private void saveDefaultResource(String fileName) {
+        File file = new File(plugin.getDataFolder(), fileName);
+        if (!file.exists()) {
+            plugin.saveResource(fileName, false);
         }
     }
 
-    public FileConfiguration getMessages() {
-        if (messagesConfig == null) {
-            reloadMessages();
-        }
-        return messagesConfig;
-    }
-
-    public void saveDefaultMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-
-        // 🌟 PROTOCOLO OMEGA ACTIVADO:
-        // Siempre extraerá el messages.yml más reciente de tu código fuente.
+    // 💡 Carga los textos desde el YML hacia Java
+    private void loadConfigurate() {
+        File file = new File(plugin.getDataFolder(), "messages.yml");
+        YamlConfigurationLoader loader = YamlConfigurationLoader.builder()
+                .path(file.toPath())
+                .nodeStyle(NodeStyle.BLOCK)
+                .build();
         try {
-            plugin.saveResource("messages.yml", true);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("No se pudo actualizar messages.yml desde el jar.");
+            this.messages = loader.load().get(WarMessagesConfig.class);
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error al cargar messages.yml en NexoWar: " + e.getMessage());
         }
     }
 
-    public String getMessage(String path) {
-        return getMessages().getString(path, "&cMessage not found: " + path);
+    // 🔄 MÉTODO NUEVO: Úsalo cuando hagas un comando de recarga en el futuro
+    public void reloadMessages() {
+        loadConfigurate();
+    }
+
+    public WarMessagesConfig getMessages() {
+        return messages;
     }
 }

@@ -1,6 +1,8 @@
 package me.nexo.war.listeners;
 
-import me.nexo.core.utils.NexoColor;
+import com.google.inject.Inject;
+import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.war.config.ConfigManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -8,7 +10,17 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.geysermc.floodgate.api.FloodgateApi;
 
+/**
+ * ⚔️ NexoWar - Listener de Crossplay (Arquitectura Enterprise)
+ */
 public class WarCrossplayListener implements Listener {
+
+    private final ConfigManager configManager;
+
+    @Inject
+    public WarCrossplayListener(ConfigManager configManager) {
+        this.configManager = configManager;
+    }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInterPlatformCombat(EntityDamageByEntityEvent event) {
@@ -24,7 +36,7 @@ public class WarCrossplayListener implements Listener {
                 event.setCancelled(true);
 
                 // Alerta táctica enviada a la ActionBar para no saturar el chat
-                atacante.sendActionBar(NexoColor.parse("&#FF5555🛡️ Protocolo Nexo: Combate prohibido entre diferentes plataformas."));
+                CrossplayUtils.sendActionBar(atacante, configManager.getMessages().errores().combatePlataformas());
             }
         }
     }
