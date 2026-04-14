@@ -82,6 +82,9 @@ public class ItemsBootstrap {
         pm.registerEvents(injector.getInstance(ArtefactoListener.class), plugin);
         pm.registerEvents(injector.getInstance(GuardarropaListener.class), plugin);
         pm.registerEvents(injector.getInstance(MochilaListener.class), plugin);
+
+        // 🌟 AÑADIDO: ¡Ahora el sincronizador fantasma cobra vida y protege los ítems!
+        pm.registerEvents(injector.getInstance(LazyItemSyncer.class), plugin);
     }
 
     private void registerCommands() {
@@ -92,6 +95,7 @@ public class ItemsBootstrap {
         });
 
         // 🌟 Aquí registraremos los comandos purificados de Lamp
-        handler.register(injector.getInstance(me.nexo.items.commands.ComandoDesguace.class));
+        handler.register(injector.getInstance(me.nexo.items.ComandoDesguace.class));
+        handler.register(injector.getInstance(me.nexo.items.commands.ComandoUpgrade.class));
     }
 }

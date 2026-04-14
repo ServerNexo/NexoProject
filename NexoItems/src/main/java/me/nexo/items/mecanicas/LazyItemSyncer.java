@@ -1,7 +1,7 @@
 package me.nexo.items.mecanicas;
 
 import me.nexo.items.NexoItems;
-import me.nexo.items.managers.ItemManager; // 🌟 AÑADIDO PARA LEER LAS LLAVES
+import me.nexo.items.managers.ItemManager;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -47,10 +47,12 @@ public class LazyItemSyncer implements Listener {
     }
 
     private void sincronizarInventario(Inventory inventory) {
-        // Usamos un Virtual Thread para procesar el inventario sin congelar el servidor
+        // 🚨 1. LEEMOS EN EL HILO PRINCIPAL (100% Seguro para Bukkit)
+        ItemStack[] contents = inventory.getContents();
+
+        // ⚡ 2. PROCESAMOS EN EL HILO VIRTUAL (Cero Lag para el servidor)
         Thread.startVirtualThread(() -> {
-            for (int i = 0; i < inventory.getSize(); i++) {
-                ItemStack item = inventory.getItem(i);
+            for (ItemStack item : contents) {
                 if (item != null && item.hasItemMeta()) {
                     sincronizarItem(item);
                 }

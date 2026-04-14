@@ -1,21 +1,26 @@
 package me.nexo.items.mecanicas;
 
-import me.nexo.core.utils.NexoColor;
-import me.nexo.items.managers.ItemManager;
-import me.nexo.items.NexoItems;
-import me.nexo.items.dtos.WeaponDTO;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
+import me.nexo.items.NexoItems;
+import me.nexo.items.dtos.WeaponDTO;
+import me.nexo.items.managers.FileManager;
+import me.nexo.items.managers.ItemManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -29,16 +34,26 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * 🎒 NexoItems - Gestor de Habilidades y Artefactos (Arquitectura Enterprise)
+ */
+@Singleton
 public class InteractListener implements Listener {
 
     private final NexoItems plugin;
+    private final FileManager fileManager;
+
+    // Caché de enfriamientos
     private final HashMap<UUID, Long> cooldowns = new HashMap<>();
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public InteractListener(NexoItems plugin) {
         this.plugin = plugin;
+        this.fileManager = plugin.getFileManager();
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
     public void alInteractuar(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_AIR && event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
@@ -59,12 +74,13 @@ public class InteractListener implements Listener {
         // ⚔️ ARMAS RPG
         if (pdc.has(ItemManager.llaveWeaponId, PersistentDataType.STRING)) {
             String idArma = pdc.get(ItemManager.llaveWeaponId, PersistentDataType.STRING);
-            WeaponDTO dto = plugin.getFileManager().getWeaponDTO(idArma);
+            WeaponDTO dto = fileManager.getWeaponDTO(idArma);
 
             if (dto != null && !dto.habilidadId().equalsIgnoreCase("ninguna")) {
                 int costoEnergia = 20;
                 int cooldownMs = 2000;
 
+                // Definición de balances de Habilidades
                 switch (dto.habilidadId().toLowerCase()) {
                     case "quake", "ola", "rafaga" -> { costoEnergia = 20; cooldownMs = 3000; }
                     case "tajo_sanguinario", "agujero_negro" -> { costoEnergia = 40; cooldownMs = 5000; }
@@ -82,19 +98,19 @@ public class InteractListener implements Listener {
 
         if (cooldowns.containsKey(uuid) && (ahora - cooldowns.get(uuid)) < cooldownMs) {
             long faltan = (cooldownMs - (ahora - cooldowns.get(uuid))) / 1000;
-            jugador.sendActionBar(NexoColor.parse("&#FF5555❄ Enfriamiento de Sistema: " + faltan + "s"));
+            CrossplayUtils.sendActionBar(jugador, "&#FF5555❄ Enfriamiento de Sistema: " + faltan + "s");
             return;
         }
 
         NexoUser user = NexoAPI.getInstance().getUserLocal(uuid);
         if (user == null) {
-            jugador.sendMessage(NexoColor.parse("&#FF5555[!] Sincronizando interfaz neuronal. Espera..."));
+            CrossplayUtils.sendMessage(jugador, "&#FF5555[!] Sincronizando interfaz neuronal. Espera...");
             return;
         }
 
         int energiaActual = user.getEnergiaMineria();
         if (energiaActual < costoEnergia) {
-            jugador.sendActionBar(NexoColor.parse("&#FF5555⚡ Energía Insuficiente (" + costoEnergia + " requeridos)"));
+            CrossplayUtils.sendActionBar(jugador, "&#FF5555⚡ Energía Insuficiente (" + costoEnergia + " requeridos)");
             jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1, 1);
             return;
         }
@@ -149,7 +165,10 @@ public class InteractListener implements Listener {
             case "tajo_sanguinario":
                 jugador.playSound(loc, Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1f, 0.5f);
                 jugador.getWorld().spawnParticle(Particle.SWEEP_ATTACK, loc.add(loc.getDirection().multiply(1.5)).add(0,1,0), 3);
-                jugador.getWorld().spawnParticle(Particle.DUST, loc.add(0,1,0), 30, 1.5, 0.5, 1.5, new Particle.DustOptions(org.bukkit.Color.RED, 2));
+
+                // 🌟 FIX de Partículas para 1.20+
+                org.bukkit.Particle.DustOptions polvoRojo = new org.bukkit.Particle.DustOptions(org.bukkit.Color.RED, 2.0F);
+                jugador.getWorld().spawnParticle(Particle.DUST, loc.add(0,1,0), 30, 1.5, 0.5, 1.5, polvoRojo);
 
                 double curacionTotal = 0;
                 for (Entity e : jugador.getNearbyEntities(4, 2, 4)) {
@@ -159,9 +178,12 @@ public class InteractListener implements Listener {
                     }
                 }
                 if (curacionTotal > 0) {
-                    double maxHp = jugador.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
-                    jugador.setHealth(Math.min(maxHp, jugador.getHealth() + curacionTotal));
-                    jugador.getWorld().spawnParticle(Particle.HEART, jugador.getLocation().add(0, 2, 0), (int) curacionTotal);
+                    AttributeInstance hpAttr = jugador.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                    if(hpAttr != null) {
+                        double maxHp = hpAttr.getValue();
+                        jugador.setHealth(Math.min(maxHp, jugador.getHealth() + curacionTotal));
+                        jugador.getWorld().spawnParticle(Particle.HEART, jugador.getLocation().add(0, 2, 0), (int) curacionTotal);
+                    }
                 }
                 exito = true;
                 break;
@@ -214,7 +236,7 @@ public class InteractListener implements Listener {
                     }
                     exito = true;
                 } else {
-                    jugador.sendMessage(NexoColor.parse("&#FF5555[!] Sin objetivos hostiles válidos en el rango de Juicio."));
+                    CrossplayUtils.sendMessage(jugador, "&#FF5555[!] Sin objetivos hostiles válidos en el rango de Juicio.");
                 }
                 break;
 
@@ -251,18 +273,19 @@ public class InteractListener implements Listener {
                     jugador.playSound(destino, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
                     exito = true;
                 } else {
-                    jugador.sendMessage(NexoColor.parse("&#FF5555[!] Destino inválido para salto traslacional."));
+                    CrossplayUtils.sendMessage(jugador, "&#FF5555[!] Destino inválido para salto traslacional.");
                 }
                 break;
         }
 
         if (exito) {
-            user.setEnergiaMineria(Math.max(0, energiaActual - costoEnergia));
+            user.setEnergiaMineria(Math.max(0, energiaActual - costoEnergia)); // Asumo que "EnergiaMineria" es el stat global de Maná
             cooldowns.put(uuid, ahora);
-            jugador.sendActionBar(NexoColor.parse("&#00E5FF✨ Habilidad Desplegada: &#FFFFFF" + habilidad.toUpperCase() + " &#555555(-" + costoEnergia + "⚡)"));
+            CrossplayUtils.sendActionBar(jugador, "&#00E5FF✨ Habilidad Desplegada: &#FFFFFF" + habilidad.toUpperCase() + " &#555555(-" + costoEnergia + "⚡)");
         }
     }
 
+    // 🧹 Limpieza automática para que el mapa no se llene de basura en la memoria
     @EventHandler
     public void onPlayerQuit(org.bukkit.event.player.PlayerQuitEvent event) {
         cooldowns.remove(event.getPlayer().getUniqueId());

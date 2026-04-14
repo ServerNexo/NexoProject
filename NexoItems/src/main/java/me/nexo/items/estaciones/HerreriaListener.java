@@ -13,10 +13,13 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -29,8 +32,27 @@ public class HerreriaListener implements Listener {
         this.plugin = plugin;
     }
 
+    // 🛡️ PATRÓN ENTERPRISE: InventoryHolder Personalizado (Inhackeable)
+    public static class HerreriaMenuHolder implements InventoryHolder {
+        private final Inventory inventory;
+
+        // 🌟 CORRECCIÓN: Ahora acepta 'Component' en vez de 'String'
+        public HerreriaMenuHolder(net.kyori.adventure.text.Component title) {
+            this.inventory = Bukkit.createInventory(this, 27, title);
+        }
+        @Override
+        public Inventory getInventory() { return inventory; }
+    }
+
     public void abrirMenu(Player jugador) {
-        Inventory inv = Bukkit.createInventory(null, 27, CrossplayUtils.parseCrossplay(jugador, plugin.getConfigManager().getMessage("menus.herreria.titulo")));
+        // Leemos desde la nueva arquitectura
+        String rawTitle = plugin.getConfigManager().getMessages().menus().herreria().titulo();
+
+        // 🌟 CORRECCIÓN: Guardamos el resultado como 'Component'
+        net.kyori.adventure.text.Component tituloFormat = CrossplayUtils.parseCrossplay(jugador, rawTitle);
+
+        HerreriaMenuHolder holder = new HerreriaMenuHolder(tituloFormat);
+        Inventory inv = holder.getInventory();
 
         ItemStack cristal = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta metaCristal = cristal.getItemMeta();
@@ -43,16 +65,17 @@ public class HerreriaListener implements Listener {
             inv.setItem(i, cristal);
         }
 
-        inv.setItem(11, new ItemStack(Material.AIR));
-        inv.setItem(15, new ItemStack(Material.AIR));
+        inv.setItem(11, new ItemStack(Material.AIR)); // Hueco Arma
+        inv.setItem(15, new ItemStack(Material.AIR)); // Hueco Material
 
         ItemStack yunque = new ItemStack(Material.ANVIL);
         ItemMeta metaYunque = yunque.getItemMeta();
         if (metaYunque != null) {
-            metaYunque.displayName(CrossplayUtils.parseCrossplay(jugador, plugin.getConfigManager().getMessage("menus.herreria.boton.titulo")));
-            metaYunque.lore(plugin.getConfigManager().getMessages().getStringList("menus.herreria.boton.lore").stream()
-                    .map(line -> CrossplayUtils.parseCrossplay(jugador, line))
-                    .collect(Collectors.toList()));
+            String btnTitle = plugin.getConfigManager().getMessages().menus().herreria().boton().titulo();
+            List<String> btnLore = plugin.getConfigManager().getMessages().menus().herreria().boton().lore();
+
+            metaYunque.displayName(CrossplayUtils.parseCrossplay(jugador, btnTitle));
+            metaYunque.lore(btnLore.stream().map(line -> CrossplayUtils.parseCrossplay(jugador, line)).collect(Collectors.toList()));
             yunque.setItemMeta(metaYunque);
         }
         inv.setItem(13, yunque);
@@ -62,79 +85,94 @@ public class HerreriaListener implements Listener {
 
     @EventHandler
     public void alHacerClic(InventoryClickEvent event) {
-        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.herreria.titulo").replaceAll("<[^>]*>", ""))) return;
+        // 🛡️ Verificación Inhackeable
+        if (!(event.getInventory().getHolder() instanceof HerreriaMenuHolder)) return;
 
+        if (event.getClickedInventory() == null) return;
         Player jugador = (Player) event.getWhoClicked();
-        int slot = event.getRawSlot();
 
-        if (slot >= 27) return;
-
-        if (slot != 11 && slot != 15 && slot != 13) {
+        // 🛡️ PROTECCIÓN ANTI-DUPE (Evita mover items raros con Shift)
+        if (event.isShiftClick() && event.getClickedInventory().equals(jugador.getInventory())) {
             event.setCancelled(true);
+            jugador.sendMessage("§c⚠️ Utiliza el clic normal para colocar los artefactos.");
             return;
         }
 
-        if (slot == 13) {
-            event.setCancelled(true);
-            Inventory inv = event.getInventory();
-            ItemStack arma = inv.getItem(11);
-            ItemStack material = inv.getItem(15);
+        int slot = event.getRawSlot();
 
-            if (arma == null || arma.getType() == Material.AIR) {
-                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.inserta-activo"));
-                jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+        // Si hace clic en el menú superior (Herrería)
+        if (event.getClickedInventory().equals(event.getInventory())) {
+
+            // Si hace clic en los cristales, cancelamos
+            if (slot != 11 && slot != 15 && slot != 13) {
+                event.setCancelled(true);
                 return;
             }
 
-            if (material == null || !material.hasItemMeta() ||
-                    !material.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveMaterialMejora, PersistentDataType.BYTE)) {
-                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.necesitas-polvo"));
-                jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-                return;
-            }
+            // 🌟 LÓGICA DEL BOTÓN DE FORJA
+            if (slot == 13) {
+                event.setCancelled(true);
+                Inventory inv = event.getInventory();
+                ItemStack arma = inv.getItem(11);
+                ItemStack material = inv.getItem(15);
 
-            ItemMeta metaArma = arma.getItemMeta();
-            if (!metaArma.getPersistentDataContainer().has(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER)) {
-                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.no-soporta-mejoras"));
-                return;
-            }
+                var nodos = plugin.getConfigManager().getMessages().estaciones();
 
-            int nivelActual = metaArma.getPersistentDataContainer().getOrDefault(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, 0);
+                if (arma == null || arma.getType() == Material.AIR) {
+                    CrossplayUtils.sendMessage(jugador, nodos.insertaActivo());
+                    jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                    return;
+                }
 
-            if (nivelActual >= 10) {
-                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.mejora-maxima"));
-                return;
-            }
+                if (material == null || !material.hasItemMeta() ||
+                        !material.getItemMeta().getPersistentDataContainer().has(ItemManager.llaveMaterialMejora, PersistentDataType.BYTE)) {
+                    CrossplayUtils.sendMessage(jugador, nodos.necesitasPolvo());
+                    jugador.playSound(jugador.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
+                    return;
+                }
 
-            material.setAmount(material.getAmount() - 1);
+                ItemMeta metaArma = arma.getItemMeta();
+                if (!metaArma.getPersistentDataContainer().has(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER)) {
+                    CrossplayUtils.sendMessage(jugador, nodos.noSoportaMejoras());
+                    return;
+                }
 
-            int chanceExito = 100 - (nivelActual * 10);
-            int tiro = random.nextInt(100) + 1;
+                int nivelActual = metaArma.getPersistentDataContainer().getOrDefault(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, 0);
 
-            if (tiro <= chanceExito) {
-                nivelActual++;
-                metaArma.getPersistentDataContainer().set(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, nivelActual);
+                if (nivelActual >= 10) {
+                    CrossplayUtils.sendMessage(jugador, nodos.mejoraMaxima());
+                    return;
+                }
 
-                String nombreViejo = PlainTextComponentSerializer.plainText().serialize(metaArma.displayName());
-                String nombreNuevo = nombreViejo.replaceAll("\\[\\+\\d+\\]", "[+" + nivelActual + "]");
-                metaArma.displayName(CrossplayUtils.parseCrossplay(jugador, nombreNuevo));
+                // Consumimos el material
+                material.setAmount(material.getAmount() - 1);
 
-                arma.setItemMeta(metaArma);
+                int chanceExito = 100 - (nivelActual * 10);
+                int tiro = random.nextInt(100) + 1;
 
-                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.forja-exitosa").replace("%level%", String.valueOf(nivelActual)));
-                jugador.playSound(jugador.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1f);
-            } else {
-                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.herreria.forja-fallida"));
-                jugador.playSound(jugador.getLocation(), Sound.ENTITY_ITEM_BREAK, 1f, 1f);
+                if (tiro <= chanceExito) {
+                    nivelActual++;
+                    metaArma.getPersistentDataContainer().set(ItemManager.llaveNivelMejora, PersistentDataType.INTEGER, nivelActual);
+
+                    String nombreViejo = PlainTextComponentSerializer.plainText().serialize(metaArma.displayName());
+                    String nombreNuevo = nombreViejo.replaceAll("\\[\\+\\d+\\]", "[+" + nivelActual + "]");
+                    metaArma.displayName(CrossplayUtils.parseCrossplay(jugador, nombreNuevo));
+
+                    arma.setItemMeta(metaArma);
+
+                    CrossplayUtils.sendMessage(jugador, nodos.mejoraExitosa().replace("%level%", String.valueOf(nivelActual)));
+                    jugador.playSound(jugador.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1f);
+                } else {
+                    CrossplayUtils.sendMessage(jugador, nodos.mejoraFallida());
+                    jugador.playSound(jugador.getLocation(), Sound.ENTITY_ITEM_BREAK, 1f, 1f);
+                }
             }
         }
     }
 
     @EventHandler
     public void alCerrar(InventoryCloseEvent event) {
-        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (!tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.herreria.titulo").replaceAll("<[^>]*>", ""))) return;
+        if (!(event.getInventory().getHolder() instanceof HerreriaMenuHolder)) return;
 
         Player jugador = (Player) event.getPlayer();
         Inventory inv = event.getInventory();
@@ -142,11 +180,19 @@ public class HerreriaListener implements Listener {
         ItemStack arma = inv.getItem(11);
         ItemStack material = inv.getItem(15);
 
+        // 🛡️ PROTECCIÓN ANTI-VOID (Si el inventario está lleno, lo tira al suelo)
+        HashMap<Integer, ItemStack> sobrantes = new HashMap<>();
+
         if (arma != null && arma.getType() != Material.AIR) {
-            jugador.getInventory().addItem(arma);
+            sobrantes.putAll(jugador.getInventory().addItem(arma));
         }
         if (material != null && material.getType() != Material.AIR) {
-            jugador.getInventory().addItem(material);
+            sobrantes.putAll(jugador.getInventory().addItem(material));
+        }
+
+        // Escupimos los ítems que no cupieron al suelo real
+        for (ItemStack drop : sobrantes.values()) {
+            jugador.getWorld().dropItemNaturally(jugador.getLocation(), drop);
         }
     }
 }

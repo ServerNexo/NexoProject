@@ -1,12 +1,16 @@
 package me.nexo.items.mecanicas;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
+import me.nexo.core.user.NexoAPI;
+import me.nexo.core.user.NexoUser;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.NexoItems;
 import me.nexo.items.dtos.ArmorDTO;
 import me.nexo.items.dtos.EnchantDTO;
 import me.nexo.items.dtos.ToolDTO;
-import me.nexo.core.user.NexoAPI;
-import me.nexo.core.user.NexoUser;
+import me.nexo.items.managers.FileManager;
 import me.nexo.items.managers.ItemManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -33,17 +37,36 @@ import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 🎒 NexoItems - Motor de Recolección y Minería RPG (Arquitectura Enterprise)
+ */
+@Singleton
 public class BlockBreakListener implements Listener {
 
     private final NexoItems plugin;
+    private final FileManager fileManager;
     private final HashMap<UUID, Long> cooldownRecoleccion = new HashMap<>();
     private final String MUNDO_RPG = "Mina";
     private final Random random = new Random();
 
     public static final ConcurrentHashMap<Location, BlockData> bloquesRegenerando = new ConcurrentHashMap<>();
 
+    // ⚡ CACHÉ DE RENDIMIENTO
+    private final NamespacedKey keyBendicion;
+    private final NamespacedKey keyExperiencia;
+    private final NamespacedKey keyMidas;
+    private final NamespacedKey keyAura;
+
+    // 💉 Inyección de Dependencias
+    @Inject
     public BlockBreakListener(NexoItems plugin) {
         this.plugin = plugin;
+        this.fileManager = plugin.getFileManager();
+
+        this.keyBendicion = new NamespacedKey(plugin, "nexo_enchant_bendicion_nexo");
+        this.keyExperiencia = new NamespacedKey(plugin, "nexo_enchant_experiencia_divina");
+        this.keyMidas = new NamespacedKey(plugin, "nexo_enchant_toque_de_midas");
+        this.keyAura = new NamespacedKey(plugin, "nexo_enchant_aura_recolectora");
     }
 
     public static void restaurarBloquesRotos() {
@@ -78,33 +101,19 @@ public class BlockBreakListener implements Listener {
         ItemStack recompensa = null;
         boolean esCultivo = false, esMineral = false, esTronco = false;
 
+        // 1. RECONOCIMIENTO DEL BLOQUE
         if (tipoOriginal == Material.COAL_ORE || tipoOriginal == Material.DEEPSLATE_COAL_ORE) {
-            xpGanada = 2;
-            costeEnergia = 5;
-            recompensa = new ItemStack(Material.COAL, 1);
-            esMineral = true;
+            xpGanada = 2; costeEnergia = 5; recompensa = new ItemStack(Material.COAL, 1); esMineral = true;
         } else if (tipoOriginal == Material.IRON_ORE || tipoOriginal == Material.DEEPSLATE_IRON_ORE) {
-            xpGanada = 5;
-            costeEnergia = 10;
-            recompensa = new ItemStack(Material.RAW_IRON, 1);
-            esMineral = true;
+            xpGanada = 5; costeEnergia = 10; recompensa = new ItemStack(Material.RAW_IRON, 1); esMineral = true;
         } else if (tipoOriginal == Material.DIAMOND_ORE || tipoOriginal == Material.DEEPSLATE_DIAMOND_ORE) {
-            xpGanada = 25;
-            costeEnergia = 30;
-            recompensa = new ItemStack(Material.DIAMOND, 1);
-            esMineral = true;
+            xpGanada = 25; costeEnergia = 30; recompensa = new ItemStack(Material.DIAMOND, 1); esMineral = true;
         } else if (tipoOriginal == Material.OAK_LOG || tipoOriginal == Material.BIRCH_LOG || tipoOriginal == Material.SPRUCE_LOG) {
-            xpGanada = 3;
-            costeEnergia = 4;
-            recompensa = new ItemStack(tipoOriginal, 1);
-            esTronco = true;
+            xpGanada = 3; costeEnergia = 4; recompensa = new ItemStack(tipoOriginal, 1); esTronco = true;
         } else if (tipoOriginal == Material.WHEAT || tipoOriginal == Material.CARROTS || tipoOriginal == Material.POTATOES) {
-            if (dataOriginal instanceof Ageable) {
-                Ageable cultivo = (Ageable) dataOriginal;
+            if (dataOriginal instanceof Ageable cultivo) {
                 if (cultivo.getAge() == cultivo.getMaximumAge()) {
-                    xpGanada = 1;
-                    costeEnergia = 1;
-                    esCultivo = true;
+                    xpGanada = 1; costeEnergia = 1; esCultivo = true;
                     recompensa = new ItemStack(tipoOriginal == Material.WHEAT ? Material.WHEAT : (tipoOriginal == Material.CARROTS ? Material.CARROT : Material.POTATO), 1);
                 } else {
                     event.setCancelled(true);
@@ -113,6 +122,7 @@ public class BlockBreakListener implements Listener {
             }
         }
 
+        // 2. PROCESAMIENTO DEL RECURSO
         if (xpGanada > 0) {
             event.setCancelled(true);
 
@@ -121,13 +131,15 @@ public class BlockBreakListener implements Listener {
 
             NexoUser user = NexoAPI.getInstance().getUserLocal(uuid);
             if (user == null) {
-                CrossplayUtils.sendMessage(jugador, plugin.getConfigManager().getMessage("eventos.blockbreak.enlace-caido"));
+                // 🌟 FIX: Mensaje Directo
+                CrossplayUtils.sendMessage(jugador, "&#FF5555[!] Enlace neuronal con el Nexo perdido.");
                 return;
             }
 
             int energiaActual = user.getEnergiaMineria();
             if (energiaActual < costeEnergia) {
-                CrossplayUtils.sendActionBar(jugador, plugin.getConfigManager().getMessage("eventos.blockbreak.energia-agotada"));
+                // 🌟 FIX: Mensaje Directo
+                CrossplayUtils.sendActionBar(jugador, "&#FF5555[!] Energía de Minería agotada.");
                 return;
             }
 
@@ -142,34 +154,30 @@ public class BlockBreakListener implements Listener {
 
                 if (pdc.has(ItemManager.llaveHerramientaId, PersistentDataType.STRING)) {
                     String toolId = pdc.get(ItemManager.llaveHerramientaId, PersistentDataType.STRING);
-                    ToolDTO toolData = plugin.getFileManager().getToolDTO(toolId);
+                    ToolDTO toolData = fileManager.getToolDTO(toolId);
 
                     if (toolData != null) {
                         fortunaExtra = toolData.multiplicadorFortuna();
                         habilidadHerramienta = toolData.habilidadId();
 
-                        NamespacedKey keyBendicion = new NamespacedKey(plugin, "nexo_enchant_bendicion_nexo");
                         if (pdc.has(keyBendicion, PersistentDataType.INTEGER)) {
-                            EnchantDTO ench = plugin.getFileManager().getEnchantDTO("bendicion_nexo");
-                            if (ench != null)
-                                fortunaExtra += ench.getValorPorNivel(pdc.get(keyBendicion, PersistentDataType.INTEGER));
+                            EnchantDTO ench = fileManager.getEnchantDTO("bendicion_nexo");
+                            if (ench != null) fortunaExtra += ench.getValorPorNivel(pdc.get(keyBendicion, PersistentDataType.INTEGER));
                         }
 
-                        NamespacedKey keyExp = new NamespacedKey(plugin, "nexo_enchant_experiencia_divina");
-                        if (pdc.has(keyExp, PersistentDataType.INTEGER)) {
-                            EnchantDTO ench = plugin.getFileManager().getEnchantDTO("experiencia_divina");
-                            if (ench != null)
-                                xpGanada = (int) (xpGanada * ench.getValorPorNivel(pdc.get(keyExp, PersistentDataType.INTEGER)));
+                        if (pdc.has(keyExperiencia, PersistentDataType.INTEGER)) {
+                            EnchantDTO ench = fileManager.getEnchantDTO("experiencia_divina");
+                            if (ench != null) xpGanada = (int) (xpGanada * ench.getValorPorNivel(pdc.get(keyExperiencia, PersistentDataType.INTEGER)));
                         }
 
-                        NamespacedKey keyMidas = new NamespacedKey(plugin, "nexo_enchant_toque_de_midas");
                         if (pdc.has(keyMidas, PersistentDataType.INTEGER)) {
-                            EnchantDTO ench = plugin.getFileManager().getEnchantDTO("toque_de_midas");
+                            EnchantDTO ench = fileManager.getEnchantDTO("toque_de_midas");
                             if (ench != null && (random.nextDouble() * 100 <= ench.getValorPorNivel(pdc.get(keyMidas, PersistentDataType.INTEGER)))) {
                                 ItemStack oro = new ItemStack(Material.GOLD_INGOT);
                                 ItemMeta oroMeta = oro.getItemMeta();
                                 if (oroMeta != null) {
-                                    oroMeta.displayName(CrossplayUtils.parseCrossplay(jugador, plugin.getConfigManager().getMessage("eventos.blockbreak.oro-sintetico")));
+                                    // 🌟 FIX: Mensaje Directo
+                                    oroMeta.displayName(CrossplayUtils.parseCrossplay(jugador, "&#FFAA00Oro Sintético"));
                                     oro.setItemMeta(oroMeta);
                                 }
                                 jugador.getInventory().addItem(oro);
@@ -185,6 +193,7 @@ public class BlockBreakListener implements Listener {
                         if (lore != null) {
                             for (int i = 0; i < lore.size(); i++) {
                                 if (org.bukkit.ChatColor.stripColor(lore.get(i)).contains("Bloques Rotos:")) {
+                                    // Usando CrossplayUtils que devuelve Strings procesados
                                     lore.set(i, CrossplayUtils.getChat(jugador, "&#E6CCFFBloques Rotos: &#ff00ff" + String.format("%,d", rotos)));
                                     break;
                                 }
@@ -202,7 +211,7 @@ public class BlockBreakListener implements Listener {
                 var pdc = armor.getItemMeta().getPersistentDataContainer();
 
                 if (pdc.has(ItemManager.llaveArmaduraId, PersistentDataType.STRING)) {
-                    ArmorDTO armorDTO = plugin.getFileManager().getArmorDTO(pdc.get(ItemManager.llaveArmaduraId, PersistentDataType.STRING));
+                    ArmorDTO armorDTO = fileManager.getArmorDTO(pdc.get(ItemManager.llaveArmaduraId, PersistentDataType.STRING));
                     if (armorDTO != null) {
                         if (esMineral) suerteTotal += armorDTO.suerteMinera();
                         if (esCultivo) suerteTotal += armorDTO.suerteAgricola();
@@ -210,17 +219,16 @@ public class BlockBreakListener implements Listener {
                     }
                 }
 
-                NamespacedKey keyAura = new NamespacedKey(plugin, "nexo_enchant_aura_recolectora");
                 if (pdc.has(keyAura, PersistentDataType.INTEGER)) {
-                    EnchantDTO ench = plugin.getFileManager().getEnchantDTO("aura_recolectora");
-                    if (ench != null)
-                        suerteTotal += ench.getValorPorNivel(pdc.get(keyAura, PersistentDataType.INTEGER));
+                    EnchantDTO ench = fileManager.getEnchantDTO("aura_recolectora");
+                    if (ench != null) suerteTotal += ench.getValorPorNivel(pdc.get(keyAura, PersistentDataType.INTEGER));
                 }
             }
 
             int cantidad = (random.nextDouble() * 100 <= suerteTotal) ? 2 : 1;
             if (cantidad > 1) {
-                CrossplayUtils.sendActionBar(jugador, plugin.getConfigManager().getMessage("eventos.blockbreak.doble-material").replace("%suerte%", String.format("%.1f", suerteTotal)));
+                // 🌟 FIX: Mensaje Directo
+                CrossplayUtils.sendActionBar(jugador, "&#55FF55✨ ¡Doble Drop! &8(&f%suerte%%&8)".replace("%suerte%", String.format("%.1f", suerteTotal)));
             }
 
             if (recompensa != null) {
@@ -237,9 +245,10 @@ public class BlockBreakListener implements Listener {
             while (xpActual >= (nivelActual * 100)) {
                 xpActual -= (nivelActual * 100);
                 nivelActual++;
+                // 🌟 FIX: Mensaje Directo
                 CrossplayUtils.sendTitle(jugador,
-                        plugin.getConfigManager().getMessage("eventos.blockbreak.ascenso-cenit.titulo"),
-                        plugin.getConfigManager().getMessage("eventos.blockbreak.ascenso-cenit.subtitulo").replace("%level%", String.valueOf(nivelActual)));
+                        "&#FF55FF¡ASCENSO CÉNIT!",
+                        "&#FFAA00Nivel %level%".replace("%level%", String.valueOf(nivelActual)));
             }
 
             user.setNexoNivel(nivelActual);

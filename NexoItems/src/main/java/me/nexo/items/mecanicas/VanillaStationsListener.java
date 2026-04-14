@@ -1,5 +1,7 @@
 package me.nexo.items.mecanicas;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.items.NexoItems;
 import org.bukkit.NamespacedKey;
 import org.bukkit.event.EventHandler;
@@ -10,17 +12,19 @@ import org.bukkit.event.inventory.PrepareGrindstoneEvent;
 import org.bukkit.event.inventory.PrepareSmithingEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 
+/**
+ * 🎒 NexoItems - Bloqueador de Estaciones Vanilla (Arquitectura Enterprise)
+ */
+@Singleton
 public class VanillaStationsListener implements Listener {
 
     private final NexoItems plugin;
-    private final String nexoNamespace;
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public VanillaStationsListener(NexoItems plugin) {
         this.plugin = plugin;
-        // Obtenemos el "apellido" de tu plugin en minúsculas (nexoitems o nexo)
-        this.nexoNamespace = plugin.getName().toLowerCase();
     }
 
     // 🔨 1. Bloquear Yunques Vanilla
@@ -49,18 +53,20 @@ public class VanillaStationsListener implements Listener {
     @EventHandler
     public void onEnchant(PrepareItemEnchantEvent event) {
         if (esItemCustom(event.getItem())) {
-            event.setCancelled(true);
+            event.setCancelled(true); // Cancela el encantamiento
         }
     }
 
-    // 🛡️ 4. Bloquear Mesa de Herrería (Smithing Table - Actualizaciones de Netherite)
+    // 🛡️ 4. Bloquear Mesa de Herrería (Smithing Table 1.20+)
     @EventHandler
     public void onSmithing(PrepareSmithingEvent event) {
-        ItemStack equipo = event.getInventory().getItem(1); // El slot central del equipo
-        ItemStack plantilla = event.getInventory().getItem(0);
-
-        if (esItemCustom(equipo) || esItemCustom(plantilla)) {
-            event.setResult(null);
+        // En 1.20+, hay 3 slots de entrada (Template, Base, Material)
+        for (int i = 0; i < 3; i++) {
+            ItemStack inputSlot = event.getInventory().getItem(i);
+            if (esItemCustom(inputSlot)) {
+                event.setResult(null); // Si tan solo UNO es de Nexo, bloqueamos la mesa
+                return;
+            }
         }
     }
 
@@ -72,8 +78,8 @@ public class VanillaStationsListener implements Listener {
 
         // Escaneamos todas las llaves (keys) de datos ocultos del ítem
         for (NamespacedKey key : meta.getPersistentDataContainer().getKeys()) {
-            // Si el ítem tiene un dato registrado por "nexoitems", "nexo" o "nexo_core", lo bloqueamos
-            if (key.getNamespace().contains("nexo")) {
+            // Si la llave del NBT pertenece a tu ecosistema, lo identificamos al instante
+            if (key.getNamespace().toLowerCase().contains("nexo")) {
                 return true;
             }
         }

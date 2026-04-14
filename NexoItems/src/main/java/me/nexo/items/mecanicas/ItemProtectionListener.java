@@ -1,5 +1,7 @@
 package me.nexo.items.mecanicas;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.items.NexoItems;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Item;
@@ -14,11 +16,18 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
+/**
+ * 🎒 NexoItems - Protector de Ítems en el suelo (Arquitectura Enterprise)
+ */
+@Singleton
 public class ItemProtectionListener implements Listener {
+
     private final NexoItems plugin;
     private final NamespacedKey ownerKey;
     private final NamespacedKey expireKey;
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public ItemProtectionListener(NexoItems plugin) {
         this.plugin = plugin;
         this.ownerKey = new NamespacedKey(plugin, "item_owner");
@@ -57,7 +66,7 @@ public class ItemProtectionListener implements Listener {
         }
     }
 
-    // 🛡️ 4. LA MAGIA: Bloquear que otros lo recojan
+    // 🛡️ 4. LA MAGIA: Bloquear que otros lo recojan (Anti-Ninja Looting)
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPickup(EntityPickupItemEvent event) {
         if (!(event.getEntity() instanceof Player player)) return;
@@ -83,7 +92,7 @@ public class ItemProtectionListener implements Listener {
         }
     }
 
-    // 🔧 Helper: Función que inyecta el dueño y el tiempo al ítem
+    // 🔧 Helper: Función que inyecta el dueño y el tiempo a la ENTIDAD ítem en el mundo
     private void protegerItem(Item item, Player owner) {
         item.getPersistentDataContainer().set(ownerKey, PersistentDataType.STRING, owner.getUniqueId().toString());
         // Protegemos el ítem por 30 segundos (30,000 milisegundos)

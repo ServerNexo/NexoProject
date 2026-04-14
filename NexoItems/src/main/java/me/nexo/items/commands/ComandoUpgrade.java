@@ -8,14 +8,11 @@ import me.nexo.items.estaciones.UpgradeMenu;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import revxrsal.commands.annotation.Command;
-import revxrsal.commands.annotation.Default;
-import revxrsal.commands.bukkit.annotation.CommandPermission;
 
 /**
  * 🎒 NexoItems - Comando de Forja/Upgrade (Arquitectura Enterprise)
  */
 @Singleton
-@Command({"forja", "upgrade", "upgradeitem"})
 public class ComandoUpgrade {
 
     private final NexoItems plugin;
@@ -32,7 +29,7 @@ public class ComandoUpgrade {
      * Lamp valida automáticamente que sea un Player.
      * Si quieres restringir el comando a un permiso, descomenta la línea de abajo.
      */
-    @Default
+    @Command({"forja", "upgrade", "upgradeitem"}) // 🌟 El comando va directamente aquí
     // @CommandPermission("nexo.items.forja.remota")
     public void openForja(Player player) {
 
