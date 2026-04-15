@@ -8,6 +8,7 @@ import me.nexo.core.menus.NexoMenu;
 import me.nexo.core.utils.NexoColor;
 import me.nexo.items.NexoItems;
 import me.nexo.items.managers.ItemManager;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -21,6 +22,10 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 🎒 NexoItems - Menú de Forja Cénit (Arquitectura Enterprise)
+ * Nota: Los menús son instanciados por jugador, NO usan @Singleton.
+ */
 public class UpgradeMenu extends NexoMenu {
 
     private final NexoItems plugin;
@@ -32,7 +37,8 @@ public class UpgradeMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        return plugin.getConfigManager().getMessage("menus.upgrade.titulo");
+        // 🌟 FIX: Texto directo serializado para evitar errores de getMessage
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#ff8c00⬆ <bold>FORJA CÉNIT</bold>"));
     }
 
     @Override
@@ -51,12 +57,22 @@ public class UpgradeMenu extends NexoMenu {
         ItemStack btn = new ItemStack(Material.NETHER_STAR);
         ItemMeta btnMeta = btn.getItemMeta();
         if (btnMeta != null) {
-            btnMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.upgrade.boton.titulo")));
+            // 🌟 FIX: Título con Component directo
+            btnMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff✨ <bold>EVOLUCIONAR ACTIVO</bold>"));
 
-            List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.upgrade.boton.lore");
-            btnMeta.lore(loreConfig.stream()
-                    .map(line -> CrossplayUtils.parseCrossplay(player, line))
-                    .collect(Collectors.toList()));
+            // 🌟 FIX: Lore seguro compatible con String y Bedrock
+            List<String> loreRaw = List.of(
+                    "&#E6CCFFAsciende tu activo al siguiente",
+                    "&#E6CCFFnivel de maestría (Cénit).",
+                    "",
+                    "&#00f5ff► Clic para procesar"
+            );
+
+            List<String> loreFormateado = loreRaw.stream()
+                    .map(line -> LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(line)))
+                    .collect(Collectors.toList());
+
+            btnMeta.setLore(loreFormateado);
 
             btnMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "evolve_item");
             btn.setItemMeta(btnMeta);
@@ -82,18 +98,17 @@ public class UpgradeMenu extends NexoMenu {
     private void procesarEvolucion() {
         ItemStack item = inventory.getItem(13);
         if (item == null || !item.hasItemMeta()) {
-            player.sendMessage(NexoColor.parse("&#FF5555[!] Inserta un activo válido en la bahía de procesamiento."));
+            CrossplayUtils.sendMessage(player, "&#FF5555[!] Inserta un activo válido en la bahía de procesamiento.");
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             return;
         }
 
         ItemMeta meta = item.getItemMeta();
-        // Usando las llaves estáticas de ItemManager que tenías en tu Listener original
         boolean isWeapon = meta.getPersistentDataContainer().has(ItemManager.llaveWeaponId, PersistentDataType.STRING);
         boolean isTool = meta.getPersistentDataContainer().has(ItemManager.llaveHerramientaId, PersistentDataType.STRING);
 
         if (!isWeapon && !isTool) {
-            player.sendMessage(NexoColor.parse("&#FF5555[!] Este activo no soporta la Evolución Cénit."));
+            CrossplayUtils.sendMessage(player, "&#FF5555[!] Este activo no soporta la Evolución Cénit.");
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
             return;
         }
@@ -102,7 +117,7 @@ public class UpgradeMenu extends NexoMenu {
 
         // 🌟 LÍMITE ABSOLUTO DEL JUEGO
         if (nivelActual >= 60) {
-            player.sendMessage(NexoColor.parse("&#FFAA00[!] El activo ya ha alcanzado su Cénit (Nivel Máximo 60)."));
+            CrossplayUtils.sendMessage(player, "&#FFAA00[!] El activo ya ha alcanzado su Cénit (Nivel Máximo 60).");
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 1f);
             return;
         }
@@ -131,7 +146,7 @@ public class UpgradeMenu extends NexoMenu {
         // Bloquear la evolución si el ítem superaría la maestría del jugador
         if (targetNivel > playerSkillLevel) {
             player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1f, 1f);
-            player.sendMessage(NexoColor.parse("&#FF5555[!] Nivel de Operario Insuficiente. Requiere Nivel " + targetNivel + " en " + skillName + "."));
+            CrossplayUtils.sendMessage(player, "&#FF5555[!] Nivel de Operario Insuficiente. Requiere Nivel " + targetNivel + " en " + skillName + ".");
             return;
         }
 
@@ -143,7 +158,7 @@ public class UpgradeMenu extends NexoMenu {
         ItemManager.sincronizarItemAsync(item);
 
         player.playSound(player.getLocation(), Sound.BLOCK_ANVIL_USE, 1f, 1.5f);
-        player.sendMessage(NexoColor.parse("&#55FF55[✓] Evolución completada. El activo ha ascendido al Nivel " + targetNivel + "."));
+        CrossplayUtils.sendMessage(player, "&#55FF55[✓] Evolución completada. El activo ha ascendido al Nivel " + targetNivel + ".");
     }
 
     // 🛡️ SALVAVIDAS: Si el jugador cierra el menú con el ítem adentro, se lo devolvemos

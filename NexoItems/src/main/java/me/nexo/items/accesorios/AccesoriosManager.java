@@ -1,5 +1,7 @@
 package me.nexo.items.accesorios;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
@@ -19,6 +21,10 @@ import java.sql.ResultSet;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 🎒 NexoItems - Manager Central de Accesorios (Arquitectura Enterprise)
+ */
+@Singleton
 public class AccesoriosManager {
 
     private final NexoItems plugin;
@@ -27,6 +33,8 @@ public class AccesoriosManager {
 
     public final Set<UUID> usuariosCorazonNexo = new HashSet<>();
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public AccesoriosManager(NexoItems plugin) {
         this.plugin = plugin;
         this.llaveAccesorio = new NamespacedKey(plugin, "nexo_accesorio_id");
@@ -70,8 +78,10 @@ public class AccesoriosManager {
                 CrossplayUtils.sendMessage(p, "&#8b0000[!] Error crítico: Enlace caído con la Base de Datos Central.");
                 return;
             }
+
             String sql = "SELECT contenido FROM nexo_storage WHERE uuid = ? AND tipo = 'accesorios'";
             String base64Data = null;
+
             try (Connection conn = nexoCore.getDatabaseManager().getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, p.getUniqueId().toString());
@@ -80,23 +90,41 @@ public class AccesoriosManager {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
             String finalData = base64Data;
+
             Bukkit.getScheduler().runTask(plugin, () -> {
                 int slotsDesbloqueados = getSlotsDesbloqueados(p);
                 int filas = Math.max(1, (int) Math.ceil(slotsDesbloqueados / 9.0));
-                Inventory inv = Bukkit.createInventory(null, filas * 9, CrossplayUtils.parseCrossplay(p, plugin.getConfigManager().getMessage("menus.accesorios.titulo")));
+                int size = filas * 9;
+
+                // 🌟 FIX: Creación del menú usando el Holder Seguro del Listener
+                net.kyori.adventure.text.Component tituloFormat = CrossplayUtils.parseCrossplay(p, "&#ff00ff💍 <bold>BÓVEDA DE ACCESORIOS</bold>");
+                AccesoriosListener.AccesoriosMenuHolder holder = new AccesoriosListener.AccesoriosMenuHolder(tituloFormat, size);
+                Inventory inv = holder.getInventory();
+
                 if (finalData != null && !finalData.isEmpty()) {
                     inv.setContents(Base64Util.itemStackArrayFromBase64(finalData));
                 }
+
+                // 🌟 FIX: Textos de los Slots Bloqueados directamente en código
                 ItemStack cristalBloqueado = new ItemStack(Material.RED_STAINED_GLASS_PANE);
                 ItemMeta meta = cristalBloqueado.getItemMeta();
-                meta.displayName(CrossplayUtils.parseCrossplay(p, plugin.getConfigManager().getMessage("menus.accesorios.slot-bloqueado.titulo")));
-                List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.accesorios.slot-bloqueado.lore");
-                meta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(p, line)).collect(Collectors.toList()));
+                meta.displayName(CrossplayUtils.parseCrossplay(p, "&#FF5555🔒 <bold>RANURA BLOQUEADA</bold>"));
+
+                List<String> loreRaw = Arrays.asList(
+                        "&#E6CCFFDesbloquea esta ranura subiendo",
+                        "&#E6CCFFtu nivel de prestigio o con",
+                        "&#E6CCFFun expansor de bóveda."
+                );
+                meta.lore(loreRaw.stream().map(line -> CrossplayUtils.parseCrossplay(p, line)).collect(Collectors.toList()));
                 cristalBloqueado.setItemMeta(meta);
+
+                // Rellenar lo bloqueado
                 for (int i = slotsDesbloqueados; i < inv.getSize(); i++) {
                     inv.setItem(i, cristalBloqueado);
                 }
+
                 p.openInventory(inv);
                 p.playSound(p.getLocation(), org.bukkit.Sound.ITEM_ARMOR_EQUIP_GOLD, 1f, 1f);
             });
@@ -104,10 +132,12 @@ public class AccesoriosManager {
     }
 
     public int getSlotsDesbloqueados(Player p) {
+        // Todo: Conectar a tu sistema de rangos/niveles (Por ahora da 12)
         return 12;
     }
 
     public boolean cumpleRequisito(Player p, AccessoryDTO dto) {
+        // Todo: Verificaciones extra si fueran necesarias
         return true;
     }
 
@@ -116,6 +146,7 @@ public class AccesoriosManager {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
             if (nexoCore == null || nexoCore.getDatabaseManager() == null) return;
+
             String sql = "INSERT INTO nexo_storage (uuid, tipo, contenido) VALUES (?, 'accesorios', ?) " +
                     "ON CONFLICT (uuid, tipo) DO UPDATE SET contenido = EXCLUDED.contenido;";
             try (Connection conn = nexoCore.getDatabaseManager().getConnection();
@@ -128,16 +159,20 @@ public class AccesoriosManager {
             }
         });
 
+        // 🛡️ LÓGICA DE PODER Y FAMILIAS
         Map<AccessoryDTO.Familia, AccessoryDTO> accesoriosActivos = new EnumMap<>(AccessoryDTO.Familia.class);
         for (ItemStack item : inv.getContents()) {
             if (item == null || item.getType() == Material.RED_STAINED_GLASS_PANE || !item.hasItemMeta()) continue;
             var pdc = item.getItemMeta().getPersistentDataContainer();
+
             if (pdc.has(llaveAccesorio, PersistentDataType.STRING)) {
                 String id = pdc.get(llaveAccesorio, PersistentDataType.STRING);
                 AccessoryDTO dto = registro.get(id);
+
                 if (dto != null && cumpleRequisito(p, dto)) {
                     if (accesoriosActivos.containsKey(dto.family())) {
                         AccessoryDTO existente = accesoriosActivos.get(dto.family());
+                        // Solo equipamos el de mayor poder dentro de la misma familia
                         if (dto.rarity().getPoderNexo() > existente.rarity().getPoderNexo()) {
                             accesoriosActivos.put(dto.family(), dto);
                         }
@@ -148,16 +183,21 @@ public class AccesoriosManager {
             }
         }
 
+        // 📊 SUMA DE ESTADÍSTICAS
         Map<AccessoryDTO.StatType, Double> statsTotales = new EnumMap<>(AccessoryDTO.StatType.class);
         int poderTotal = 0;
         boolean corazon = false;
+
         for (AccessoryDTO activo : accesoriosActivos.values()) {
             poderTotal += activo.rarity().getPoderNexo();
             statsTotales.put(activo.statType(), statsTotales.getOrDefault(activo.statType(), 0.0) + activo.statValue());
             if (activo.id().equals("corazon_nexo")) corazon = true;
         }
+
         if (corazon) usuariosCorazonNexo.add(p.getUniqueId());
         else usuariosCorazonNexo.remove(p.getUniqueId());
+
+        // Lanzamos el evento para que el Listener asigne los Stats
         AccessoryStatsUpdateEvent evento = new AccessoryStatsUpdateEvent(p, statsTotales, poderTotal, corazon);
         Bukkit.getPluginManager().callEvent(evento);
     }

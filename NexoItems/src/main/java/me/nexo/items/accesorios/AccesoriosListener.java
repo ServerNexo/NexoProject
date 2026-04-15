@@ -1,10 +1,12 @@
 package me.nexo.items.accesorios;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
@@ -14,16 +16,23 @@ import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityResurrectEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 🎒 NexoItems - Controlador de Accesorios y Stats (Arquitectura Enterprise)
+ */
+@Singleton
 public class AccesoriosListener implements Listener {
 
     private final NexoItems plugin;
@@ -36,6 +45,18 @@ public class AccesoriosListener implements Listener {
     private final NamespacedKey keyVelocidad;
     private final NamespacedKey keyArmadura;
 
+    // 🛡️ PATRÓN ENTERPRISE: InventoryHolder Personalizado
+    public static class AccesoriosMenuHolder implements InventoryHolder {
+        private final Inventory inventory;
+        public AccesoriosMenuHolder(net.kyori.adventure.text.Component title, int size) {
+            this.inventory = Bukkit.createInventory(this, size, title);
+        }
+        @Override
+        public Inventory getInventory() { return inventory; }
+    }
+
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public AccesoriosListener(NexoItems plugin, AccesoriosManager manager) {
         this.plugin = plugin;
         this.manager = manager;
@@ -45,40 +66,43 @@ public class AccesoriosListener implements Listener {
         this.keyArmadura = new NamespacedKey(plugin, "accesorio_armadura");
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
     public void alCerrarBolsa(InventoryCloseEvent event) {
-        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.accesorios.titulo").replaceAll("<[^>]*>", ""))) {
-            manager.procesarYGuardarBolsa((Player) event.getPlayer(), event.getInventory());
-            ((Player) event.getPlayer()).playSound(event.getPlayer().getLocation(), Sound.ITEM_ARMOR_EQUIP_LEATHER, 1f, 1.2f);
-        }
+        // 🛡️ Verificación Inhackeable
+        if (!(event.getInventory().getHolder() instanceof AccesoriosMenuHolder)) return;
+
+        manager.procesarYGuardarBolsa((Player) event.getPlayer(), event.getInventory());
+        ((Player) event.getPlayer()).playSound(event.getPlayer().getLocation(), Sound.ITEM_ARMOR_EQUIP_LEATHER, 1f, 1.2f);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
     public void alHacerClic(InventoryClickEvent event) {
-        String tituloLimpio = PlainTextComponentSerializer.plainText().serialize(event.getView().title());
-        if (tituloLimpio.equals(plugin.getConfigManager().getMessage("menus.accesorios.titulo").replaceAll("<[^>]*>", ""))) {
-            ItemStack currentItem = event.getCurrentItem();
+        // 🛡️ Verificación Inhackeable
+        if (!(event.getInventory().getHolder() instanceof AccesoriosMenuHolder)) return;
 
-            if (currentItem != null && currentItem.getType() == Material.RED_STAINED_GLASS_PANE) {
-                event.setCancelled(true);
-                return;
-            }
+        ItemStack currentItem = event.getCurrentItem();
 
-            if (event.getClick().name().contains("NUMBER_KEY")) {
-                int slotDestino = event.getRawSlot();
-                if (slotDestino < event.getView().getTopInventory().getSize()) {
-                    ItemStack slotItem = event.getView().getTopInventory().getItem(slotDestino);
-                    if (slotItem != null && slotItem.getType() == Material.RED_STAINED_GLASS_PANE) {
-                        event.setCancelled(true);
-                        return;
-                    }
+        // Evita mover los paneles de cristal rojo (los slots bloqueados)
+        if (currentItem != null && currentItem.getType() == Material.RED_STAINED_GLASS_PANE) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Evita mover ítems hacia los cristales rojos usando los números del teclado (1-9)
+        if (event.getClick().name().contains("NUMBER_KEY")) {
+            int slotDestino = event.getRawSlot();
+            if (slotDestino < event.getView().getTopInventory().getSize()) {
+                ItemStack slotItem = event.getView().getTopInventory().getItem(slotDestino);
+                if (slotItem != null && slotItem.getType() == Material.RED_STAINED_GLASS_PANE) {
+                    event.setCancelled(true);
+                    return;
                 }
             }
+        }
 
-            if (event.isShiftClick() && currentItem != null && currentItem.getType() == Material.RED_STAINED_GLASS_PANE) {
-                event.setCancelled(true);
-            }
+        // Evita Shift-Click a los cristales
+        if (event.isShiftClick() && currentItem != null && currentItem.getType() == Material.RED_STAINED_GLASS_PANE) {
+            event.setCancelled(true);
         }
     }
 
@@ -98,46 +122,51 @@ public class AccesoriosListener implements Listener {
             user.setEnergiaExtraAccesorios(energiaExtra);
         }
 
-        CrossplayUtils.sendMessage(p, plugin.getConfigManager().getMessage("eventos.accesorios.stats-actualizadas").replace("%power%", String.valueOf(event.getNexoPower())));
+        // 🌟 FIX: Mensaje Directo
+        CrossplayUtils.sendMessage(p, "&#55FF55[✓] <bold>MATRIZ RECALIBRADA</bold> | Poder Nexo: &#00E5FF" + event.getNexoPower());
     }
 
     private void aplicarAtributo(Player p, Attribute atributo, NamespacedKey key, double valor) {
         AttributeInstance instancia = p.getAttribute(atributo);
         if (instancia == null) return;
 
+        // Limpiamos los modificadores anteriores
         for (AttributeModifier mod : instancia.getModifiers()) {
             if (mod.getKey().equals(key)) {
                 instancia.removeModifier(mod);
             }
         }
 
+        // Aplicamos el nuevo
         if (valor > 0) {
             AttributeModifier modificador = new AttributeModifier(key, valor, AttributeModifier.Operation.ADD_NUMBER);
             instancia.addModifier(modificador);
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void alMorir(EntityResurrectEvent event) {
         if (event.getEntity() instanceof Player p) {
             if (event.isCancelled() && manager.usuariosCorazonNexo.contains(p.getUniqueId())) {
 
                 long ahora = System.currentTimeMillis();
-                long cooldownMilis = 3600 * 1000L;
+                long cooldownMilis = 3600 * 1000L; // 1 Hora
 
                 if (!cooldownCorazon.containsKey(p.getUniqueId()) || (ahora - cooldownCorazon.get(p.getUniqueId())) > cooldownMilis) {
 
-                    event.setCancelled(false);
+                    event.setCancelled(false); // Revivimos al jugador
                     cooldownCorazon.put(p.getUniqueId(), ahora);
 
-                    p.setHealth(p.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue() * 0.5);
+                    AttributeInstance healthAttr = p.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                    if (healthAttr != null) {
+                        p.setHealth(healthAttr.getValue() * 0.5); // Cura el 50%
+                    }
+
                     p.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, p.getLocation(), 150);
                     p.playSound(p.getLocation(), Sound.ITEM_TOTEM_USE, 1f, 0.5f);
 
-                    CrossplayUtils.sendTitle(p,
-                            plugin.getConfigManager().getMessage("eventos.accesorios.milagro.titulo"),
-                            plugin.getConfigManager().getMessage("eventos.accesorios.milagro.subtitulo")
-                    );
+                    // 🌟 FIX: Mensaje Directo
+                    CrossplayUtils.sendTitle(p, "&#FF5555¡MILAGRO DEL NEXO!", "&#E6CCFFEl Corazón del Nexo ha evitado tu muerte.");
                 }
             }
         }

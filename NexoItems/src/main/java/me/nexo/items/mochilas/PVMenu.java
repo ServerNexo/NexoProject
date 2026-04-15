@@ -2,7 +2,9 @@ package me.nexo.items.mochilas;
 
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.items.NexoItems;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -16,6 +18,10 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 🎒 NexoItems - Menú de Bóvedas del Vacío / Player Vaults (Arquitectura Enterprise)
+ * Nota: Los menús son instanciados por jugador, NO usan @Singleton.
+ */
 public class PVMenu extends NexoMenu {
 
     private final NexoItems plugin;
@@ -27,7 +33,8 @@ public class PVMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        return plugin.getConfigManager().getMessage("menus.pv.titulo");
+        // 🌟 FIX: Título convertido a String seguro para el inventario
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#9933FF🧳 <bold>BÓVEDAS DEL VACÍO</bold>"));
     }
 
     @Override
@@ -47,16 +54,28 @@ public class PVMenu extends NexoMenu {
 
             if (meta != null) {
                 if (tienePerm) {
-                    meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.pv.mochila.desbloqueada.titulo").replace("%id%", String.valueOf(i))));
-                    List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.pv.mochila.desbloqueada.lore");
-                    meta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
+                    meta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff✨ <bold>BÓVEDA #" + i + "</bold>"));
+
+                    List<String> loreRaw = List.of(
+                            "&#E6CCFFHaz clic para abrir tu",
+                            "&#E6CCFFalmacenamiento dimensional.",
+                            "",
+                            "&#55FF55► Clic para acceder"
+                    );
+                    meta.lore(loreRaw.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
 
                     // 🌟 PDC para saber a qué mochila le dio clic
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "pv_action"), PersistentDataType.INTEGER, i);
                 } else {
-                    meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.pv.mochila.bloqueada.titulo").replace("%id%", String.valueOf(i))));
-                    List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.pv.mochila.bloqueada.lore");
-                    meta.lore(loreConfig.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
+                    meta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF5555🔒 <bold>BÓVEDA #" + i + " BLOQUEADA</bold>"));
+
+                    List<String> loreRaw = List.of(
+                            "&#E6CCFFNo tienes acceso a esta",
+                            "&#E6CCFFbóveda todavía.",
+                            "",
+                            "&#FF3366[!] Requiere rango o expansión."
+                    );
+                    meta.lore(loreRaw.stream().map(line -> CrossplayUtils.parseCrossplay(player, line)).collect(Collectors.toList()));
                 }
                 pvItem.setItemMeta(meta);
             }
@@ -69,7 +88,7 @@ public class PVMenu extends NexoMenu {
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta backMeta = back.getItemMeta();
         if (backMeta != null) {
-            backMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.pv.boton-volver")));
+            backMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF3366⬅ <bold>VOLVER AL HUB</bold>"));
             backMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "hub_action"), PersistentDataType.STRING, "open_hub");
             back.setItemMeta(backMeta);
         }
