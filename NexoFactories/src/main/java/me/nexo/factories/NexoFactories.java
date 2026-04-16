@@ -1,15 +1,24 @@
 package me.nexo.factories;
 
+import com.google.inject.Guice;
+import com.google.inject.Injector;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.factories.commands.ComandoFactory;
 import me.nexo.factories.commands.ComandoFactoryTabCompleter;
+import me.nexo.factories.config.ConfigManager;
+import me.nexo.factories.di.FactoriesModule;
 import me.nexo.factories.listeners.FactoryInteractListener;
 import me.nexo.factories.managers.BlueprintManager;
 import me.nexo.factories.managers.FactoryManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/**
+ * 🏭 NexoFactories - Main Plugin Class (Arquitectura Enterprise)
+ */
 public class NexoFactories extends JavaPlugin {
 
+    private Injector injector;
+    private ConfigManager configManager;
     private FactoryManager factoryManager;
     private BlueprintManager blueprintManager;
 
@@ -20,14 +29,20 @@ public class NexoFactories extends JavaPlugin {
 
         if (getServer().getPluginManager().getPlugin("NexoCore") == null ||
                 getServer().getPluginManager().getPlugin("NexoProtections") == null) {
-            getLogger().severe("❌ Error: Faltan NexoCore o NexoProtections.");
+            getLogger().severe("❌ Error: Faltan dependencias (NexoCore o NexoProtections).");
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
 
-        this.factoryManager = new FactoryManager(this);
-        this.blueprintManager = new BlueprintManager(this);
+        // 🌟 INICIALIZACIÓN DE GUICE (El corazón de la Arquitectura)
+        this.injector = Guice.createInjector(new FactoriesModule(this));
 
+        // 🌟 OBTENEMOS LAS INSTANCIAS DESDE GUICE
+        this.configManager = injector.getInstance(ConfigManager.class);
+        this.factoryManager = injector.getInstance(FactoryManager.class);
+        this.blueprintManager = injector.getInstance(BlueprintManager.class);
+
+        // Registramos en el API central
         NexoAPI.getServices().register(FactoryManager.class, this.factoryManager);
 
         factoryManager.loadFactoriesAsync().thenRun(() -> {
@@ -35,13 +50,13 @@ public class NexoFactories extends JavaPlugin {
             getServer().getScheduler().runTaskTimer(this, factoryManager::tickFactories, 20L * 60, 20L * 60);
         });
 
+        // 🌟 Registramos Eventos usando las instancias inyectadas
         getServer().getPluginManager().registerEvents(blueprintManager, this);
+        getServer().getPluginManager().registerEvents(injector.getInstance(FactoryInteractListener.class), this);
 
-        // 🌟 CORRECCIÓN: Registramos SOLO el listener de interacción (sin pasarle el menú)
-        getServer().getPluginManager().registerEvents(new FactoryInteractListener(this), this);
-
+        // 🌟 Registramos Comandos usando la instancia inyectada
         if (getCommand("factory") != null) {
-            getCommand("factory").setExecutor(new ComandoFactory(this));
+            getCommand("factory").setExecutor(injector.getInstance(ComandoFactory.class));
             getCommand("factory").setTabCompleter(new ComandoFactoryTabCompleter());
         }
 
@@ -59,13 +74,7 @@ public class NexoFactories extends JavaPlugin {
         getLogger().info("NexoFactories ha sido deshabilitado.");
     }
 
-    public FactoryManager getFactoryManager() {
-        return factoryManager;
-    }
-
-    public BlueprintManager getBlueprintManager() {
-        return blueprintManager;
-    }
-
-    // 🌟 Los Getters de los menús viejos han sido eliminados por completo
+    public FactoryManager getFactoryManager() { return factoryManager; }
+    public BlueprintManager getBlueprintManager() { return blueprintManager; }
+    public ConfigManager getConfigManager() { return configManager; }
 }

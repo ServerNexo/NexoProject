@@ -1,5 +1,7 @@
 package me.nexo.economy.blackmarket;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
 import me.nexo.economy.NexoEconomy;
@@ -14,6 +16,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * 💰 NexoEconomy - Manager del Mercado Negro (Arquitectura Enterprise)
+ */
+@Singleton
 public class BlackMarketManager {
 
     private final NexoEconomy plugin;
@@ -21,12 +27,15 @@ public class BlackMarketManager {
     private final List<BlackMarketItem> currentStock = new ArrayList<>();
     private final List<BlackMarketItem> possibleLootPool = new ArrayList<>();
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public BlackMarketManager(NexoEconomy plugin) {
         this.plugin = plugin;
         cargarLootPool();
     }
 
     private void cargarLootPool() {
+        // Pedimos amablemente los ítems al módulo de NexoItems si está cargado
         NexoAPI.getServices().get(ItemManager.class).ifPresent(itemManager -> {
             possibleLootPool.add(new BlackMarketItem("hoja_vacio", itemManager.crearHojaVacio(), new BigDecimal("1500"), NexoAccount.Currency.MANA));
 
@@ -49,6 +58,7 @@ public class BlackMarketManager {
             } catch (Exception ignored) {}
         });
 
+        // Fallback por defecto siempre disponible
         possibleLootPool.add(new BlackMarketItem(
                 "forbidden_apple",
                 crearItemMagico(Material.ENCHANTED_GOLDEN_APPLE, "&#8b0000<bold>🍎 Manzana Prohibida</bold>", "&#E6CCFFFruta del inframundo."),
@@ -68,10 +78,11 @@ public class BlackMarketManager {
             currentStock.add(shuffled.get(i));
         }
 
-        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.divisor"));
-        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-llega"));
-        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-llega-desc"));
-        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.divisor"));
+        // 🌟 FIX: Mensajes directos con diseño sin leer la config en cada evento
+        CrossplayUtils.broadcastMessage("&#555555--------------------------------");
+        CrossplayUtils.broadcastMessage("&#8b0000🌑 <bold>EL MERCADO NEGRO HA ABIERTO</bold>");
+        CrossplayUtils.broadcastMessage("&#E6CCFFEl mercader sombrío ha traído nuevos artefactos prohibidos.");
+        CrossplayUtils.broadcastMessage("&#555555--------------------------------");
     }
 
     public void closeMarket() {
@@ -79,10 +90,11 @@ public class BlackMarketManager {
         this.isMarketOpen = false;
         this.currentStock.clear();
 
-        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.divisor"));
-        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-se-va"));
-        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.mercader-se-va-desc"));
-        CrossplayUtils.broadcastMessage(plugin.getConfigManager().getMessage("eventos.blackmarket.divisor"));
+        // 🌟 FIX: Mensajes directos
+        CrossplayUtils.broadcastMessage("&#555555--------------------------------");
+        CrossplayUtils.broadcastMessage("&#8b0000🌑 <bold>EL MERCADO NEGRO SE HA DESVANECIDO</bold>");
+        CrossplayUtils.broadcastMessage("&#E6CCFFEl mercader regresó a las sombras.");
+        CrossplayUtils.broadcastMessage("&#555555--------------------------------");
     }
 
     public boolean isMarketOpen() { return isMarketOpen; }

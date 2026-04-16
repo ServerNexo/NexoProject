@@ -2,9 +2,11 @@ package me.nexo.economy.core;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.NexoCore;
+import me.nexo.economy.NexoEconomy;
 import org.bukkit.Bukkit;
-import org.bukkit.plugin.java.JavaPlugin;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -15,9 +17,13 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 💰 NexoEconomy - Manager Central de Economía (Arquitectura Enterprise)
+ */
+@Singleton
 public class EconomyManager {
 
-    private final JavaPlugin plugin;
+    private final NexoEconomy plugin;
     private final NexoCore core;
 
     // ⚡ Caché Ultrarrápido: Las cuentas expiran a los 30 min de inactividad
@@ -25,7 +31,9 @@ public class EconomyManager {
             .expireAfterAccess(30, TimeUnit.MINUTES)
             .build();
 
-    public EconomyManager(JavaPlugin plugin) {
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
+    public EconomyManager(NexoEconomy plugin) {
         this.plugin = plugin;
         this.core = NexoCore.getPlugin(NexoCore.class);
         crearTablaEconomia();
@@ -46,7 +54,7 @@ public class EconomyManager {
                  java.sql.Statement stmt = conn.createStatement()) {
                 stmt.execute(sql);
             } catch (Exception e) {
-                plugin.getLogger().severe("Error creando tabla de economía: " + e.getMessage());
+                plugin.getLogger().severe("❌ Error creando tabla de economía: " + e.getMessage());
             }
         });
     }
@@ -101,7 +109,7 @@ public class EconomyManager {
                     return newAcc;
                 }
             } catch (Exception e) {
-                plugin.getLogger().severe("Error cargando cuenta: " + e.getMessage());
+                plugin.getLogger().severe("❌ Error cargando cuenta: " + e.getMessage());
                 return null;
             }
         });
@@ -138,7 +146,7 @@ public class EconomyManager {
                     return true;
                 }
             } catch (Exception e) {
-                plugin.getLogger().severe("Fallo de Transacción Atómica: " + e.getMessage());
+                plugin.getLogger().severe("❌ Fallo de Transacción Atómica: " + e.getMessage());
             }
             return false;
         });
@@ -146,5 +154,31 @@ public class EconomyManager {
 
     public Optional<NexoAccount> getCachedAccount(UUID ownerId, NexoAccount.AccountType type) {
         return Optional.ofNullable(accountCache.getIfPresent(getCacheKey(ownerId, type)));
+    }
+
+    /**
+     * 🛡️ GUARDADO SÍNCRONO: Se ejecuta en onDisable() para prevenir rollbacks al apagar el servidor.
+     */
+    public void saveAllAccountsSync() {
+        if (accountCache.asMap().isEmpty()) return;
+
+        String sql = "UPDATE nexo_economy SET coins = ?, gems = ?, mana = ? WHERE id = CAST(? AS UUID)";
+        try (Connection conn = core.getDatabaseManager().getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            for (NexoAccount acc : accountCache.asMap().values()) {
+                ps.setBigDecimal(1, acc.getBalance(NexoAccount.Currency.COINS));
+                ps.setBigDecimal(2, acc.getBalance(NexoAccount.Currency.GEMS));
+                ps.setBigDecimal(3, acc.getBalance(NexoAccount.Currency.MANA));
+                ps.setString(4, acc.getOwnerId().toString());
+                ps.addBatch();
+            }
+
+            ps.executeBatch();
+            plugin.getLogger().info("✅ Se guardaron " + accountCache.estimatedSize() + " cuentas exitosamente.");
+
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error en guardado de emergencia de economía: " + e.getMessage());
+        }
     }
 }

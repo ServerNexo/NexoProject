@@ -2,7 +2,9 @@ package me.nexo.economy.bazar;
 
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -19,6 +21,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 💰 NexoEconomy - Menú de Navegación del Bazar (Arquitectura Enterprise)
+ * Nota: Los menús son instanciados por jugador, NO usan @Singleton.
+ */
 public class BazaarMenu extends NexoMenu {
 
     private final NexoEconomy plugin;
@@ -51,9 +57,10 @@ public class BazaarMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        if (type == MenuType.MAIN) return plugin.getConfigManager().getMessage("menus.bazar.principal.titulo");
-        if (type == MenuType.CATEGORY) return plugin.getConfigManager().getMessage("menus.bazar.categoria.titulo").replace("%category%", category);
-        return plugin.getConfigManager().getMessage("menus.bazar.opciones.titulo").replace("%item_id%", selectedItem);
+        // 🌟 FIX: Títulos Hexadecimales directos compatibles con Bedrock
+        if (type == MenuType.MAIN) return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(plugin.getConfigManager().getMessages().menus().bazarTitulo()));
+        if (type == MenuType.CATEGORY) return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FFAA00⚖ <bold>CATEGORÍA: " + category + "</bold>"));
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FFAA00⚖ <bold>MERCADO: " + selectedItem + "</bold>"));
     }
 
     @Override
@@ -68,7 +75,7 @@ public class BazaarMenu extends NexoMenu {
         if (type == MenuType.MAIN) {
             ItemStack mineria = new ItemStack(Material.DIAMOND_PICKAXE);
             ItemMeta meta = mineria.getItemMeta();
-            meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.principal.mineria")));
+            meta.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff⛏ <bold>MINERÍA</bold>"));
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_category");
             meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "category"), PersistentDataType.STRING, "MINING");
@@ -76,7 +83,7 @@ public class BazaarMenu extends NexoMenu {
 
             ItemStack farmeo = new ItemStack(Material.GOLDEN_HOE);
             ItemMeta meta2 = farmeo.getItemMeta();
-            meta2.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.principal.agricultura")));
+            meta2.displayName(CrossplayUtils.parseCrossplay(player, "&#55FF55🌾 <bold>AGRICULTURA</bold>"));
             meta2.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             meta2.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_category");
             meta2.getPersistentDataContainer().set(new NamespacedKey(plugin, "category"), PersistentDataType.STRING, "FARMING");
@@ -87,15 +94,15 @@ public class BazaarMenu extends NexoMenu {
 
             ItemStack buzon = new ItemStack(Material.CHEST);
             ItemMeta metaBuzon = buzon.getItemMeta();
-            metaBuzon.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.principal.reclamar-entregas.titulo")));
-            metaBuzon.lore(List.of(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.principal.reclamar-entregas.lore"))));
+            metaBuzon.displayName(CrossplayUtils.parseCrossplay(player, "&#FFAA00📦 <bold>RECLAMAR ENTREGAS</bold>"));
+            metaBuzon.lore(List.of(CrossplayUtils.parseCrossplay(player, "&#E6CCFFClic para recoger tus compras o ventas completadas.")));
             metaBuzon.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "claim_deliveries");
             buzon.setItemMeta(metaBuzon);
 
             ItemStack misOrdenes = new ItemStack(Material.PAPER);
             ItemMeta metaOrdenes = misOrdenes.getItemMeta();
-            metaOrdenes.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.principal.mis-ordenes.titulo")));
-            metaOrdenes.lore(List.of(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.principal.mis-ordenes.lore"))));
+            metaOrdenes.displayName(CrossplayUtils.parseCrossplay(player, "&#00f5ff📋 <bold>MIS ÓRDENES</bold>"));
+            metaOrdenes.lore(List.of(CrossplayUtils.parseCrossplay(player, "&#E6CCFFClic para ver o cancelar tus órdenes activas.")));
             metaOrdenes.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_my_orders");
             misOrdenes.setItemMeta(metaOrdenes);
 
@@ -105,7 +112,7 @@ public class BazaarMenu extends NexoMenu {
         } else if (type == MenuType.CATEGORY) {
             ItemStack loading = new ItemStack(Material.CLOCK);
             ItemMeta lMeta = loading.getItemMeta();
-            lMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.categoria.cargando")));
+            lMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#FFAA00⏳ <bold>CARGANDO MERCADO...</bold>"));
             loading.setItemMeta(lMeta);
             inventory.setItem(22, loading);
 
@@ -146,16 +153,16 @@ public class BazaarMenu extends NexoMenu {
 
             ItemStack buy = new ItemStack(Material.GREEN_TERRACOTTA);
             ItemMeta metaBuy = buy.getItemMeta();
-            metaBuy.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.opciones.comprar.titulo")));
-            metaBuy.lore(List.of(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.opciones.comprar.lore"))));
+            metaBuy.displayName(CrossplayUtils.parseCrossplay(player, "&#55FF55[+] <bold>CREAR ORDEN DE COMPRA</bold>"));
+            metaBuy.lore(List.of(CrossplayUtils.parseCrossplay(player, "&#E6CCFFOfrece monedas a cambio de ítems.")));
             metaBuy.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "create_buy_order");
             metaBuy.getPersistentDataContainer().set(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING, selectedItem);
             buy.setItemMeta(metaBuy);
 
             ItemStack sell = new ItemStack(Material.RED_TERRACOTTA);
             ItemMeta metaSell = sell.getItemMeta();
-            metaSell.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.opciones.vender.titulo")));
-            metaSell.lore(List.of(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.opciones.vender.lore"))));
+            metaSell.displayName(CrossplayUtils.parseCrossplay(player, "&#FF5555[-] <bold>CREAR ORDEN DE VENTA</bold>"));
+            metaSell.lore(List.of(CrossplayUtils.parseCrossplay(player, "&#E6CCFFOfrece ítems a cambio de monedas.")));
             metaSell.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "create_sell_order");
             metaSell.getPersistentDataContainer().set(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING, selectedItem);
             sell.setItemMeta(metaSell);
@@ -170,26 +177,36 @@ public class BazaarMenu extends NexoMenu {
 
     private ItemStack buildBazaarItem(Material mat) {
         String itemId = mat.name();
-        BigDecimal buyPrice = plugin.getBazaarManager().getMejorPrecioVenta(itemId);
-        BigDecimal sellPrice = plugin.getBazaarManager().getMejorPrecioCompra(itemId);
+        BigDecimal buyPrice = plugin.getBazaarManager().getMejorPrecioVenta(itemId); // Lo que le cuesta al comprador
+        BigDecimal sellPrice = plugin.getBazaarManager().getMejorPrecioCompra(itemId); // Lo que recibe el vendedor
         int buyOrders = plugin.getBazaarManager().getVolumenOrdenes(itemId, "BUY");
         int sellOrders = plugin.getBazaarManager().getVolumenOrdenes(itemId, "SELL");
 
         ItemStack item = new ItemStack(mat);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>" + mat.name() + "</bold>"));
+        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#FFAA00<bold>" + mat.name() + "</bold>"));
 
-        List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.bazar.categoria.item.lore");
-        List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
-                .map(line -> CrossplayUtils.parseCrossplay(player, line
-                        .replace("%buy_price%", buyPrice.compareTo(BigDecimal.ZERO) == 0 ? "N/A" : buyPrice.toString())
-                        .replace("%sell_price%", sellPrice.compareTo(BigDecimal.ZERO) == 0 ? "N/A" : sellPrice.toString())
-                        .replace("%margin%", buyPrice.compareTo(BigDecimal.ZERO) > 0 && sellPrice.compareTo(BigDecimal.ZERO) > 0 ? buyPrice.subtract(sellPrice).toString() : "N/A")
-                        .replace("%buy_orders%", String.valueOf(buyOrders))
-                        .replace("%sell_orders%", String.valueOf(sellOrders))))
-                .collect(Collectors.toList());
+        String bpStr = buyPrice.compareTo(BigDecimal.ZERO) == 0 ? "N/A" : buyPrice.toString();
+        String spStr = sellPrice.compareTo(BigDecimal.ZERO) == 0 ? "N/A" : sellPrice.toString();
+        String marginStr = (buyPrice.compareTo(BigDecimal.ZERO) > 0 && sellPrice.compareTo(BigDecimal.ZERO) > 0) ? buyPrice.subtract(sellPrice).toString() : "N/A";
 
-        meta.lore(lore);
+        // 🌟 FIX: Lore construido directamente en Componentes
+        List<String> loreRaw = List.of(
+                "&#E6CCFFMejor Oferta (Compra): &#55FF55" + bpStr + " ⛃",
+                "&#E6CCFFMejor Demanda (Venta): &#FF5555" + spStr + " ⛃",
+                "&#E6CCFFMargen: &#00f5ff" + marginStr + " ⛃",
+                "",
+                "&#E6CCFFVolumen de Compra: &#55FF55" + buyOrders,
+                "&#E6CCFFVolumen de Venta: &#FF5555" + sellOrders,
+                "",
+                "&#00f5ff► Clic para comerciar"
+        );
+
+        meta.lore(loreRaw.stream()
+                .map(line -> LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(line)))
+                .map(line -> CrossplayUtils.parseCrossplay(player, line))
+                .collect(Collectors.toList()));
+
         meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_options");
         meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING, itemId);
         item.setItemMeta(meta);
@@ -200,7 +217,7 @@ public class BazaarMenu extends NexoMenu {
     private void addBackButton(String target) {
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta meta = back.getItemMeta();
-        meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.boton-volver")));
+        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF3366⬅ <bold>VOLVER</bold>"));
         meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "back_" + target);
         back.setItemMeta(meta);
         inventory.setItem(getSlots() - 5, back);
@@ -256,7 +273,7 @@ public class BazaarMenu extends NexoMenu {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
             player.closeInventory();
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                // NOTA: Dejamos el viejo invocador de MyOrdersMenu activo por ahora
+                // Instancia el submenú personal
                 new BazaarMyOrdersMenu(player, plugin).open();
             }, 3L);
 
@@ -267,11 +284,14 @@ public class BazaarMenu extends NexoMenu {
             String orderType = action.equals("create_buy_order") ? "BUY" : "SELL";
             BazaarChatListener.activeSessions.put(player.getUniqueId(), new BazaarChatListener.OrderSession(itemId, orderType));
 
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.bazar.ayuda.divisor"));
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.chat.solicitar-precio").replace("%item_id%", itemId));
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.chat.cantidad-fijada").replace("%amount%", "CANTIDAD TOTAL"));
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("eventos.bazar.chat.valor-invalido"));
-            CrossplayUtils.sendMessage(player, plugin.getConfigManager().getMessage("comandos.bazar.ayuda.divisor"));
+            // 🌟 FIX: Textos directos
+            CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
+            CrossplayUtils.sendMessage(player, "&#FFAA00⚖ <bold>ORDEN DEL BAZAR: " + itemId + "</bold>");
+            CrossplayUtils.sendMessage(player, "&#E6CCFFEscribe en el chat la cantidad y el precio deseado.");
+            CrossplayUtils.sendMessage(player, "&#00f5ffFormato: &#E6CCFF<cantidad> <precio_por_unidad>");
+            CrossplayUtils.sendMessage(player, "&#E6CCFFEjemplo para comerciar 64 ítems a 10 Monedas c/u: &#55FF5564 10");
+            CrossplayUtils.sendMessage(player, "&#E6CCFFEscribe &#FF5555cancelar &#E6CCFFpara abortar la operación.");
+            CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
             player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
         }
     }

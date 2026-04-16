@@ -2,7 +2,9 @@ package me.nexo.economy.bazar;
 
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -13,9 +15,14 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * 💰 NexoEconomy - Menú de Órdenes Propias (Arquitectura Enterprise)
+ * Nota: Los menús son instanciados por jugador, NO usan @Singleton.
+ */
 public class BazaarMyOrdersMenu extends NexoMenu {
 
     private final NexoEconomy plugin;
@@ -27,7 +34,8 @@ public class BazaarMyOrdersMenu extends NexoMenu {
 
     @Override
     public String getMenuName() {
-        return plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.titulo");
+        // 🌟 FIX: Título serializado seguro para Bedrock
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#00f5ff📋 <bold>MIS ÓRDENES</bold>"));
     }
 
     @Override
@@ -41,7 +49,7 @@ public class BazaarMyOrdersMenu extends NexoMenu {
 
         ItemStack loading = new ItemStack(Material.CLOCK);
         ItemMeta lMeta = loading.getItemMeta();
-        lMeta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.cargando")));
+        lMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#FFAA00⏳ <bold>CARGANDO ÓRDENES...</bold>"));
         loading.setItemMeta(lMeta);
         inventory.setItem(22, loading);
 
@@ -49,10 +57,11 @@ public class BazaarMyOrdersMenu extends NexoMenu {
 
         // 🚀 Carga asíncrona segura a la base de datos
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            // Obtenemos el Manager mediante el Singleton de Guice (vía plugin si no lo inyectamos aquí)
             List<BazaarManager.ActiveOrderDTO> orders = plugin.getBazaarManager().getMisOrdenes(player.getUniqueId());
 
             Bukkit.getScheduler().runTask(plugin, () -> {
-                // 🌟 PROTECCIÓN ANTI-CRASH: Verificamos directamente el objeto inventario, adiós al PlainTextComponentSerializer
+                // 🌟 PROTECCIÓN ANTI-CRASH: Verificamos directamente la memoria del inventario
                 if (player.getOpenInventory().getTopInventory() != inventory) return;
 
                 inventory.setItem(22, new ItemStack(Material.AIR));
@@ -68,17 +77,23 @@ public class BazaarMyOrdersMenu extends NexoMenu {
                     ItemMeta meta = item.getItemMeta();
 
                     boolean isBuy = order.type.equals("BUY");
-                    String titulo = isBuy ? plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.orden.compra") : plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.orden.venta");
+                    String titulo = isBuy ? "&#55FF55[+] <bold>COMPRA: " + order.itemId + "</bold>" : "&#FF5555[-] <bold>VENTA: " + order.itemId + "</bold>";
                     meta.displayName(CrossplayUtils.parseCrossplay(player, titulo));
 
-                    List<String> loreConfig = plugin.getConfigManager().getMessages().getStringList("menus.bazar.mis-ordenes-menu.orden.lore");
-                    List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
-                            .map(line -> CrossplayUtils.parseCrossplay(player, line
-                                    .replace("%item_id%", order.itemId)
-                                    .replace("%amount%", String.valueOf(order.amount))
-                                    .replace("%price%", order.price.toString())))
-                            .collect(Collectors.toList());
-                    meta.lore(lore);
+                    // 🌟 FIX: Lore construido directamente en Componentes sin replace()
+                    BigDecimal total = order.price.multiply(new BigDecimal(order.amount));
+                    List<String> loreRaw = List.of(
+                            "&#E6CCFFCantidad: &#00f5ff" + order.amount,
+                            "&#E6CCFFPrecio Unitario: &#FFAA00" + order.price.toString() + " ⛃",
+                            "&#E6CCFFTotal: &#FFAA00" + total.toString() + " ⛃",
+                            "",
+                            "&#FF3366► Clic para cancelar orden"
+                    );
+
+                    meta.lore(loreRaw.stream()
+                            .map(line -> LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(line)))
+                            .map(line -> CrossplayUtils.parseCrossplay(player, line))
+                            .collect(Collectors.toList()));
 
                     // 🌟 MAGIA: Incrustamos la acción de cancelar en el ítem (PDC)
                     meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "cancel_order");
@@ -94,7 +109,7 @@ public class BazaarMyOrdersMenu extends NexoMenu {
                 if (orders.isEmpty()) {
                     ItemStack empty = new ItemStack(Material.BARRIER);
                     ItemMeta em = empty.getItemMeta();
-                    em.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.mis-ordenes-menu.vacio")));
+                    em.displayName(CrossplayUtils.parseCrossplay(player, "&#FF5555[!] No tienes órdenes activas en el Bazar."));
                     empty.setItemMeta(em);
                     inventory.setItem(22, empty);
                 }
@@ -107,7 +122,7 @@ public class BazaarMyOrdersMenu extends NexoMenu {
     private void addBackButton() {
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta meta = back.getItemMeta();
-        meta.displayName(CrossplayUtils.parseCrossplay(player, plugin.getConfigManager().getMessage("menus.bazar.boton-volver")));
+        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF3366⬅ <bold>VOLVER</bold>"));
         meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "back_main");
         back.setItemMeta(meta);
         inventory.setItem(getSlots() - 5, back);
