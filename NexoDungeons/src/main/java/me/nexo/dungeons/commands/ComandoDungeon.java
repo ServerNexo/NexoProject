@@ -1,6 +1,7 @@
 package me.nexo.dungeons.commands;
 
-import me.nexo.core.utils.NexoColor;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.dungeons.NexoDungeons;
 import me.nexo.dungeons.menu.DungeonMenu;
 import org.bukkit.command.Command;
@@ -9,24 +10,33 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * 🏰 NexoDungeons - Comando Principal (Arquitectura Enterprise)
+ */
+@Singleton
 public class ComandoDungeon implements CommandExecutor {
 
     private final NexoDungeons plugin;
-    private static final String ERR_NOT_PLAYER = "&#ff4b2b[!] Acceso denegado: El terminal requiere un operario humano.";
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public ComandoDungeon(NexoDungeons plugin) {
         this.plugin = plugin;
     }
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, String[] args) {
+
+        // 🌟 FIX: Protección de consola segura y sin variables estáticas innecesarias.
+        // La consola de Windows/Linux no procesa bien el Hexadecimal, se envía texto plano.
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(NexoColor.parse(ERR_NOT_PLAYER));
+            sender.sendMessage("[!] Acceso denegado: El terminal no puede abrir el menú holográfico de las mazmorras.");
             return true;
         }
 
-        // 🌟 CORRECCIÓN: Invertimos el orden para que encaje perfectamente con tu menú
+        // 🌟 ABRE EL MENÚ AL INSTANTE
         new DungeonMenu(player, plugin).open();
+
         return true;
     }
 }

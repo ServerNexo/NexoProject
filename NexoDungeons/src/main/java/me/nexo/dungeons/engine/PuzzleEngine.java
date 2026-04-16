@@ -4,9 +4,10 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.dungeons.NexoDungeons;
 import me.nexo.dungeons.data.EventRule;
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
 
 import java.io.File;
@@ -15,6 +16,10 @@ import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 🏰 NexoDungeons - Motor Matemático de Puzzles y Eventos (Arquitectura Enterprise)
+ */
+@Singleton
 public class PuzzleEngine {
 
     private final NexoDungeons plugin;
@@ -26,6 +31,8 @@ public class PuzzleEngine {
     // 📂 Plantillas de Instancias (Se guardan aquí y se inyectan al clonar la dungeon)
     private final Map<String, EventRule> instancedTemplates = new ConcurrentHashMap<>();
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public PuzzleEngine(NexoDungeons plugin) {
         this.plugin = plugin;
         crearArchivoEjemplo();
@@ -34,9 +41,11 @@ public class PuzzleEngine {
 
     private void crearArchivoEjemplo() {
         try {
+            if (!plugin.getDataFolder().exists()) {
+                plugin.getDataFolder().mkdirs();
+            }
             File file = new File(plugin.getDataFolder(), "events.json");
             if (!file.exists()) {
-                plugin.getDataFolder().mkdirs();
                 String jsonDefault = """
                 {
                   "eventos": [
@@ -54,11 +63,14 @@ public class PuzzleEngine {
                 """;
                 Files.writeString(file.toPath(), jsonDefault);
             }
-        } catch (Exception e) { e.printStackTrace(); }
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error creando archivo de ejemplo JSON: " + e.getMessage());
+        }
     }
 
     public void loadRulesAsync() {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        // 🌟 FIX: Lectura I/O Asíncrona mediante Virtual Threads (Cero lagazos en Java 21)
+        Thread.startVirtualThread(() -> {
             try {
                 File file = new File(plugin.getDataFolder(), "events.json");
                 if (!file.exists()) return;
@@ -84,20 +96,23 @@ public class PuzzleEngine {
                         cargados++;
                     }
                 }
-                plugin.getLogger().info("✅ PuzzleEngine: " + cargados + " eventos globales y " + instancedTemplates.size() + " plantillas de dungeon cargadas.");
+                plugin.getLogger().info("✅ [PUZZLE ENGINE] " + cargados + " eventos globales y " + instancedTemplates.size() + " plantillas de Dungeon cargadas en memoria RAM.");
             } catch (Exception e) {
                 plugin.getLogger().severe("❌ Error leyendo events.json: " + e.getMessage());
             }
         });
     }
 
-    // ⚡ MÉTODO CRÍTICO: Búsqueda O(1) para el Listener
+    // ⚡ MÉTODO CRÍTICO: Búsqueda O(1) para el DungeonListener
     public EventRule getRuleAt(Location loc) {
+        if (loc == null || loc.getWorld() == null) return null;
+
         String key = loc.getWorld().getName() + "_" + loc.getBlockX() + "_" + loc.getBlockY() + "_" + loc.getBlockZ();
         return activeRules.get(key);
     }
 
     // Cuando el DungeonGridManager pegue el schematic, llamará a esto para activar los puzzles
+    // (Offset Injection)
     public void injectInstancedRules(String worldName, int offsetX, int offsetY, int offsetZ) {
         for (EventRule template : instancedTemplates.values()) {
             int realX = template.trigger().loc().get("x") + offsetX;

@@ -1,31 +1,44 @@
 package me.nexo.dungeons.listeners;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.dungeons.NexoDungeons;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
+/**
+ * 🏰 NexoDungeons - Listener de Protección de Botín (Arquitectura Enterprise)
+ */
+@Singleton
 public class LootProtectionListener implements Listener {
 
     private final NexoDungeons plugin;
-    public static NamespacedKey ownerKey;
+    private final NamespacedKey ownerKey; // 🌟 FIX: Adiós al 'static'
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public LootProtectionListener(NexoDungeons plugin) {
         this.plugin = plugin;
-        // Creamos la llave NBT para marcar a los dueños
-        ownerKey = new NamespacedKey(plugin, "loot_owner");
+        // Creamos la llave PDC vinculada a la instancia
+        this.ownerKey = new NamespacedKey(plugin, "loot_owner");
     }
 
     // =========================================
     // 🎁 UTILIDAD: Soltar Botín Estilo Hypixel
     // =========================================
-    public static void dropProtectedItem(Location loc, ItemStack itemStack, Player owner) {
+    // 🌟 FIX: Ahora es un método de instancia. Las clases que necesiten soltar botín
+    // (como BossFightManager o LootDistributor) deben inyectar este Listener y llamarlo.
+    public void dropProtectedItem(Location loc, ItemStack itemStack, Player owner) {
         if (itemStack == null || itemStack.getType().isAir()) return;
 
         // Soltamos el ítem en el mundo
@@ -34,9 +47,10 @@ public class LootProtectionListener implements Listener {
         // Lo hacemos brillar para que se vea épico
         itemEntity.setGlowing(true);
 
-        // Le ponemos un holograma flotante
-        String rarezaColor = "§d§l"; // Puedes dinamizar esto según el ítem
-        itemEntity.setCustomName(rarezaColor + "Botín de " + owner.getName());
+        // 🌟 FIX: Holograma flotante con colores Hexadecimales seguros para Bedrock
+        String rarezaColor = "&#ff00ff<bold>"; // Puedes dinamizar esto luego si quieres
+        String customName = LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(rarezaColor + "Botín de " + owner.getName() + "</bold>"));
+        itemEntity.setCustomName(customName);
         itemEntity.setCustomNameVisible(true);
 
         // 🔒 Le inyectamos el UUID del dueño en sus datos persistentes
@@ -46,7 +60,7 @@ public class LootProtectionListener implements Listener {
     // =========================================
     // 🛡️ LISTENER: Bloquear a los ladrones
     // =========================================
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onPickup(EntityPickupItemEvent event) {
         // Solo nos importan los jugadores
         if (!(event.getEntity() instanceof Player player)) return;
@@ -60,8 +74,9 @@ public class LootProtectionListener implements Listener {
             // Si el UUID del jugador NO coincide con el UUID guardado en el ítem...
             if (!player.getUniqueId().toString().equals(ownerUUID)) {
                 event.setCancelled(true); // Bloqueamos la acción
-                // Opcional: Descomentar para avisarle que no es suyo, aunque puede causar spam de chat
-                // player.sendMessage("§c¡Ese botín le pertenece a otro jugador!");
+
+                // 🌟 FIX: Opcional, enviarle un Action Bar en lugar de un mensaje en el chat para no spamearlo.
+                player.sendActionBar(NexoColor.parse("&#FF5555[!] Ese botín le pertenece a otro jugador."));
             }
         }
     }

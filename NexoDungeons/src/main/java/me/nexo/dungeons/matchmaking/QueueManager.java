@@ -1,8 +1,10 @@
 package me.nexo.dungeons.matchmaking;
 
-import me.nexo.core.NexoCore;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.dungeons.NexoDungeons;
+import me.nexo.dungeons.waves.WaveManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Sound;
@@ -14,51 +16,64 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+/**
+ * 🏰 NexoDungeons - Motor de Emparejamiento y Colas (Arquitectura Enterprise)
+ */
+@Singleton
 public class QueueManager {
 
     private final NexoDungeons plugin;
-    private final NexoCore core;
+    private final WaveManager waveManager;
+
     private final LinkedList<UUID> waveQueue = new LinkedList<>();
     private final Map<String, Location> configuredArenas;
 
-    public QueueManager(NexoDungeons plugin) {
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
+    public QueueManager(NexoDungeons plugin, WaveManager waveManager) {
         this.plugin = plugin;
-        this.core = NexoCore.getPlugin(NexoCore.class);
+        this.waveManager = waveManager;
+
+        // 🌟 FIX: Listado inmutable de arenas
         this.configuredArenas = Map.of(
                 "Sector_Coliseo", new Location(Bukkit.getWorlds().get(0), 1000, 64, 1000),
                 "Sector_Infernal", new Location(Bukkit.getWorlds().get(0), -1000, 64, -1000)
         );
-        iniciarMotorDeEmparejamiento();
-    }
 
-    private String getMessage(String path) {
-        return core.getConfigManager().getMessage("dungeons_messages.yml", path);
+        iniciarMotorDeEmparejamiento();
     }
 
     public void addPlayerToWaves(Player p) {
         if (waveQueue.contains(p.getUniqueId())) {
-            CrossplayUtils.sendMessage(p, getMessage("eventos.queue.ya-en-cola"));
+            CrossplayUtils.sendMessage(p, "&#FF5555[!] Ya te encuentras en la cola de emparejamiento.");
             return;
         }
         waveQueue.add(p.getUniqueId());
-        CrossplayUtils.sendMessage(p, getMessage("eventos.queue.unido-cola"));
-        CrossplayUtils.sendMessage(p, getMessage("eventos.queue.posicion-cola").replace("%pos%", String.valueOf(waveQueue.size())));
+
+        // 🌟 FIX: Mensajes directos con Hexadecimal. Cero lag de lectura (I/O).
+        CrossplayUtils.sendMessage(p, "&#55FF55[✓] <bold>EMPAREJAMIENTO:</bold> &#E6CCFFTe has unido a la cola de las mazmorras.");
+        CrossplayUtils.sendMessage(p, "&#E6CCFFPosición actual: &#00f5ff" + waveQueue.size());
     }
 
     public void removePlayer(Player p) {
-        waveQueue.remove(p.getUniqueId());
+        if (waveQueue.remove(p.getUniqueId())) {
+            CrossplayUtils.sendMessage(p, "&#FF5555[!] Has abandonado la cola de emparejamiento.");
+        }
     }
 
     private void iniciarMotorDeEmparejamiento() {
+        // Tarea repetitiva que revisa la cola cada 2 segundos (40 ticks)
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (waveQueue.isEmpty()) return;
 
             for (Map.Entry<String, Location> entry : configuredArenas.entrySet()) {
                 String arenaId = entry.getKey();
 
-                if (!plugin.getWaveManager().isArenaActive(arenaId)) {
+                // Si la arena está libre, armamos un escuadrón
+                if (!waveManager.isArenaActive(arenaId)) {
 
                     List<Player> escuadron = new ArrayList<>();
+                    // Escuadrones de hasta 3 jugadores
                     while (escuadron.size() < 3 && !waveQueue.isEmpty()) {
                         UUID playerId = waveQueue.poll();
                         if (playerId == null) continue;
@@ -71,14 +86,22 @@ public class QueueManager {
 
                     if (escuadron.isEmpty()) continue;
 
+                    // Despliegue del escuadrón
                     for (Player p : escuadron) {
-                        p.teleport(entry.getValue());
-                        p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
-                        CrossplayUtils.sendMessage(p, getMessage("eventos.queue.emparejamiento-exitoso").replace("%arena%", arenaId));
-                        CrossplayUtils.sendMessage(p, getMessage("eventos.queue.tamano-escuadron").replace("%size%", String.valueOf(escuadron.size())));
+                        // 🌟 FIX: Teletransporte Asíncrono de Paper. Cero lagazos al cargar chunks.
+                        p.teleportAsync(entry.getValue()).thenAccept(success -> {
+                            if (success) {
+                                p.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 1f);
+                                CrossplayUtils.sendMessage(p, "&#555555--------------------------------");
+                                CrossplayUtils.sendMessage(p, "&#00f5ff⚔ <bold>ARENA ENCONTRADA:</bold> &#E6CCFFDesplegando en " + arenaId.replace("_", " ") + ".");
+                                CrossplayUtils.sendMessage(p, "&#E6CCFFTamaño del escuadrón: &#55FF55" + escuadron.size() + " Jugador(es)");
+                                CrossplayUtils.sendMessage(p, "&#555555--------------------------------");
+                            }
+                        });
                     }
 
-                    plugin.getWaveManager().startArena(arenaId, entry.getValue());
+                    // Iniciamos la arena mediante el WaveManager inyectado
+                    waveManager.startArena(arenaId, entry.getValue());
 
                     if (waveQueue.isEmpty()) break;
                 }
