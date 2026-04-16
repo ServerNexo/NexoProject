@@ -2,11 +2,12 @@ package me.nexo.factories.menu;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.factories.NexoFactories;
 import me.nexo.factories.core.ActiveFactory;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
@@ -16,11 +17,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-// 🌟 Heredamos del sistema base de menús
+/**
+ * 🏭 NexoFactories - Compilador Lógico de Máquinas (Arquitectura Enterprise)
+ * Nota: Los menús son instanciados por jugador, NO usan @Singleton.
+ */
 public class LogicMenu extends NexoMenu {
 
     private final NexoFactories plugin;
-    private final NexoCore core;
     private final ActiveFactory factory;
 
     private final List<String> conditions = Arrays.asList("NONE", "ENERGY_>_50", "ENERGY_>_20", "STORAGE_<_100", "STORAGE_<_500");
@@ -32,7 +35,6 @@ public class LogicMenu extends NexoMenu {
     public LogicMenu(Player player, NexoFactories plugin, ActiveFactory factory) {
         super(player);
         this.plugin = plugin;
-        this.core = NexoCore.getPlugin(NexoCore.class);
         this.factory = factory;
 
         // Cargamos la configuración anterior de esta máquina en específico
@@ -45,17 +47,10 @@ public class LogicMenu extends NexoMenu {
         } catch (Exception ignored) {}
     }
 
-    private String getMessage(String path) {
-        return core.getConfigManager().getMessage("factories_messages.yml", path);
-    }
-
-    private List<String> getMessageList(String path) {
-        return core.getConfigManager().getConfig("factories_messages.yml").getStringList(path);
-    }
-
     @Override
     public String getMenuName() {
-        return getMessage("menus.logic.titulo");
+        // 🌟 FIX: Título serializado compatible con Java y Bedrock
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FF5555⚙ <bold>COMPILADOR LÓGICO</bold>"));
     }
 
     @Override
@@ -70,15 +65,35 @@ public class LogicMenu extends NexoMenu {
         String cond = conditions.get(currentConditionIndex);
         String act = actions.get(currentActionIndex);
 
-        List<String> sensorLore = getMessageList("menus.logic.sensor.lore").stream()
-                .map(line -> line.replace("%condition%", cond)).collect(Collectors.toList());
-        setItem(11, Material.COMPARATOR, getMessage("menus.logic.sensor.titulo"), sensorLore);
+        // 🌟 FIX: Lores con Hexadecimal directo, sin getMessageList
+        List<String> sensorLoreRaw = List.of(
+                "&#E6CCFFSelecciona la condición que",
+                "&#E6CCFFdisparará el evento.",
+                "",
+                "&#E6CCFFActual: &#00f5ff" + cond,
+                "",
+                "&#00f5ff► Clic para alternar"
+        );
+        setItem(11, Material.COMPARATOR, "&#00f5ff📡 <bold>SENSOR DE ENTRADA</bold>",
+                sensorLoreRaw.stream().map(line -> LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(line))).collect(Collectors.toList()));
 
-        List<String> actionLore = getMessageList("menus.logic.operacion.lore").stream()
-                .map(line -> line.replace("%action%", act)).collect(Collectors.toList());
-        setItem(15, Material.REDSTONE_TORCH, getMessage("menus.logic.operacion.titulo"), actionLore);
+        List<String> actionLoreRaw = List.of(
+                "&#E6CCFFSelecciona lo que hará la máquina",
+                "&#E6CCFFal cumplirse la condición.",
+                "",
+                "&#E6CCFFActual: &#FFAA00" + act,
+                "",
+                "&#FFAA00► Clic para alternar"
+        );
+        setItem(15, Material.REDSTONE_TORCH, "&#FFAA00⚡ <bold>OPERACIÓN DE RESPUESTA</bold>",
+                actionLoreRaw.stream().map(line -> LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(line))).collect(Collectors.toList()));
 
-        setItem(22, Material.LIME_DYE, getMessage("menus.logic.guardar.titulo"), getMessageList("menus.logic.guardar.lore"));
+        List<String> saveLoreRaw = List.of(
+                "&#E6CCFFGuarda los cambios en el chip",
+                "&#E6CCFFlógico de esta maquinaria."
+        );
+        setItem(22, Material.LIME_DYE, "&#55FF55[✓] <bold>COMPILAR SCRIPT</bold>",
+                saveLoreRaw.stream().map(line -> LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(line))).collect(Collectors.toList()));
     }
 
     @Override
@@ -112,7 +127,9 @@ public class LogicMenu extends NexoMenu {
 
             player.closeInventory();
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 2f);
-            CrossplayUtils.sendMessage(player, getMessage("eventos.script-compilado"));
+
+            // 🌟 FIX: Mensaje Directo
+            CrossplayUtils.sendMessage(player, "&#55FF55[✓] Script lógico compilado e inyectado en el procesador de la máquina.");
         }
     }
 }

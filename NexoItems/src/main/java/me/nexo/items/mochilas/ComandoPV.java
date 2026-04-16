@@ -1,41 +1,46 @@
 package me.nexo.items.mochilas;
 
-import me.nexo.core.utils.NexoColor;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+@Singleton
 public class ComandoPV implements CommandExecutor {
 
     private final NexoItems plugin;
+    private final MochilaManager manager;
 
     private static final String ERR_NOT_PLAYER = "&#FF5555[!] El terminal requiere un operario humano.";
     private static final String ERR_USAGE = "&#FF5555[!] Uso: &#FFAA00/pv <número>";
     private static final String ERR_INVALID_NUM = "&#FF5555[!] Error: Debes ingresar un número válido.";
-    private static final String ERR_NO_PERM = "&#FF5555[!] Acceso denegado a la mochila compartimento #%num%.";
+    private static final String ERR_NO_PERM = "&#FF5555[!] Acceso denegado a la bóveda #%num%.";
 
-    public ComandoPV(NexoItems plugin) {
+    @Inject
+    public ComandoPV(NexoItems plugin, MochilaManager manager) {
         this.plugin = plugin;
+        this.manager = manager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player player)) {
-            sender.sendMessage(NexoColor.parse(ERR_NOT_PLAYER));
+            CrossplayUtils.sendMessage(null, ERR_NOT_PLAYER);
             return true;
         }
 
-        // 🌟 NUEVO: Si escribe solo "/pv" (0 argumentos), abrimos el Selector Visual Omega
+        // Si escribe solo "/pv", abrimos el Selector
         if (args.length == 0) {
-            new PVMenu(player, plugin).open(); // <--- ¡AQUÍ ESTÁ LA CORRECCIÓN!
+            new PVMenu(player, plugin).open();
             return true;
         }
 
-        // Si escribe más de 1 argumento (Ej: "/pv 1 2"), le da error de sintaxis
         if (args.length != 1) {
-            player.sendMessage(NexoColor.parse(ERR_USAGE));
+            CrossplayUtils.sendMessage(player, ERR_USAGE);
             return true;
         }
 
@@ -44,15 +49,15 @@ public class ComandoPV implements CommandExecutor {
 
             // Validación de Permisos
             if (!player.hasPermission("nexo.pv." + vaultNumber) && !player.hasPermission("nexo.pv.*")) {
-                player.sendMessage(NexoColor.parse(ERR_NO_PERM.replace("%num%", String.valueOf(vaultNumber))));
+                CrossplayUtils.sendMessage(player, ERR_NO_PERM.replace("%num%", String.valueOf(vaultNumber)));
                 return true;
             }
 
-            // Llama al método asíncrono que abre el inventario directamente
-            plugin.getMochilaManager().abrirMochila(player, vaultNumber);
+            // Llamada Inyectada y Segura
+            manager.abrirMochila(player, vaultNumber);
 
         } catch (NumberFormatException e) {
-            player.sendMessage(NexoColor.parse(ERR_INVALID_NUM));
+            CrossplayUtils.sendMessage(player, ERR_INVALID_NUM);
         }
 
         return true;

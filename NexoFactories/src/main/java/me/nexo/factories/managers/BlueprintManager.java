@@ -1,5 +1,7 @@
 package me.nexo.factories.managers;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
@@ -16,6 +18,7 @@ import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.util.Transformation;
@@ -27,6 +30,10 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 🏭 NexoFactories - Proyector de Hologramas de Construcción (Arquitectura Enterprise)
+ */
+@Singleton
 public class BlueprintManager implements Listener {
 
     private final NexoFactories plugin;
@@ -36,23 +43,24 @@ public class BlueprintManager implements Listener {
     private final Map<UUID, Location> activeCores = new ConcurrentHashMap<>();
     private final Map<UUID, StructureTemplate> activeTemplates = new ConcurrentHashMap<>();
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public BlueprintManager(NexoFactories plugin) {
         this.plugin = plugin;
         this.core = NexoCore.getPlugin(NexoCore.class);
     }
 
-    private String getMessage(String path) {
-        return core.getConfigManager().getMessage("factories_messages.yml", path);
-    }
-
     public void projectBlueprint(Player player, Location coreLocation, StructureTemplate template) {
         clearBlueprint(player);
         List<BlockDisplay> displays = new ArrayList<>();
+
         for (Map.Entry<Vector, Material> entry : template.getRequiredBlocks().entrySet()) {
             Vector rel = entry.getKey();
             Material mat = entry.getValue();
             Location displayLoc = coreLocation.clone().add(rel.getBlockX(), rel.getBlockY(), rel.getBlockZ());
+
             if (displayLoc.getBlock().getType() == mat) continue;
+
             BlockDisplay display = (BlockDisplay) coreLocation.getWorld().spawnEntity(displayLoc, EntityType.BLOCK_DISPLAY);
             display.setBlock(Bukkit.createBlockData(mat));
             display.setTransformation(new Transformation(
@@ -64,10 +72,13 @@ public class BlueprintManager implements Listener {
             display.setGlowing(true);
             displays.add(display);
         }
+
         activeHolograms.put(player.getUniqueId(), displays);
         activeCores.put(player.getUniqueId(), coreLocation);
         activeTemplates.put(player.getUniqueId(), template);
-        CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.plano-proyectado"));
+
+        // 🌟 FIX: Mensaje Directo
+        CrossplayUtils.sendMessage(player, "&#55FF55[✓] Plano holográfico proyectado. Comienza a colocar los bloques indicados.");
         player.playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 2f);
     }
 
@@ -82,7 +93,7 @@ public class BlueprintManager implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
         UUID id = player.getUniqueId();
@@ -96,6 +107,7 @@ public class BlueprintManager implements Listener {
         for (Map.Entry<Vector, Material> entry : template.getRequiredBlocks().entrySet()) {
             Vector rel = entry.getKey();
             Location expectedLoc = coreLoc.clone().add(rel.getBlockX(), rel.getBlockY(), rel.getBlockZ());
+
             if (placedBlock.getLocation().equals(expectedLoc)) {
                 if (placedBlock.getType() == entry.getValue()) {
                     isPart = true;
@@ -110,7 +122,8 @@ public class BlueprintManager implements Listener {
                     });
                     player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1f, 2f);
                 } else {
-                    CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.pieza-incorrecta").replace("%block%", entry.getValue().name()));
+                    // 🌟 FIX: Mensaje Directo
+                    CrossplayUtils.sendMessage(player, "&#FF5555[!] Pieza estructural incorrecta. Se requiere: &#FFAA00" + entry.getValue().name());
                     event.setCancelled(true);
                     return;
                 }
@@ -122,7 +135,8 @@ public class BlueprintManager implements Listener {
             NexoAPI.getServices().get(ClaimManager.class).ifPresent(claimManager -> {
                 me.nexo.protections.core.ProtectionStone stone = claimManager.getStoneAt(coreLoc);
                 if (stone == null) {
-                    CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.sin-proteccion"));
+                    // 🌟 FIX: Mensaje Directo
+                    CrossplayUtils.sendMessage(player, "&#FF5555[!] Las fábricas solo pueden operar dentro de un campo de protección (Nexo-Piedra).");
                     event.setCancelled(true);
                     return;
                 }
@@ -134,10 +148,11 @@ public class BlueprintManager implements Listener {
                 );
 
                 plugin.getFactoryManager().createFactoryAsync(factory).thenRun(() -> {
+                    // 🌟 FIX: Mensajes Directos
                     CrossplayUtils.sendMessage(player, " ");
-                    CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.maquina-ensamblada"));
-                    CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.estructura-registrada").replace("%type%", template.getFactoryType()));
-                    CrossplayUtils.sendMessage(player, getMessage("eventos.blueprint.red-electrica"));
+                    CrossplayUtils.sendMessage(player, "&#00f5ff✨ <bold>ENSAMBLAJE COMPLETADO</bold>");
+                    CrossplayUtils.sendMessage(player, "&#E6CCFFEstructura registrada como: &#ff00ff" + template.getFactoryType());
+                    CrossplayUtils.sendMessage(player, "&#E6CCFFLa maquinaria se ha enlazado a tu Nexo-Piedra.");
                     CrossplayUtils.sendMessage(player, " ");
                     player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
                 });

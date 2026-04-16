@@ -1,40 +1,59 @@
 package me.nexo.items.mochilas;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.NexoCore;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.items.NexoItems;
 import me.nexo.core.utils.Base64Util;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
+@Singleton
 public class MochilaManager {
 
     private final NexoItems plugin;
 
-    public MochilaManager(NexoItems plugin) {
-        this.plugin = plugin;
+    // 🛡️ PATRÓN ENTERPRISE: InventoryHolder Personalizado (Guarda el ID de la mochila adentro)
+    public static class MochilaHolder implements InventoryHolder {
+        private final Inventory inventory;
+        private final int mochilaId;
+
+        public MochilaHolder(int mochilaId, net.kyori.adventure.text.Component title) {
+            this.mochilaId = mochilaId;
+            this.inventory = Bukkit.createInventory(this, 54, title);
+        }
+
+        @Override
+        public Inventory getInventory() { return inventory; }
+        public int getMochilaId() { return mochilaId; }
     }
 
-    private String serialize(String hex) {
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hex));
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
+    public MochilaManager(NexoItems plugin) {
+        this.plugin = plugin;
     }
 
     public void abrirMochila(Player p, int id) {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
             NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
             if (nexoCore == null || nexoCore.getDatabaseManager() == null) {
-                p.sendMessage(NexoColor.parse("&#FF5555[!] Error crítico: Enlace caído con la Base de Datos Central."));
+                CrossplayUtils.sendMessage(p, "&#FF5555[!] Error crítico: Enlace caído con la Base de Datos Central.");
                 return;
             }
+
             String base64Data = null;
             String sql = "SELECT contenido FROM mochilas WHERE uuid = ? AND mochila_id = ?";
+
             try (Connection conn = nexoCore.getDatabaseManager().getConnection();
                  PreparedStatement ps = conn.prepareStatement(sql)) {
                 ps.setString(1, p.getUniqueId().toString());
@@ -46,15 +65,22 @@ public class MochilaManager {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+
             String finalData = base64Data;
+
             Bukkit.getScheduler().runTask(plugin, () -> {
-                Inventory inv = Bukkit.createInventory(null, 54, serialize("&#555555<bold>»</bold> &#00E5FFMochila Virtual #" + id));
+                // 🌟 FIX: Creación de inventario Inhackeable con Component
+                net.kyori.adventure.text.Component titulo = CrossplayUtils.parseCrossplay(p, "&#555555<bold>»</bold> &#00E5FFMochila Virtual #" + id);
+                MochilaHolder holder = new MochilaHolder(id, titulo);
+                Inventory inv = holder.getInventory();
+
                 if (finalData != null && !finalData.isEmpty()) {
                     ItemStack[] items = Base64Util.itemStackArrayFromBase64(finalData);
                     inv.setContents(items);
                 }
+
                 p.openInventory(inv);
-                p.playSound(p.getLocation(), org.bukkit.Sound.ITEM_ARMOR_EQUIP_LEATHER, 1f, 1f);
+                p.playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_LEATHER, 1f, 1f);
             });
         });
     }
@@ -70,6 +96,7 @@ public class MochilaManager {
     public void guardarMochilaSync(String uuid, int id, String base64Data) {
         NexoCore nexoCore = (NexoCore) Bukkit.getPluginManager().getPlugin("NexoCore");
         if (nexoCore == null || nexoCore.getDatabaseManager() == null) return;
+
         String sql = "INSERT INTO mochilas (uuid, mochila_id, contenido) VALUES (?, ?, ?) ON CONFLICT (uuid, mochila_id) DO UPDATE SET contenido = EXCLUDED.contenido;";
         try (Connection conn = nexoCore.getDatabaseManager().getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {

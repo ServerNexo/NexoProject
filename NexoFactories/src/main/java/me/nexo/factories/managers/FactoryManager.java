@@ -2,6 +2,8 @@ package me.nexo.factories.managers;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.skill.Skills;
 import dev.aurelium.auraskills.api.user.SkillsUser;
@@ -24,6 +26,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
+/**
+ * 🏭 NexoFactories - Manager Central de Máquinas (Arquitectura Enterprise)
+ */
+@Singleton
 public class FactoryManager {
 
     private final NexoFactories plugin;
@@ -33,6 +39,8 @@ public class FactoryManager {
     private static final double ENERGY_COST_PER_CYCLE = 15.0;
     private static final long CYCLE_DURATION_MS = 60_000L;
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public FactoryManager(NexoFactories plugin) {
         this.plugin = plugin;
         this.logicEngine = new ScriptEvaluator();
