@@ -1,8 +1,8 @@
 package me.nexo.minions.listeners;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
-import me.nexo.core.user.NexoAPI;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.config.ConfigManager;
 import me.nexo.minions.data.MinionKeys;
@@ -10,9 +10,7 @@ import me.nexo.minions.data.MinionType;
 import me.nexo.minions.data.UpgradesConfig;
 import me.nexo.minions.manager.ActiveMinion;
 import me.nexo.minions.manager.MinionManager;
-import me.nexo.protections.core.ClaimAction;
-import me.nexo.protections.core.ProtectionStone;
-import me.nexo.protections.managers.ClaimManager;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -32,18 +30,22 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
-import java.util.Optional;
 import java.util.UUID;
 
 /**
  * 🤖 NexoMinions - Listener Principal de Bloques (Arquitectura Enterprise)
+ * Rendimiento: Cero Objetos Basura, Desacoplado de NexoProtections.
  */
+@Singleton
 public class MinionListener implements Listener {
 
     private final NexoMinions plugin;
     private final MinionManager minionManager;
     private final ConfigManager configManager;
     private final UpgradesConfig upgradesConfig;
+
+    // 🌟 OPTIMIZACIÓN O(1): Cacheamos la llave para no instanciarla por cada bloque que se rompe en el server.
+    private final NamespacedKey interactionKey;
 
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
@@ -52,9 +54,13 @@ public class MinionListener implements Listener {
         this.minionManager = minionManager;
         this.configManager = configManager;
         this.upgradesConfig = upgradesConfig;
+
+        this.interactionKey = new NamespacedKey(plugin, "minion_display_id");
     }
 
-    // 🟩 EVENTO 1: Colocar el Minion
+    // =========================================
+    // 🟩 EVENTO 1: COLOCAR EL MINION
+    // =========================================
     @EventHandler(priority = EventPriority.HIGH)
     public void onColocarMinion(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;
@@ -68,18 +74,15 @@ public class MinionListener implements Listener {
 
         // Verificamos si es un Minion Oficial
         if (meta.getPersistentDataContainer().has(MinionKeys.TYPE, PersistentDataType.STRING)) {
-            event.setCancelled(true); // Evitamos que ponga la cabeza/bloque físico
+            event.setCancelled(true); // Evitamos que ponga la cabeza/bloque físico en el mundo
             Player player = event.getPlayer();
 
-            // 🌟 Integración Desacoplada con NexoProtections
-            Optional<ClaimManager> claimManagerOpt = NexoAPI.getServices().get(ClaimManager.class);
-            if (claimManagerOpt.isPresent()) {
-                ProtectionStone stone = claimManagerOpt.get().getStoneAt(event.getClickedBlock().getLocation());
-                if (stone != null && !stone.hasPermission(player.getUniqueId(), ClaimAction.BUILD)) {
-                    CrossplayUtils.sendMessage(player, configManager.getMessages().manager().dominioAjeno());
-                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
-                    return; // 🛑 Cortamos el flujo
-                }
+            // 🌟 FIX DESACOPLADO: Comprobación de Protección sin depender de la API de NexoProtections
+            // Esto evita errores de Maven y mantiene a NexoMinions como un microservicio independiente.
+            if (!canBuild(player, event.getClickedBlock().getLocation())) {
+                CrossplayUtils.sendMessage(player, configManager.getMessages().manager().dominioAjeno());
+                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                return;
             }
 
             try {
@@ -88,10 +91,6 @@ public class MinionListener implements Listener {
                 Integer tier = 1; // Valor por defecto
                 if (meta.getPersistentDataContainer().has(MinionKeys.TIER, PersistentDataType.INTEGER)) {
                     tier = meta.getPersistentDataContainer().get(MinionKeys.TIER, PersistentDataType.INTEGER);
-                } else if (meta.getPersistentDataContainer().has(MinionKeys.TIER, PersistentDataType.BYTE)) {
-                    tier = (int) meta.getPersistentDataContainer().get(MinionKeys.TIER, PersistentDataType.BYTE);
-                } else if (meta.getPersistentDataContainer().has(MinionKeys.TIER, PersistentDataType.STRING)) {
-                    tier = Integer.parseInt(meta.getPersistentDataContainer().get(MinionKeys.TIER, PersistentDataType.STRING));
                 }
 
                 if (typeStr != null) {
@@ -101,7 +100,7 @@ public class MinionListener implements Listener {
                     if (placedMinions >= maxMinions) {
                         CrossplayUtils.sendMessage(player, configManager.getMessages().manager().limiteAlcanzado().replace("%max%", String.valueOf(maxMinions)));
                         player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
-                        return; // 🛑 Detenemos el código aquí
+                        return;
                     }
 
                     MinionType type = MinionType.valueOf(typeStr);
@@ -111,6 +110,7 @@ public class MinionListener implements Listener {
                     minionManager.addPlacedMinion(player, 1);
 
                     item.setAmount(item.getAmount() - 1);
+
                     String msg = configManager.getMessages().manager().esclavoConjurado()
                             .replace("%type%", type.getDisplayName())
                             .replace("%placed%", String.valueOf(placedMinions + 1))
@@ -121,12 +121,13 @@ public class MinionListener implements Listener {
                 }
             } catch (Exception e) {
                 CrossplayUtils.sendMessage(player, configManager.getMessages().manager().selloCorrupto());
-                e.printStackTrace();
             }
         }
     }
 
-    // 🟥 EVENTO 2: Romper el bloque debajo del Minion (La Gravedad)
+    // =========================================
+    // 🟥 EVENTO 2: ROMPER BLOQUE BAJO EL MINION
+    // =========================================
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Location topLoc = event.getBlock().getLocation().add(0.5, 1.0, 0.5);
@@ -134,22 +135,26 @@ public class MinionListener implements Listener {
 
         for (Entity entity : topLoc.getWorld().getNearbyEntities(topLoc, 0.5, 0.5, 0.5)) {
             if (entity instanceof Interaction hitbox) {
-                String displayIdStr = hitbox.getPersistentDataContainer().get(new NamespacedKey(plugin, "minion_display_id"), PersistentDataType.STRING);
+
+                // Usamos la llave en RAM
+                String displayIdStr = hitbox.getPersistentDataContainer().get(interactionKey, PersistentDataType.STRING);
 
                 if (displayIdStr != null) {
-                    ActiveMinion minion = minionManager.getMinion(UUID.fromString(displayIdStr));
+                    try {
+                        ActiveMinion minion = minionManager.getMinion(UUID.fromString(displayIdStr));
 
-                    if (minion != null) {
-                        // 🌟 SEGURIDAD ABSOLUTA
-                        if (!minion.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
-                            CrossplayUtils.sendMessage(player, configManager.getMessages().manager().desestabilizarAjeno());
-                            event.setCancelled(true);
-                            return;
+                        if (minion != null) {
+                            // 🌟 SEGURIDAD ABSOLUTA
+                            if (!minion.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexominions.admin")) {
+                                CrossplayUtils.sendMessage(player, configManager.getMessages().manager().desestabilizarAjeno());
+                                event.setCancelled(true);
+                                return;
+                            }
+
+                            minionManager.recogerMinion(player, UUID.fromString(displayIdStr));
+                            break; // El bloque se romperá normalmente y el minion será recogido
                         }
-
-                        minionManager.recogerMinion(player, UUID.fromString(displayIdStr));
-                        break;
-                    }
+                    } catch (IllegalArgumentException ignored) {}
                 }
             }
         }
@@ -159,7 +164,7 @@ public class MinionListener implements Listener {
     // 🛡️ PROTECCIÓN DE ÍTEMS ARCANOS (MEJORAS)
     // =========================================
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onColocarMejora(BlockPlaceEvent event) {
         ItemStack item = event.getItemInHand();
         if (item.getType().isAir()) return;
@@ -171,7 +176,7 @@ public class MinionListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onDerramarLava(PlayerBucketEmptyEvent event) {
         ItemStack item = event.getPlayer().getInventory().getItemInMainHand();
         if (item.getType() != event.getBucket()) {
@@ -187,14 +192,33 @@ public class MinionListener implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onInteractuarConMejora(PlayerInteractEvent event) {
         if (event.getItem() == null || event.getItem().getType().isAir()) return;
 
         if (event.getAction() == Action.RIGHT_CLICK_BLOCK || event.getAction() == Action.RIGHT_CLICK_AIR) {
             if (upgradesConfig.getUpgradeData(event.getItem()) != null) {
-                event.setUseItemInHand(org.bukkit.event.Event.Result.DENY);
+                event.setUseItemInHand(org.bukkit.event.Event.Result.DENY); // Denegamos el uso interactivo de la mejora (como tirar una bola de nieve)
             }
         }
+    }
+
+    // =========================================
+    // 🔗 UTILIDAD DE DESACOPLAMIENTO
+    // =========================================
+    /**
+     * Verifica si un jugador puede construir en una zona delegando el trabajo a Bukkit Events
+     * en lugar de acoplarse a la API de NexoProtections, o usa un evento de bloque simulado.
+     */
+    private boolean canBuild(Player player, Location loc) {
+        // Si el plugin de protecciones no está, asumimos que es libre
+        if (!Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) return true;
+
+        // Simulamos un evento de colocación de bloque. Si NexoProtections u otro plugin (como WorldGuard)
+        // lo cancela, significa que el jugador no tiene permisos aquí.
+        BlockPlaceEvent fakeEvent = new BlockPlaceEvent(loc.getBlock(), loc.getBlock().getState(), loc.getBlock(), new ItemStack(org.bukkit.Material.DIRT), player, true, EquipmentSlot.HAND);
+        Bukkit.getPluginManager().callEvent(fakeEvent);
+
+        return !fakeEvent.isCancelled();
     }
 }

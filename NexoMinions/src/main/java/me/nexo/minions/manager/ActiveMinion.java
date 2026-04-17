@@ -1,9 +1,7 @@
 package me.nexo.minions.manager;
 
 import me.nexo.colecciones.NexoColecciones;
-import me.nexo.core.NexoCore;
-import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor;
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.data.MinionKeys;
 import me.nexo.minions.data.MinionTier;
@@ -30,6 +28,7 @@ import java.util.UUID;
 
 /**
  * 🤖 NexoMinions - Modelo de Minion Activo (Arquitectura Enterprise)
+ * Rendimiento: Híbrido. Matemáticas en RAM asíncrona, Física en Bukkit Síncrono.
  */
 public class ActiveMinion {
     private final NexoMinions plugin;
@@ -38,17 +37,17 @@ public class ActiveMinion {
     private final TextDisplay holograma;
     private final UUID ownerId;
     private final MinionType type;
-    private int tier;
-    private long nextActionTime;
-    private int storedItems;
+
+    // Volátiles para garantizar lectura segura en Hilos Virtuales
+    private volatile int tier;
+    private volatile long nextActionTime;
+    private volatile int storedItems;
+
     private final ItemStack[] upgrades = new ItemStack[4];
     private int trabajosRealizados = 0;
 
     private InventoryHolder cachedStorage = null;
     private long lastStorageCheckTime = 0;
-
-    // 💡 Caché transitoria para llamadas seguras a NexoCore
-    private transient NexoCore coreCache;
 
     public ActiveMinion(NexoMinions plugin, ItemDisplay entity, Interaction hitbox, TextDisplay holograma, UUID ownerId, MinionType type, int tier, long nextActionTime, int storedItems) {
         this.plugin = plugin;
@@ -67,16 +66,12 @@ public class ActiveMinion {
         }
     }
 
-    private NexoCore getCore() {
-        if (coreCache == null) coreCache = JavaPlugin.getPlugin(NexoCore.class);
-        return coreCache;
-    }
-
     public int getRealMaxStorage() {
         int base = MinionTier.getMaxStorage(tier);
         int bonus = 0;
 
         for (ItemStack item : upgrades) {
+            if (item == null) continue;
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
             if (datos != null && "UPGRADE".equals(datos.getString("category")) && "STORAGE".equals(datos.getString("type"))) {
                 bonus += datos.getInt("bonus_capacidad", 0);
@@ -85,82 +80,62 @@ public class ActiveMinion {
         return base + bonus;
     }
 
-    public void calcularTrabajoOffline(long currentTimeMillis) {
-        long tiempoPasado = currentTimeMillis - this.nextActionTime;
-        if (tiempoPasado > 0) {
-            long tiempoPorAccion = (long) (MinionTier.getDelayMillis(this.tier) * getSpeedMultiplier());
-            if (tiempoPorAccion <= 0) tiempoPorAccion = 1000;
-
-            int trabajosPerdidos = (int) (tiempoPasado / tiempoPorAccion);
-
-            int maxStorage = getRealMaxStorage();
-
-            if (!tieneMejoraPorTipo("STORAGE_LINK")) {
-                this.storedItems = Math.min(maxStorage, this.storedItems + trabajosPerdidos);
-
-                if (this.storedItems >= maxStorage) {
-                    trabajosPerdidos = maxStorage - this.storedItems;
-                }
-            } else {
-                this.storedItems += trabajosPerdidos;
-            }
-
-            this.trabajosRealizados += trabajosPerdidos;
-            consumirCombustibles();
-
-            this.entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
-
-            this.nextActionTime = currentTimeMillis + tiempoPorAccion;
-            this.entity.getPersistentDataContainer().set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, this.nextActionTime);
-        }
-    }
-
+    // ==========================================
+    // 🧠 MOTOR LÓGICO ASÍNCRONO (Virtual Threads)
+    // ==========================================
+    // Este método es llamado por el MinionManager desde un Hilo Virtual.
+    // Hace todos los cálculos sin afectar el TPS.
     public void tick(long currentTimeMillis) {
         int maxStorage = getRealMaxStorage();
+        boolean estaLleno = storedItems >= maxStorage;
+        boolean tieneEnlaceCofre = tieneMejoraPorTipo("STORAGE_LINK");
 
-        actualizarHolograma(maxStorage);
+        // 1. Planificamos qué tareas físicas debe hacer el Hilo Principal de Bukkit
+        boolean debeTrabajar = (currentTimeMillis >= nextActionTime) && (!estaLleno || tieneEnlaceCofre);
 
-        if (storedItems >= maxStorage && !tieneMejoraPorTipo("STORAGE_LINK")) {
-            animar(); return;
-        }
-
-        if (currentTimeMillis >= nextActionTime) {
-            realizarTrabajo();
+        // Calculamos tiempo de próxima acción si es necesario
+        if (debeTrabajar) {
             long tiempoBase = MinionTier.getDelayMillis(tier);
-            nextActionTime = currentTimeMillis + (long) (tiempoBase * getSpeedMultiplier());
-            entity.getPersistentDataContainer().set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, nextActionTime);
+            this.nextActionTime = currentTimeMillis + (long) (tiempoBase * getSpeedMultiplier());
         }
-        animar();
+
+        // 2. Ejecución Física (Thread-Safe Bridge)
+        // Volvemos al Hilo Principal solo para las acciones que tocan el mundo.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+
+            // Si el minion fue removido mientras calculábamos, abortamos.
+            if (!entity.isValid()) return;
+
+            // Actualización visual holográfica O(1)
+            actualizarHolograma(maxStorage, estaLleno, tieneEnlaceCofre);
+
+            if (debeTrabajar) {
+                realizarTrabajoFisico();
+                entity.getPersistentDataContainer().set(MinionKeys.NEXT_ACTION, PersistentDataType.LONG, nextActionTime);
+            }
+
+            animarFisica();
+        });
     }
 
-    private void actualizarHolograma(int maxStorage) {
-        if (holograma == null || holograma.isDead()) return;
-
-        // 💡 Lectura desde el motor Type-Safe
-        if (storedItems >= maxStorage && !tieneMejoraPorTipo("STORAGE_LINK")) {
-            String msg = plugin.getConfigManager().getMessages().manager().hologramaSaciado()
-                    .replace("%items%", String.valueOf(storedItems))
-                    .replace("%max%", String.valueOf(maxStorage));
-            holograma.text(NexoColor.parse(msg));
-        } else {
-            String nombreBonito = type.name().replace("MINION_", "").replace("_", " ");
-            String msg = plugin.getConfigManager().getMessages().manager().hologramaNormal()
-                    .replace("%name%", nombreBonito)
-                    .replace("%tier%", String.valueOf(tier))
-                    .replace("%items%", String.valueOf(storedItems))
-                    .replace("%max%", String.valueOf(maxStorage));
-            holograma.text(NexoColor.parse(msg));
-        }
-    }
-
-    private void realizarTrabajo() {
+    // ==========================================
+    // 🔨 EJECUCIÓN FÍSICA (Main Thread)
+    // ==========================================
+    private void realizarTrabajoFisico() {
         Location loc = entity.getLocation();
-        loc.getWorld().spawnParticle(Particle.SCULK_SOUL, loc.clone().add(0, 0.5, 0), 3, 0.2, 0.2, 0.2, 0.05);
-        loc.getWorld().playSound(loc, Sound.ENTITY_WITHER_AMBIENT, 0.1f, 1.5f);
+
+        // 🌟 OPTIMIZACIÓN VISUAL: Solo spawneamos partículas si hay un jugador cerca (Distancia al cuadrado < 1024 = 32 bloques)
+        boolean jugadorCerca = loc.getWorld().getPlayers().stream()
+                .anyMatch(p -> p.getLocation().distanceSquared(loc) < 1024);
+
+        if (jugadorCerca) {
+            loc.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, loc.clone().add(0, 1, 0), 2, 0.2, 0.2, 0.2, 0.01);
+            loc.getWorld().playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.3f, 1.5f);
+        }
 
         boolean guardadoEnCofre = false;
         if (tieneMejoraPorTipo("STORAGE_LINK")) {
-            guardadoEnCofre = guardarEnCofreAdyacente(new ItemStack(type.getTargetMaterial(), 1));
+            guardadoEnCofre = guardarEnCofreAdyacenteFisico(new ItemStack(type.getTargetMaterial(), 1));
         }
 
         if (!guardadoEnCofre) {
@@ -170,18 +145,20 @@ public class ActiveMinion {
 
                 Player owner = Bukkit.getPlayer(ownerId);
                 if (owner != null && owner.isOnline()) {
+                    // 🌟 FIX DESACOPLADO: Economía mediante comandos de consola.
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + owner.getName() + " " + precio);
 
+                    // Sistema de Colecciones
                     if (Bukkit.getPluginManager().isPluginEnabled("NexoColecciones")) {
                         JavaPlugin.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, type.getTargetMaterial().name(), 1);
                     }
                 }
-
                 this.trabajosRealizados++;
-                consumirCombustibles();
+                consumirCombustiblesFisico();
                 return;
             }
 
+            // Guardado Interno
             if (this.storedItems < getRealMaxStorage()) {
                 this.storedItems += 1;
                 entity.getPersistentDataContainer().set(MinionKeys.STORED_ITEMS, PersistentDataType.INTEGER, this.storedItems);
@@ -189,38 +166,88 @@ public class ActiveMinion {
         }
 
         this.trabajosRealizados++;
-        consumirCombustibles();
+        consumirCombustiblesFisico();
+    }
 
-        Player owner = Bukkit.getPlayer(ownerId);
-        if (owner != null && owner.isOnline() && !tieneMejoraActiva("AUTO_SELL")) {
-            if (Bukkit.getPluginManager().isPluginEnabled("NexoColecciones")) {
-                String blockId = type.getTargetMaterial().name();
-                JavaPlugin.getPlugin(NexoColecciones.class).getCollectionManager().addProgress(owner, blockId, 1);
+    private boolean guardarEnCofreAdyacenteFisico(ItemStack item) {
+        long currentTime = System.currentTimeMillis();
+
+        // Check rápido del caché
+        if (cachedStorage != null) {
+            if (cachedStorage.getInventory().getLocation() != null &&
+                    cachedStorage.getInventory().getLocation().getBlock().getState() instanceof InventoryHolder) {
+                var sobrante = cachedStorage.getInventory().addItem(item);
+                if (sobrante.isEmpty()) return true;
             }
+            cachedStorage = null; // Caché inválido o cofre lleno
+        }
+
+        // Búsqueda pesada rate-limited (10 segundos)
+        if (currentTime - lastStorageCheckTime > 10000) {
+            lastStorageCheckTime = currentTime;
+            int[][] offsets = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
+
+            for (int[] offset : offsets) {
+                Block b = entity.getLocation().clone().add(offset[0], 0, offset[2]).getBlock();
+                if (b.getState() instanceof InventoryHolder holder) {
+                    var sobrante = holder.getInventory().addItem(item);
+                    if (sobrante.isEmpty()) {
+                        cachedStorage = holder; // Cachear nuevo cofre
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    // ==========================================
+    // 🎨 RENDERIZADO VISUAL
+    // ==========================================
+    private void actualizarHolograma(int maxStorage, boolean estaLleno, boolean tieneEnlaceCofre) {
+        if (holograma == null || holograma.isDead()) return;
+
+        // 🌟 Textos Hexadecimales directos de alto rendimiento. (Cero llamadas I/O)
+        if (estaLleno && !tieneEnlaceCofre) {
+            holograma.text(CrossplayUtils.parseCrossplay(null, "&#FF5555[!] Inventario Lleno (" + storedItems + " / " + maxStorage + ")"));
+        } else {
+            String nombreBonito = type.name().replace("MINION_", "").replace("_", " ");
+            holograma.text(CrossplayUtils.parseCrossplay(null, "&#FFAA00" + nombreBonito + " (Tier " + tier + ")\n&#E6CCFFÍtems: &#55FF55" + storedItems + " / " + maxStorage));
         }
     }
 
+    private void animarFisica() {
+        // La animación requiere estar en el Hilo Principal para modificar la Transformación de la Entidad
+        entity.setInterpolationDuration(20);
+        entity.setInterpolationDelay(0);
+
+        Transformation trans = entity.getTransformation();
+        float nuevoAngulo = (System.currentTimeMillis() % 4000) / 4000f * (float) Math.PI * 2;
+        trans.getLeftRotation().set(new AxisAngle4f(nuevoAngulo, new Vector3f(0, 1, 0)));
+        entity.setTransformation(trans);
+    }
+
+    // ==========================================
+    // ⚙️ UTILIDADES DE MEJORAS Y COMBUSTIBLE
+    // ==========================================
     public double getSpeedMultiplier() {
         double multiplicador = 1.0;
         for (ItemStack item : upgrades) {
+            if (item == null) continue;
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
-            if (datos == null) continue;
-
-            String category = datos.getString("category", "");
-            String tipo = datos.getString("type", "");
-
-            if ("FUEL".equals(category) && "SPEED".equals(tipo)) {
+            if (datos != null && "FUEL".equals(datos.getString("category")) && "SPEED".equals(datos.getString("type"))) {
                 multiplicador -= datos.getDouble("multiplier", 0.0);
             }
         }
         return Math.max(multiplicador, 0.1);
     }
 
-    private void consumirCombustibles() {
+    private void consumirCombustiblesFisico() {
         for (int i = 0; i < 4; i++) {
             ItemStack item = upgrades[i];
-            ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
+            if (item == null) continue;
 
+            ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
             if (datos != null && "FUEL".equals(datos.getString("category", ""))) {
                 if (datos.getBoolean("unbreakable", false)) continue;
 
@@ -241,62 +268,21 @@ public class ActiveMinion {
         }
     }
 
-    public boolean tieneMejoraPorTipo(String tipoBuscado) {
-        return getMejoraActiva(tipoBuscado) != null;
-    }
-
-    public boolean tieneMejoraActiva(String tipoBuscado) {
-        return getMejoraActiva(tipoBuscado) != null;
-    }
-
     public ConfigurationSection getMejoraActiva(String tipoBuscado) {
         for (ItemStack item : upgrades) {
+            if (item == null) continue;
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
             if (datos != null && datos.getString("type", "").equals(tipoBuscado)) return datos;
         }
         return null;
     }
 
-    public boolean tieneMejora(String tipoBuscado) {
-        return tieneMejoraPorTipo(tipoBuscado);
-    }
+    public boolean tieneMejoraPorTipo(String tipoBuscado) { return getMejoraActiva(tipoBuscado) != null; }
+    public boolean tieneMejoraActiva(String tipoBuscado) { return getMejoraActiva(tipoBuscado) != null; }
 
-    private boolean guardarEnCofreAdyacente(ItemStack item) {
-        long currentTime = System.currentTimeMillis();
-
-        if (cachedStorage != null) {
-            if (cachedStorage.getInventory().getLocation() != null &&
-                    cachedStorage.getInventory().getLocation().getBlock().getState() instanceof InventoryHolder) {
-
-                var sobrante = cachedStorage.getInventory().addItem(item);
-                if (sobrante.isEmpty()) {
-                    return true;
-                } else {
-                    cachedStorage = null;
-                }
-            } else {
-                cachedStorage = null;
-            }
-        }
-
-        if (currentTime - lastStorageCheckTime > 10000) {
-            lastStorageCheckTime = currentTime;
-            int[][] offsets = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
-
-            for (int[] offset : offsets) {
-                Block b = entity.getLocation().clone().add(offset[0], 0, offset[2]).getBlock();
-                if (b.getState() instanceof InventoryHolder holder) {
-                    var sobrante = holder.getInventory().addItem(item);
-                    if (sobrante.isEmpty()) {
-                        cachedStorage = holder;
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    }
-
+    // ==========================================
+    // 💾 GETTERS, SETTERS Y GUARDADO
+    // ==========================================
     public ItemStack[] getUpgrades() { return upgrades; }
     public void setUpgrade(int slot, ItemStack item) {
         upgrades[slot] = item;
@@ -310,16 +296,6 @@ public class ActiveMinion {
     public void setTier(int nuevoTier) {
         this.tier = nuevoTier;
         entity.getPersistentDataContainer().set(MinionKeys.TIER, PersistentDataType.INTEGER, nuevoTier);
-    }
-
-    private void animar() {
-        entity.setInterpolationDuration(20);
-        entity.setInterpolationDelay(0);
-
-        Transformation trans = entity.getTransformation();
-        float nuevoAngulo = (System.currentTimeMillis() % 4000) / 4000f * (float) Math.PI * 2;
-        trans.getLeftRotation().set(new AxisAngle4f(nuevoAngulo, new Vector3f(0, 1, 0)));
-        entity.setTransformation(trans);
     }
 
     public ItemDisplay getEntity() { return entity; }

@@ -9,10 +9,19 @@ import me.nexo.minions.di.MinionsModule;
 import me.nexo.minions.manager.MinionManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
+/**
+ * 🤖 NexoMinions - Clase Principal (Arquitectura Enterprise)
+ */
 public class NexoMinions extends JavaPlugin {
 
     private Injector injector;
     private MinionsBootstrap bootstrap;
+
+    // 🌟 FIX: Variables cacheadas para los Getters (Cero estrés al Injector)
+    private MinionManager minionManager;
+    private TiersConfig tiersConfig;
+    private UpgradesConfig upgradesConfig;
+    private ConfigManager configManager;
 
     @Override
     public void onEnable() {
@@ -25,14 +34,16 @@ public class NexoMinions extends JavaPlugin {
             return;
         }
 
-        // 💉 Inicializar Inyección
+        // 💉 1. Inicializar Inyección
         this.injector = Guice.createInjector(new MinionsModule(this));
 
-        // Forzamos la carga de configuraciones
-        injector.getInstance(TiersConfig.class);
-        injector.getInstance(UpgradesConfig.class);
+        // 🌟 2. Forzamos la carga y guardamos referencias O(1)
+        this.configManager = injector.getInstance(ConfigManager.class);
+        this.tiersConfig = injector.getInstance(TiersConfig.class);
+        this.upgradesConfig = injector.getInstance(UpgradesConfig.class);
+        this.minionManager = injector.getInstance(MinionManager.class);
 
-        // 🚀 Arrancar Orquestador
+        // 🚀 3. Arrancar Orquestador
         this.bootstrap = injector.getInstance(MinionsBootstrap.class);
         this.bootstrap.startServices();
 
@@ -48,21 +59,10 @@ public class NexoMinions extends JavaPlugin {
     }
 
     // ==========================================
-    // 💡 GETTERS PARA APIS Y MENÚS EXTERNOS
+    // 💡 GETTERS DE ALTO RENDIMIENTO
     // ==========================================
-    public MinionManager getMinionManager() {
-        return injector.getInstance(MinionManager.class);
-    }
-
-    public TiersConfig getTiersConfig() {
-        return injector.getInstance(TiersConfig.class);
-    }
-
-    public UpgradesConfig getUpgradesConfig() {
-        return injector.getInstance(UpgradesConfig.class);
-    }
-
-    public ConfigManager getConfigManager() {
-        return injector.getInstance(ConfigManager.class);
-    }
+    public MinionManager getMinionManager() { return minionManager; }
+    public TiersConfig getTiersConfig() { return tiersConfig; }
+    public UpgradesConfig getUpgradesConfig() { return upgradesConfig; }
+    public ConfigManager getConfigManager() { return configManager; }
 }

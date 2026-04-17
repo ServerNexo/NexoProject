@@ -4,8 +4,8 @@ import com.google.inject.Inject;
 import com.google.inject.Singleton;
 import me.nexo.minions.NexoMinions;
 import me.nexo.minions.config.nodes.MinionsMessagesConfig;
-import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 import org.spongepowered.configurate.yaml.NodeStyle;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
 import java.io.File;
 
@@ -30,7 +30,7 @@ public class ConfigManager {
     private void saveDefaultResource(String fileName) {
         File file = new File(plugin.getDataFolder(), fileName);
         if (!file.exists()) {
-            plugin.saveResource(fileName, false);
+            plugin.saveResource(fileName, false); // 🌟 Seguro: No borra datos.
         }
     }
 
@@ -44,6 +44,8 @@ public class ConfigManager {
             this.messages = loader.load().get(MinionsMessagesConfig.class);
         } catch (Exception e) {
             plugin.getLogger().severe("❌ Error al cargar messages.yml en NexoMinions: " + e.getMessage());
+            // 🌟 FIX: Fallback seguro. Evita NullPointerExceptions en todo el plugin si el YAML se corrompe.
+            this.messages = new MinionsMessagesConfig();
         }
     }
 
