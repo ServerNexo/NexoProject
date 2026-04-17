@@ -1,5 +1,7 @@
 package me.nexo.colecciones.colecciones;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.data.CollectionCategory;
 import me.nexo.colecciones.data.CollectionItem;
@@ -10,17 +12,24 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 📚 NexoColecciones - Lector de Datos de Colecciones (Arquitectura Enterprise)
+ * Nota: A diferencia de los mensajes, aquí conservamos YamlConfiguration porque
+ * solo se lee UNA VEZ al arrancar para ensamblar la memoria RAM.
+ */
+@Singleton
 public class ColeccionesConfig {
 
     private final NexoColecciones plugin;
     private FileConfiguration config;
     private File configFile;
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public ColeccionesConfig(NexoColecciones plugin) {
         this.plugin = plugin;
         crearConfig();
@@ -41,12 +50,15 @@ public class ColeccionesConfig {
         return config;
     }
 
-    public void guardarConfig() {
-        try {
-            config.save(configFile);
-        } catch (IOException e) {
-            plugin.getLogger().severe("¡No se pudo guardar el archivo colecciones.yml!");
-        }
+    // 🌟 FIX: Guardado Asíncrono mediante Hilos Virtuales (Cero Lag de disco)
+    public void guardarConfigAsync() {
+        Thread.startVirtualThread(() -> {
+            try {
+                config.save(configFile);
+            } catch (Exception e) {
+                plugin.getLogger().severe("❌ Error guardando colecciones.yml: " + e.getMessage());
+            }
+        });
     }
 
     public void recargarConfig() {
@@ -54,7 +66,7 @@ public class ColeccionesConfig {
     }
 
     // ==========================================================
-    // 🦇 NUEVO MOTOR DE ENSAMBLAJE (FASE 1)
+    // 🦇 MOTOR DE ENSAMBLAJE (CARGADO EN RAM O(1))
     // ==========================================================
 
     /**
@@ -67,8 +79,10 @@ public class ColeccionesConfig {
         ConfigurationSection catSec = config.getConfigurationSection("categorias");
         if (catSec != null) {
             for (String key : catSec.getKeys(false)) {
-                String nombre = catSec.getString(key + ".nombre", "&7" + key);
-                Material icono = Material.getMaterial(catSec.getString(key + ".icono", "STONE").toUpperCase());
+                String nombre = catSec.getString(key + ".nombre", "&#FFAA00" + key); // Color por defecto seguro
+
+                // 🌟 FIX: matchMaterial es más seguro que getMaterial en Paper 1.21+
+                Material icono = Material.matchMaterial(catSec.getString(key + ".icono", "STONE").toUpperCase());
                 if (icono == null) icono = Material.STONE;
                 int slot = catSec.getInt(key + ".slot", 0);
 
@@ -85,11 +99,11 @@ public class ColeccionesConfig {
 
                 if (categoria == null) continue; // Si la categoría no existe, ignora esta colección
 
-                Material icono = Material.getMaterial(colSec.getString(colKey + ".icono", "STONE").toUpperCase());
+                Material icono = Material.matchMaterial(colSec.getString(colKey + ".icono", "STONE").toUpperCase());
                 if (icono == null) icono = Material.STONE;
 
                 String nexoId = colSec.getString(colKey + ".nexo_id", "");
-                String nombre = colSec.getString(colKey + ".nombre", "&7" + colKey);
+                String nombre = colSec.getString(colKey + ".nombre", "&#55FF55" + colKey);
                 int slotMenu = colSec.getInt(colKey + ".slot_en_menu", 0);
 
                 // 3. Leer los Tiers de esta colección
@@ -117,11 +131,12 @@ public class ColeccionesConfig {
             }
         }
 
+        plugin.getLogger().info("✅ [COLECCIONES] Ensambladas " + categoriasMap.size() + " categorías de farmeo en RAM.");
         return categoriasMap;
     }
 
     // ==========================================================
-    // 🔍 MÉTODOS DE COMPATIBILIDAD (Para no romper Slayers)
+    // 🔍 MÉTODOS DE COMPATIBILIDAD (Slayers / Consultas crudas)
     // ==========================================================
 
     public boolean esColeccion(String id) {

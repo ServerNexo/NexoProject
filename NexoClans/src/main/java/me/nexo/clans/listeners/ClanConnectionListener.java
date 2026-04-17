@@ -1,41 +1,60 @@
 package me.nexo.clans.listeners;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.clans.NexoClans;
-import me.nexo.core.NexoCore;
+import me.nexo.clans.core.ClanManager;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.user.UserManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
+/**
+ * 👥 NexoClans - Escucha de Conexiones (Arquitectura Enterprise)
+ * Rendimiento: Hilos Virtuales asíncronos en lugar de retrasos en el Tick Loop de Bukkit.
+ */
+@Singleton
 public class ClanConnectionListener implements Listener {
 
     private final NexoClans plugin;
+    private final ClanManager clanManager;
+    private final UserManager userManager;
 
-    public ClanConnectionListener(NexoClans plugin) {
+    // 💉 PILAR 3: Inyección de Dependencias Directa (Cero acoplamiento)
+    @Inject
+    public ClanConnectionListener(NexoClans plugin, ClanManager clanManager, UserManager userManager) {
         this.plugin = plugin;
+        this.clanManager = clanManager;
+        this.userManager = userManager;
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
 
-        // Le damos 1 segundo al servidor para asegurar que NexoCore ya cargó al usuario de Supabase
-        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+        // 🌟 FIX: Hilo Virtual. No ensucia el hilo principal del servidor.
+        Thread.startVirtualThread(() -> {
+            try {
+                // Hacemos una pausa asíncrona de 1 segundo (1000ms) sin bloquear absolutamente nada.
+                // Le damos tiempo a NexoCore de descargar el perfil de Supabase.
+                Thread.sleep(1000);
 
-            // Pedimos el usuario a la caché de NexoCore
-            NexoUser user = NexoCore.getPlugin(NexoCore.class).getUserManager().getUserOrNull(player.getUniqueId());
+                // Pedimos el usuario directamente a la memoria RAM inyectada
+                NexoUser user = userManager.getUserOrNull(player.getUniqueId());
 
-            // Si el usuario existe y pertenece a un clan, le pedimos al Manager que lo suba a la RAM
-            if (user != null && user.hasClan()) {
-                plugin.getClanManager().loadClanAsync(user.getClanId(), clan -> {
-                    if (clan != null) {
-                        // Opcional: Enviar un mensaje silencioso a la consola
-                        // plugin.getLogger().info("Clan cargado/verificado en RAM para " + player.getName());
-                    }
-                });
+                // Si el usuario existe y pertenece a un clan, lo metemos a la caché Caffeine de Clanes
+                if (user != null && user.hasClan()) {
+                    clanManager.loadClanAsync(user.getClanId(), clan -> {
+                        // Operación silenciosa. El clan ya está listo en O(1) para cuando abra el menú.
+                    });
+                }
+
+            } catch (InterruptedException e) {
+                plugin.getLogger().warning("⚠️ La carga del clan para " + player.getName() + " fue interrumpida.");
             }
-
-        }, 20L); // 20 ticks = 1 segundo
+        });
     }
 }

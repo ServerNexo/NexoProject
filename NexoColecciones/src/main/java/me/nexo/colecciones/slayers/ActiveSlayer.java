@@ -4,36 +4,42 @@ import org.bukkit.boss.BossBar;
 import org.bukkit.entity.Player;
 
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * 📚 NexoColecciones - Contrato Slayer Activo (POJO)
+ * Nota: Objeto en RAM en tiempo real. Thread-Safe. No requiere Inyección.
+ */
 public class ActiveSlayer {
 
     private final UUID playerId;
     private final SlayerManager.SlayerTemplate template;
 
-    private int currentKills;
-    private boolean bossSpawned;
+    // 🌟 FIX: Atómicos y Volátiles para evitar Crashes en muertes simultáneas (Multihilo)
+    private final AtomicInteger currentKills;
+    private volatile boolean bossSpawned;
     private BossBar bossBar;
 
     public ActiveSlayer(Player player, SlayerManager.SlayerTemplate template) {
         this.playerId = player.getUniqueId();
         this.template = template;
-        this.currentKills = 0;
+        this.currentKills = new AtomicInteger(0);
         this.bossSpawned = false;
         this.bossBar = null;
     }
 
     public void addKill() {
-        if (!bossSpawned && currentKills < template.requiredKills()) {
-            this.currentKills++;
+        if (!bossSpawned && currentKills.get() < template.requiredKills()) {
+            this.currentKills.incrementAndGet(); // 🌟 FIX: Incremento atómico y seguro
         }
     }
 
-    // 🌟 GETTERS Y SETTERS COMPATIBLES
+    // 🌟 GETTERS Y SETTERS ENTERPRISE
     public UUID getPlayerId() { return playerId; }
 
     public SlayerManager.SlayerTemplate getTemplate() { return template; }
 
-    public int getKills() { return currentKills; }
+    public int getKills() { return currentKills.get(); } // Retorna el valor nativo
 
     public String getBossName() { return template.bossName(); }
 

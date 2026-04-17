@@ -1,8 +1,11 @@
 package me.nexo.colecciones.colecciones;
 
 import com.google.gson.Gson;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.colecciones.NexoColecciones;
-import me.nexo.core.NexoCore;
+import me.nexo.core.database.DatabaseManager;
+import me.nexo.core.user.NexoAPI;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -25,24 +28,29 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 
-import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.util.UUID;
 
+/**
+ * 📚 NexoColecciones - Escucha de Eventos de Farmeo (Arquitectura Enterprise)
+ */
+@Singleton
 public class ColeccionesListener implements Listener {
 
     private final NexoColecciones plugin;
     private final CollectionManager manager;
-    private final Gson gson; // 🌟 OPTIMIZACIÓN: Instanciado una sola vez para ahorrar RAM
+    private final Gson gson;
 
     private static final String ANTI_EXPLOIT_KEY = "nexo_player_placed";
     private static final String BREWER_KEY = "nexo_last_brewer";
 
-    public ColeccionesListener(NexoColecciones plugin) {
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
+    public ColeccionesListener(NexoColecciones plugin, CollectionManager manager) {
         this.plugin = plugin;
-        this.manager = plugin.getCollectionManager();
-        this.gson = new Gson();
+        this.manager = manager; // 🌟 Inyectado directamente
+        this.gson = new Gson(); // 🌟 Instanciado una sola vez para ahorrar RAM
     }
 
     // ==========================================
@@ -59,7 +67,7 @@ public class ColeccionesListener implements Listener {
     // ==========================================
     @EventHandler(priority = EventPriority.MONITOR)
     public void onBlockBreak(BlockBreakEvent event) {
-        // Si el evento fue cancelado (ej. por protección), solo permitimos romper si está en la "Mina"
+        // Si el evento fue cancelado, solo permitimos romper si está en la "Mina" (Zonas seguras)
         if (event.isCancelled() && !event.getPlayer().getWorld().getName().equalsIgnoreCase("Mina")) {
             return;
         }
@@ -149,42 +157,48 @@ public class ColeccionesListener implements Listener {
     }
 
     // ==========================================
-    // 📥 GESTIÓN DE DATOS DEL JUGADOR
+    // 📥 GESTIÓN DE DATOS DEL JUGADOR (SQL Asíncrono)
     // ==========================================
-    @EventHandler
+    @EventHandler(priority = EventPriority.NORMAL)
     public void onPlayerJoin(PlayerJoinEvent event) {
-        DataSource dataSource = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getDataSource();
-        manager.loadPlayerFromDatabase(event.getPlayer().getUniqueId(), dataSource);
+        // 🌟 FIX: Lectura segura conectando a la API sin acoplamiento duro
+        Thread.startVirtualThread(() -> {
+            NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
+                manager.loadPlayerFromDatabase(event.getPlayer().getUniqueId(), db.getDataSource());
+            });
+        });
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGHEST)
     public void onPlayerQuit(PlayerQuitEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
         CollectionProfile profile = manager.getProfile(uuid);
 
         if (profile != null && profile.isNeedsFlush()) {
-            DataSource dataSource = NexoCore.getPlugin(NexoCore.class).getDatabaseManager().getDataSource();
 
-            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-                String sql = "INSERT INTO nexo_collections (uuid, collections_data, claimed_tiers) VALUES (?, ?::jsonb, ?::jsonb) " +
-                        "ON CONFLICT (uuid) DO UPDATE SET collections_data = EXCLUDED.collections_data, claimed_tiers = EXCLUDED.claimed_tiers";
+            // 🌟 FIX: Guardado mediante Virtual Threads. ¡0% TPS Drop al desconectarse!
+            Thread.startVirtualThread(() -> {
+                NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
+                    String sql = "INSERT INTO nexo_collections (uuid, collections_data, claimed_tiers) VALUES (?, ?::jsonb, ?::jsonb) " +
+                            "ON CONFLICT (uuid) DO UPDATE SET collections_data = EXCLUDED.collections_data, claimed_tiers = EXCLUDED.claimed_tiers";
 
-                try (Connection conn = dataSource.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(sql)) {
+                    try (Connection conn = db.getDataSource().getConnection();
+                         PreparedStatement ps = conn.prepareStatement(sql)) {
 
-                    ps.setString(1, uuid.toString());
-                    ps.setString(2, gson.toJson(profile.getProgressMap()));
-                    ps.setString(3, gson.toJson(profile.getClaimedTiersMap()));
+                        ps.setString(1, uuid.toString());
+                        ps.setString(2, gson.toJson(profile.getProgressMap()));
+                        ps.setString(3, gson.toJson(profile.getClaimedTiersMap()));
 
-                    ps.executeUpdate();
+                        ps.executeUpdate();
 
-                } catch (Exception e) {
-                    plugin.getLogger().severe("Error crítico al guardar el Grimorio de Colecciones de " + event.getPlayer().getName());
-                    e.printStackTrace();
-                }
+                    } catch (Exception e) {
+                        plugin.getLogger().severe("❌ Error crítico al guardar el Grimorio de Colecciones de " + event.getPlayer().getName() + ": " + e.getMessage());
+                    }
+                });
             });
         }
-        // Limpiamos de la memoria al salir para evitar fugas de RAM
+
+        // Limpiamos de la memoria síncronamente al salir para evitar fugas de RAM
         manager.removeProfile(uuid);
     }
 }

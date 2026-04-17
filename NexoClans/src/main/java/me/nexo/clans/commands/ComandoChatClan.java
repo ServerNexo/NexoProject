@@ -1,69 +1,79 @@
 package me.nexo.clans.commands;
 
-import me.nexo.clans.NexoClans;
-import me.nexo.clans.core.NexoClan;
-import me.nexo.core.NexoCore;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+import me.nexo.clans.core.ClanManager;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoUser;
+import me.nexo.core.user.UserManager;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.Optional;
-
+/**
+ * 👥 NexoClans - Sistema de Chat de Facción (Arquitectura Enterprise)
+ * Rendimiento: Hilos Virtuales para distribución masiva de mensajes y Cero Lag I/O.
+ */
+@Singleton
 public class ComandoChatClan implements CommandExecutor {
 
-    private final NexoClans plugin;
-    private final NexoCore core;
+    private final ClanManager clanManager;
+    private final UserManager userManager;
 
-    public ComandoChatClan(NexoClans plugin) {
-        this.plugin = plugin;
-        this.core = NexoCore.getPlugin(NexoCore.class);
-    }
-
-    private String getMessage(String path) {
-        return core.getConfigManager().getMessage("clans_messages.yml", path);
+    // 💉 PILAR 3: Inyección de Dependencias Directa
+    @Inject
+    public ComandoChatClan(ClanManager clanManager, UserManager userManager) {
+        this.clanManager = clanManager;
+        this.userManager = userManager;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) return true;
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("[!] El chat de clanes es exclusivo para jugadores.");
+            return true;
+        }
 
-        NexoUser user = core.getUserManager().getUserOrNull(player.getUniqueId());
+        // Búsqueda en RAM Inyectada (O(1))
+        NexoUser user = userManager.getUserOrNull(player.getUniqueId());
 
         if (user == null || !user.hasClan()) {
-            CrossplayUtils.sendMessage(player, getMessage("comandos.chat.errores.sin-clan"));
+            CrossplayUtils.sendMessage(player, "&#FF5555[!] No perteneces a ninguna facción.");
             return true;
         }
 
         if (args.length == 0) {
-            CrossplayUtils.sendMessage(player, getMessage("comandos.chat.errores.uso"));
+            CrossplayUtils.sendMessage(player, "&#FFAA00[!] Uso: /c <mensaje>");
             return true;
         }
 
         String mensaje = String.join(" ", args);
 
-        Optional<NexoClan> clanOpt = plugin.getClanManager().getClanFromCache(user.getClanId());
-        if (clanOpt.isEmpty()) {
-            CrossplayUtils.sendMessage(player, getMessage("comandos.chat.errores.sin-clan"));
-            return true;
-        }
+        clanManager.getClanFromCache(user.getClanId()).ifPresentOrElse(clan -> {
 
-        NexoClan clan = clanOpt.get();
+            // 🌟 FIX: Hilo Virtual.
+            // Distribuimos el mensaje de chat de forma asíncrona para que el servidor
+            // jamás se congele si hay cientos de jugadores enviando mensajes al mismo tiempo.
+            Thread.startVirtualThread(() -> {
 
-        String formato = getMessage("comandos.chat.formato")
-                .replace("%clan_name%", clan.getName())
-                .replace("%player%", player.getName())
-                .replace("%message%", mensaje);
+                // Formato de alta velocidad sin llamadas de I/O al disco duro
+                String formato = "&#FFAA00[Clan] &#E6CCFF" + clan.getName() + " &#555555| &#55FF55" + player.getName() + ": &#FFFFFF" + mensaje;
 
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            NexoUser tUser = core.getUserManager().getUserOrNull(p.getUniqueId());
-            if (tUser != null && tUser.hasClan() && tUser.getClanId().equals(user.getClanId())) {
-                CrossplayUtils.sendMessage(p, formato);
-            }
-        }
+                // Reparto a los aliados
+                for (Player p : Bukkit.getOnlinePlayers()) {
+                    NexoUser tUser = userManager.getUserOrNull(p.getUniqueId());
+
+                    if (tUser != null && tUser.hasClan() && tUser.getClanId().equals(user.getClanId())) {
+                        CrossplayUtils.sendMessage(p, formato);
+                    }
+                }
+            });
+
+        }, () -> {
+            CrossplayUtils.sendMessage(player, "&#FF5555[!] La conexión telepática con tu facción ha fallado.");
+        });
 
         return true;
     }

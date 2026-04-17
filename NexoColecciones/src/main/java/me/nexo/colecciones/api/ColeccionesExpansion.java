@@ -1,5 +1,7 @@
 package me.nexo.colecciones.api;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import me.nexo.colecciones.NexoColecciones;
 import me.nexo.colecciones.colecciones.CollectionManager;
@@ -8,14 +10,20 @@ import me.nexo.colecciones.data.CollectionItem;
 import org.bukkit.OfflinePlayer;
 import org.jetbrains.annotations.NotNull;
 
+/**
+ * 📚 NexoColecciones - Expansión de PlaceholderAPI (Arquitectura Enterprise)
+ */
+@Singleton
 public class ColeccionesExpansion extends PlaceholderExpansion {
 
     private final NexoColecciones plugin;
     private final CollectionManager manager;
 
-    public ColeccionesExpansion(NexoColecciones plugin) {
+    // 💉 PILAR 3: Inyección de Dependencias Directa
+    @Inject
+    public ColeccionesExpansion(NexoColecciones plugin, CollectionManager manager) {
         this.plugin = plugin;
-        this.manager = plugin.getCollectionManager();
+        this.manager = manager; // 🌟 Manager inyectado, sin acoplamiento
     }
 
     @Override
@@ -25,7 +33,8 @@ public class ColeccionesExpansion extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getAuthor() {
-        return plugin.getDescription().getAuthors().toString();
+        // 🌟 FIX: Texto estático y limpio. (getAuthors().toString() devuelve "[Nombre]")
+        return "NexoNetwork";
     }
 
     @Override
@@ -35,11 +44,12 @@ public class ColeccionesExpansion extends PlaceholderExpansion {
 
     @Override
     public boolean persist() {
-        return true; // Mantiene la expansión activa al recargar PAPI
+        return true; // Mantiene la expansión activa al recargar PAPI (/papi reload)
     }
 
     @Override
     public String onRequest(OfflinePlayer player, @NotNull String params) {
+        // Validación de seguridad (PAPI a veces lanza NPCs o jugadores offline)
         if (player == null || !player.isOnline()) return "0";
 
         CollectionProfile profile = manager.getProfile(player.getUniqueId());
@@ -47,7 +57,7 @@ public class ColeccionesExpansion extends PlaceholderExpansion {
 
         // 🌟 VARIABLE 1: %nexocolecciones_progress_ITEM%
         if (params.startsWith("progress_")) {
-            String itemId = params.replace("progress_", "").toLowerCase(); // Usamos minúsculas para coincidir con el motor
+            String itemId = params.replace("progress_", "").toLowerCase();
             return String.valueOf(profile.getProgress(itemId));
         }
 
@@ -55,13 +65,13 @@ public class ColeccionesExpansion extends PlaceholderExpansion {
         if (params.startsWith("level_")) {
             String itemId = params.replace("level_", "").toLowerCase();
 
-            // Buscamos el ítem en la memoria del Cerebro
+            // Buscamos el ítem en la memoria RAM ultra-rápida
             CollectionItem item = manager.getItemGlobal(itemId);
             if (item == null) return "0"; // Si no existe, es nivel 0
 
             int progreso = profile.getProgress(itemId);
 
-            // 🌟 CORRECCIÓN: Le pasamos el 'item' al calculador para que lea sus Tiers
+            // Calculamos el nivel basado en el progreso actual y los Tiers
             return String.valueOf(manager.calcularNivel(item, progreso));
         }
 

@@ -1,62 +1,55 @@
 package me.nexo.clans.config;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.clans.NexoClans;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import me.nexo.clans.config.nodes.ClansMessagesConfig;
+import org.spongepowered.configurate.CommentedConfigurationNode;
+import org.spongepowered.configurate.yaml.YamlConfigurationLoader;
 
 import java.io.File;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.nio.file.Path;
 
+/**
+ * 👥 NexoClans - Gestor de Configuración Tipado (Arquitectura Enterprise)
+ */
+@Singleton
 public class ConfigManager {
 
     private final NexoClans plugin;
-    private FileConfiguration messagesConfig = null;
-    private File messagesFile = null;
+    private ClansMessagesConfig messages;
+    private YamlConfigurationLoader messagesLoader;
 
+    // 💉 PILAR 3: Inyección de Dependencias
+    @Inject
     public ConfigManager(NexoClans plugin) {
         this.plugin = plugin;
-        saveDefaultMessages();
+        loadMessages();
     }
 
-    public void reloadMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
+    public void loadMessages() {
+        File file = new File(plugin.getDataFolder(), "messages.yml");
+
+        // 🌟 FIX SEGURIDAD: Usamos 'false' para NO borrar los cambios que hagan los admins en el archivo.
+        if (!file.exists()) {
+            plugin.saveResource("messages.yml", false);
         }
 
-        // 🌟 Recargamos la configuración desde el archivo recién actualizado
-        messagesConfig = YamlConfiguration.loadConfiguration(messagesFile);
+        Path path = file.toPath();
+        messagesLoader = YamlConfigurationLoader.builder().path(path).build();
 
-        InputStream defaultStream = plugin.getResource("messages.yml");
-        if (defaultStream != null) {
-            YamlConfiguration defaultConfig = YamlConfiguration.loadConfiguration(new InputStreamReader(defaultStream));
-            messagesConfig.setDefaults(defaultConfig);
-        }
-    }
-
-    public FileConfiguration getMessages() {
-        if (messagesConfig == null) {
-            reloadMessages();
-        }
-        return messagesConfig;
-    }
-
-    public void saveDefaultMessages() {
-        if (messagesFile == null) {
-            messagesFile = new File(plugin.getDataFolder(), "messages.yml");
-        }
-
-        // 🌟 PROTOCOLO OMEGA ACTIVADO:
-        // Al quitar el "if (!exists)" y poner "true", el servidor SIEMPRE
-        // extraerá el messages.yml más nuevo de tu .jar y borrará el viejo.
         try {
-            plugin.saveResource("messages.yml", true);
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("No se pudo actualizar messages.yml desde el jar.");
+            // Leemos todo el archivo UNA SOLA VEZ y lo guardamos en RAM usando Nodos Tipados
+            CommentedConfigurationNode root = messagesLoader.load();
+            messages = root.get(ClansMessagesConfig.class);
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error crítico cargando messages.yml de Clanes: " + e.getMessage());
+            messages = new ClansMessagesConfig(); // Fallback seguro
         }
     }
 
-    public String getMessage(String path) {
-        return getMessages().getString(path, "&cMessage not found: " + path);
+    // 🌟 Acceso Type-Safe a los textos (Adiós al viejo getMessage de lectura I/O)
+    public ClansMessagesConfig getMessages() {
+        return messages;
     }
 }

@@ -1,26 +1,38 @@
 package me.nexo.colecciones.colecciones;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 📚 NexoColecciones - Perfil de Datos de Colecciones por Jugador
+ * Nota: Objeto instanciado en tiempo real. No requiere Inyección de Dependencias.
+ */
 public class CollectionProfile {
     private final UUID playerUUID;
 
     // Memoria de cantidad recolectada (ID de Colección -> Cantidad)
     private final ConcurrentHashMap<String, Integer> progress;
 
-    // 🌟 NUEVO: Memoria de Tiers reclamados manualmente (ID de Colección -> Set de Niveles cobrados)
+    // 🌟 FIX: Memoria de Tiers reclamados con Sets 100% Concurrentes
     private final ConcurrentHashMap<String, Set<Integer>> claimedTiers;
 
-    private boolean needsFlush = false;
+    private volatile boolean needsFlush = false; // 🌟 FIX: 'volatile' garantiza sincronía entre hilos
 
     public CollectionProfile(UUID playerUUID, Map<String, Integer> loadedProgress, Map<String, Set<Integer>> loadedClaimedTiers) {
         this.playerUUID = playerUUID;
         this.progress = loadedProgress != null ? new ConcurrentHashMap<>(loadedProgress) : new ConcurrentHashMap<>();
-        this.claimedTiers = loadedClaimedTiers != null ? new ConcurrentHashMap<>(loadedClaimedTiers) : new ConcurrentHashMap<>();
+
+        // 🌟 FIX: Reconstruimos los Sets normales a Sets Concurrentes para evitar Crashes
+        this.claimedTiers = new ConcurrentHashMap<>();
+        if (loadedClaimedTiers != null) {
+            loadedClaimedTiers.forEach((key, value) -> {
+                Set<Integer> concurrentSet = ConcurrentHashMap.newKeySet();
+                concurrentSet.addAll(value);
+                this.claimedTiers.put(key, concurrentSet);
+            });
+        }
     }
 
     // ==========================================================
@@ -49,16 +61,16 @@ public class CollectionProfile {
     // 🎁 GESTIÓN DE TIERS (RECLAMO MANUAL)
     // ==========================================================
 
-    // 🌟 NUEVO: Verifica si un jugador ya cobró un Nivel en específico
+    // Verifica si un jugador ya cobró un Nivel en específico
     public boolean hasClaimedTier(String collectionId, int tierLevel) {
         Set<Integer> claimed = claimedTiers.get(collectionId);
         return claimed != null && claimed.contains(tierLevel);
     }
 
-    // 🌟 NUEVO: Marca un Nivel como cobrado permanentemente
+    // Marca un Nivel como cobrado permanentemente de forma Thread-Safe
     public void markTierAsClaimed(String collectionId, int tierLevel) {
-        // Si no existe un Set para esta colección, lo crea, y luego añade el Nivel
-        claimedTiers.computeIfAbsent(collectionId, k -> new HashSet<>()).add(tierLevel);
+        // 🌟 FIX: Usamos ConcurrentHashMap.newKeySet() en lugar del HashSet inseguro
+        claimedTiers.computeIfAbsent(collectionId, k -> ConcurrentHashMap.newKeySet()).add(tierLevel);
         this.needsFlush = true;
     }
 

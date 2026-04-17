@@ -3,7 +3,6 @@ package me.nexo.clans.menu;
 import me.nexo.clans.NexoClans;
 import me.nexo.clans.core.ClanMember;
 import me.nexo.clans.core.NexoClan;
-import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
 import me.nexo.core.user.NexoUser;
@@ -21,24 +20,33 @@ import org.bukkit.persistence.PersistentDataType;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 👥 NexoClans - Menú de Miembros (Arquitectura Enterprise)
+ * Rendimiento: Cero Lag I/O, PDC Cacheado y Carga Asíncrona.
+ */
 public class ClanMembersMenu extends NexoMenu {
 
     private final NexoClans plugin;
-    private final NexoCore core;
     private final NexoClan clan;
     private final NexoUser user;
+
+    // 🌟 OPTIMIZACIÓN DE RAM: Cacheamos la llave para no instanciarla en el bucle
+    private final NamespacedKey memberKey;
 
     public ClanMembersMenu(Player player, NexoClans plugin, NexoClan clan, NexoUser user) {
         super(player);
         this.plugin = plugin;
-        this.core = NexoCore.getPlugin(NexoCore.class);
         this.clan = clan;
         this.user = user;
+
+        // Cacheamos la llave al abrir el menú
+        this.memberKey = new NamespacedKey(plugin, "member_name");
     }
 
     @Override
     public String getMenuName() {
-        return core.getConfigManager().getMessage("clans_messages.yml", "menus.miembros.titulo");
+        // 🌟 FIX: Texto Hexadecimal Directo (Cero I/O)
+        return "&#FFAA00👥 <bold>MIEMBROS DEL CLAN</bold>";
     }
 
     @Override
@@ -48,22 +56,25 @@ public class ClanMembersMenu extends NexoMenu {
 
     @Override
     public void setMenuItems() {
-        CrossplayUtils.sendMessage(player, core.getConfigManager().getMessage("clans_messages.yml", "menus.miembros.buscando"));
-
-        // Ítem temporal mientras carga
+        // Ítem temporal holográfico mientras carga la Base de Datos
         ItemStack loading = new ItemStack(Material.CLOCK);
         ItemMeta lMeta = loading.getItemMeta();
-        lMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>Buscando miembros...</bold>"));
-        loading.setItemMeta(lMeta);
+        if (lMeta != null) {
+            lMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>Buscando miembros en el Nexo...</bold>"));
+            loading.setItemMeta(lMeta);
+        }
         inventory.setItem(22, loading);
 
-        // 🚀 Carga asíncrona segura a la base de datos
+        // 🚀 Carga asíncrona segura desde Hilos Virtuales
         plugin.getClanManager().getMiembrosAsync(clan.getId(), miembros -> {
+
+            // Retornamos al Hilo Principal (Tick Loop) SOLO para modificar la UI gráfica
             Bukkit.getScheduler().runTask(plugin, () -> {
-                // Protección Anti-Crash: Verificamos si el jugador cerró el menú mientras cargaba
+
+                // Protección Anti-Crash: Verificamos si el jugador cerró el menú en esa fracción de segundo
                 if (player.getOpenInventory().getTopInventory() != inventory) return;
 
-                inventory.clear(); // Limpiamos el ítem de carga
+                inventory.clear(); // Limpiamos el ítem del reloj
 
                 for (int i = 0; i < miembros.size() && i < 53; i++) {
                     ClanMember m = miembros.get(i);
@@ -72,25 +83,35 @@ public class ClanMembersMenu extends NexoMenu {
 
                     if (meta != null) {
                         meta.setOwningPlayer(Bukkit.getOfflinePlayer(m.uuid()));
-                        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff" + m.name()));
+
+                        // Sistema visual de rangos directo
+                        String colorRol = m.role().equals("LIDER") ? "&#FF5555" : (m.role().equals("OFICIAL") ? "&#FFAA00" : "&#55FF55");
+                        meta.displayName(CrossplayUtils.parseCrossplay(player, colorRol + "<bold>" + m.name() + "</bold>"));
 
                         List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                        lore.add(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("clans_messages.yml", "menus.miembros.lore-rango").replace("%role%", m.role())));
+                        lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFRango: " + colorRol + m.role()));
+                        lore.add(CrossplayUtils.parseCrossplay(player, ""));
+
+                        if (user.getClanRole().equals("LIDER") || user.getClanRole().equals("OFICIAL")) {
+                            if (!m.role().equals("LIDER") && !m.uuid().equals(player.getUniqueId())) {
+                                lore.add(CrossplayUtils.parseCrossplay(player, "&#FF5555▶ Clic Derecho para Expulsar"));
+                            }
+                        }
                         meta.lore(lore);
 
-                        // 🌟 Magia PDC: Guardamos el nombre del jugador dentro del ítem de forma segura
-                        meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "member_name"), PersistentDataType.STRING, m.name());
+                        // 🌟 MAGIA PDC: Guardamos el nombre usando la llave cacheada
+                        meta.getPersistentDataContainer().set(memberKey, PersistentDataType.STRING, m.name());
 
                         head.setItemMeta(meta);
                     }
                     inventory.setItem(i, head);
                 }
 
-                // Botón de regresar
+                // Botón de regresar estático
                 ItemStack back = new ItemStack(Material.ARROW);
                 ItemMeta backMeta = back.getItemMeta();
                 if (backMeta != null) {
-                    backMeta.displayName(CrossplayUtils.parseCrossplay(player, core.getConfigManager().getMessage("clans_messages.yml", "menus.miembros.boton-regresar")));
+                    backMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF5555⬅ Volver al Panel Central"));
                     back.setItemMeta(backMeta);
                 }
                 inventory.setItem(49, back);
@@ -100,7 +121,7 @@ public class ClanMembersMenu extends NexoMenu {
 
     @Override
     public void handleMenu(InventoryClickEvent event) {
-        event.setCancelled(true); // Bloqueo absoluto
+        event.setCancelled(true); // Bloqueo absoluto anti-robos
 
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
@@ -108,13 +129,16 @@ public class ClanMembersMenu extends NexoMenu {
         // Botón de Regresar
         if (clicked.getType() == Material.ARROW && event.getRawSlot() == 49) {
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
+
+            // Volvemos al menú principal
             new ClanMenu(player, plugin, clan, user).open();
             return;
         }
 
-        // Sistema de Expulsión Seguro (Right Click a una cabeza)
+        // ⚔️ Sistema de Expulsión Seguro O(1)
         if (clicked.getType() == Material.PLAYER_HEAD && event.getClick().isRightClick()) {
-            NamespacedKey memberKey = new NamespacedKey(plugin, "member_name");
+
+            // Validamos contra la llave de RAM estática
             if (clicked.getItemMeta().getPersistentDataContainer().has(memberKey, PersistentDataType.STRING)) {
                 String targetName = clicked.getItemMeta().getPersistentDataContainer().get(memberKey, PersistentDataType.STRING);
 

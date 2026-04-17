@@ -1,37 +1,41 @@
 package me.nexo.colecciones.slayers;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.colecciones.NexoColecciones;
-import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 
 import java.io.File;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * 📚 NexoColecciones - Gestor Central de Cacerías (Arquitectura Enterprise)
+ */
+@Singleton
 public class SlayerManager {
 
     private final NexoColecciones plugin;
-    private final NexoCore core;
 
+    // DTO Inmutable (Excelente uso de Records)
     public record SlayerTemplate(String id, String name, String targetMob, int requiredKills, String bossName, String bossType) {}
 
-    private final Map<String, SlayerTemplate> templates = new HashMap<>();
+    // 🌟 FIX: Mapas 100% Concurrentes para evitar crashes de lectura/escritura asíncrona
+    private final Map<String, SlayerTemplate> templates = new ConcurrentHashMap<>();
     private final Map<UUID, ActiveSlayer> activeSlayers = new ConcurrentHashMap<>();
 
+    // 💉 PILAR 3: Inyección de Dependencias Directa (Cero acoplamiento estático)
+    @Inject
     public SlayerManager(NexoColecciones plugin) {
         this.plugin = plugin;
-        this.core = NexoCore.getPlugin(NexoCore.class);
     }
 
-    private String getMessage(String path) {
-        return core.getConfigManager().getMessage("colecciones_messages.yml", path);
-    }
-
+    // Carga de datos inicial a la RAM (Ocurre solo en arranques o reloads)
     public void cargarSlayers() {
         templates.clear();
         File file = new File(plugin.getDataFolder(), "slayers.yml");
@@ -47,9 +51,15 @@ public class SlayerManager {
 
             templates.put(key.toUpperCase(), new SlayerTemplate(key.toUpperCase(), name, targetMob, kills, bossName, bossType));
         }
+
+        plugin.getLogger().info("✅ [SLAYER MANAGER] Ensamblados " + templates.size() + " contratos Slayer en RAM.");
     }
 
-    public Map<String, SlayerTemplate> getTemplates() { return templates; }
+    // 🌟 FIX: Sellamos el mapa para que nadie pueda añadir/borrar jefes por error desde otro lado
+    public Map<String, SlayerTemplate> getTemplates() {
+        return Collections.unmodifiableMap(templates);
+    }
+
     public ActiveSlayer getActiveSlayer(UUID uuid) { return activeSlayers.get(uuid); }
     public void removeActiveSlayer(UUID uuid) { activeSlayers.remove(uuid); }
 
@@ -57,12 +67,12 @@ public class SlayerManager {
         slayerId = slayerId.toUpperCase();
 
         if (!templates.containsKey(slayerId)) {
-            CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.no-encontrado"));
+            CrossplayUtils.sendMessage(player, "&#FF5555[!] El contrato especificado no existe o la tinta se ha borrado.");
             return;
         }
 
         if (activeSlayers.containsKey(player.getUniqueId())) {
-            CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.ya-activo"));
+            CrossplayUtils.sendMessage(player, "&#FFAA00[!] Ya tienes una cacería activa. Termina o cancela tu contrato actual (/slayer cancel).");
             return;
         }
 
@@ -70,8 +80,11 @@ public class SlayerManager {
         ActiveSlayer activo = new ActiveSlayer(player, template);
         activeSlayers.put(player.getUniqueId(), activo);
 
-        CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.inicio-caceria"));
-        CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.contrato-aceptado").replace("%name%", template.name()));
-        CrossplayUtils.sendMessage(player, getMessage("comandos.slayer.descripcion-caceria").replace("%kills%", String.valueOf(template.requiredKills())).replace("%mob%", template.targetMob()));
+        // 🌟 FIX: Textos Hexadecimales directos (0% Lag I/O)
+        CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
+        CrossplayUtils.sendMessage(player, "&#FF5555⚔ <bold>NUEVA CACERÍA INICIADA</bold>");
+        CrossplayUtils.sendMessage(player, "&#E6CCFFHas firmado un contrato de sangre para aniquilar a &#FF5555" + template.name() + "&#E6CCFF.");
+        CrossplayUtils.sendMessage(player, "&#E6CCFFObjetivo inicial: Derrota &#FFAA00" + template.requiredKills() + " " + template.targetMob() + "s &#E6CCFFpara invocar a la bestia.");
+        CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
     }
 }

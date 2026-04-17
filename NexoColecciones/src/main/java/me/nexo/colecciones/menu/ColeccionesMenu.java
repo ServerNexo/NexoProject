@@ -19,9 +19,13 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * 📚 NexoColecciones - Menú Interactivo (Arquitectura Enterprise)
+ * Rendimiento: Cero Lag Visual (0 I/O), Llaves Cacheadas y Transiciones Fluidas (1 tick).
+ */
 public class ColeccionesMenu extends NexoMenu {
 
     private final NexoColecciones plugin;
@@ -29,72 +33,76 @@ public class ColeccionesMenu extends NexoMenu {
     private final String categoryId;
     private final String itemId;
 
-    public enum MenuType {
-        MAIN, CATEGORY, ITEM_TIERS
-    }
+    // 🌟 OPTIMIZACIÓN DE RAM: Llaves de PDC cacheadas para no instanciarlas en bucles
+    private final NamespacedKey actionKey;
+    private final NamespacedKey categoryKey;
+    private final NamespacedKey itemKey;
+    private final NamespacedKey tierKey;
 
-    // 🌟 NUEVO CONSTRUCTOR UNIFICADO - SIN NEXOCORE
+    public enum MenuType { MAIN, CATEGORY, ITEM_TIERS }
+
     public ColeccionesMenu(Player player, NexoColecciones plugin, MenuType type, String categoryId, String itemId) {
         super(player);
         this.plugin = plugin;
         this.menuType = type;
         this.categoryId = categoryId;
         this.itemId = itemId;
-    }
 
-    // 🌟 CORRECCIÓN: Usamos el ConfigManager nativo de Colecciones
-    private String getMessage(String path) {
-        return plugin.getConfigManager().getMessage(path);
-    }
-
-    private List<String> getMessageList(String path) {
-        return plugin.getConfigManager().getMessages().getStringList(path);
+        this.actionKey = new NamespacedKey(plugin, "action");
+        this.categoryKey = new NamespacedKey(plugin, "category_id");
+        this.itemKey = new NamespacedKey(plugin, "item_id");
+        this.tierKey = new NamespacedKey(plugin, "tier_level");
     }
 
     @Override
     public String getMenuName() {
-        if (menuType == MenuType.MAIN) {
-            return getMessage("menus.colecciones.titulo");
-        } else if (menuType == MenuType.CATEGORY) {
+        if (menuType == MenuType.MAIN) return "&#FFAA00📚 <bold>TUS COLECCIONES</bold>";
+        if (menuType == MenuType.CATEGORY) {
             CollectionCategory cat = plugin.getCollectionManager().getCategorias().get(categoryId);
-            return cat != null ? cat.getNombre() : "Categorías";
-        } else {
-            return getMessage("menus.colecciones.tiers.titulo");
+            return cat != null ? cat.getNombre() : "&#FFAA00📚 Categoría";
         }
+        return "&#E6CCFF⭐ <bold>PROGRESO DEL ÍTEM</bold>";
     }
 
     @Override
     public int getSlots() {
-        if (menuType == MenuType.MAIN) return 27;
-        if (menuType == MenuType.CATEGORY) return 54;
-        return 45; // ITEM_TIERS
+        return menuType == MenuType.MAIN ? 27 : (menuType == MenuType.CATEGORY ? 54 : 45);
     }
 
     @Override
     public void setMenuItems() {
-        setFillerGlass(); // Añade el cristal morado automáticamente
+        setFillerGlass(); // Añade el cristal morado automáticamente (desde NexoMenu)
 
+        // ==========================================
+        // 📚 1. MENÚ PRINCIPAL (CATEGORÍAS)
+        // ==========================================
         if (menuType == MenuType.MAIN) {
             for (CollectionCategory cat : plugin.getCollectionManager().getCategorias().values()) {
                 ItemStack item = new ItemStack(cat.getIcono());
                 ItemMeta meta = item.getItemMeta();
                 if (meta != null) {
                     meta.displayName(CrossplayUtils.parseCrossplay(player, cat.getNombre()));
-                    List<String> loreConfig = getMessageList("menus.colecciones.categoria-lore");
-                    List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
-                            .map(line -> CrossplayUtils.parseCrossplay(player, line))
-                            .collect(Collectors.toList());
+
+                    // 🌟 FIX: Textos directos sin Lag I/O
+                    List<net.kyori.adventure.text.Component> lore = List.of(
+                            CrossplayUtils.parseCrossplay(player, "&#555555Categoría de Farmeo"),
+                            CrossplayUtils.parseCrossplay(player, ""),
+                            CrossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para explorar")
+                    );
                     meta.lore(lore);
                     meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
 
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_category");
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "category_id"), PersistentDataType.STRING, cat.getId());
+                    meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "open_category");
+                    meta.getPersistentDataContainer().set(categoryKey, PersistentDataType.STRING, cat.getId());
                     item.setItemMeta(meta);
                 }
                 inventory.setItem(cat.getSlot(), item);
             }
-
-        } else if (menuType == MenuType.CATEGORY) {
+        }
+        // ==========================================
+        // 📦 2. MENÚ DE CATEGORÍA (ÍTEMS)
+        // ==========================================
+        else if (menuType == MenuType.CATEGORY) {
             CollectionCategory cat = plugin.getCollectionManager().getCategorias().get(categoryId);
             if (cat == null) return;
 
@@ -103,47 +111,42 @@ public class ColeccionesMenu extends NexoMenu {
             for (CollectionItem cItem : cat.getItems().values()) {
                 int progreso = profile != null ? profile.getProgress(cItem.getId()) : 0;
                 int nivelActual = plugin.getCollectionManager().calcularNivel(cItem, progreso);
+
                 ItemStack item;
                 ItemMeta meta;
 
                 if (progreso == 0) {
-                    item = new ItemStack(Material.PURPLE_DYE);
+                    item = new ItemStack(Material.GRAY_DYE); // Color gris para no descubiertos
                     meta = item.getItemMeta();
-                    if (meta != null) {
-                        meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.item-desconocido.titulo")));
-                        List<String> loreConfig = getMessageList("menus.colecciones.item-desconocido.lore");
-                        List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
-                                .map(line -> CrossplayUtils.parseCrossplay(player, line))
-                                .collect(Collectors.toList());
-                        meta.lore(lore);
-                    }
+                    meta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF5555??? (Desconocido)"));
+                    meta.lore(List.of(
+                            CrossplayUtils.parseCrossplay(player, "&#555555Sigue explorando y farmeando"),
+                            CrossplayUtils.parseCrossplay(player, "&#555555para descubrir esta colección.")
+                    ));
                 } else {
                     item = new ItemStack(cItem.getIcono());
                     meta = item.getItemMeta();
-                    if (meta != null) {
-                        meta.displayName(CrossplayUtils.parseCrossplay(player, cItem.getNombre()));
-                        List<String> loreConfig = getMessageList("menus.colecciones.item-descubierto.lore");
-                        List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
-                                .map(line -> CrossplayUtils.parseCrossplay(player, line
-                                        .replace("%level%", String.valueOf(nivelActual))
-                                        .replace("%max_tier%", String.valueOf(cItem.getMaxTier()))
-                                        .replace("%progress%", String.valueOf(progreso))))
-                                .collect(Collectors.toList());
-                        meta.lore(lore);
+                    meta.displayName(CrossplayUtils.parseCrossplay(player, cItem.getNombre()));
+                    meta.lore(List.of(
+                            CrossplayUtils.parseCrossplay(player, "&#E6CCFFNivel de Maestría: &#FFAA00" + nivelActual + " / " + cItem.getMaxTier()),
+                            CrossplayUtils.parseCrossplay(player, "&#E6CCFFProgreso Total: &#55FF55" + progreso),
+                            CrossplayUtils.parseCrossplay(player, ""),
+                            CrossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para ver recompensas")
+                    ));
 
-                        meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "open_item");
-                        meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING, cItem.getId());
-                    }
+                    meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "open_item");
+                    meta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
                 }
-                if (meta != null) {
-                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                    item.setItemMeta(meta);
-                }
+                meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                item.setItemMeta(meta);
                 inventory.setItem(cItem.getSlotMenu(), item);
             }
             addBackButton("main");
-
-        } else if (menuType == MenuType.ITEM_TIERS) {
+        }
+        // ==========================================
+        // ⭐ 3. MENÚ DE TIERS (RECOMPENSAS)
+        // ==========================================
+        else if (menuType == MenuType.ITEM_TIERS) {
             CollectionItem cItem = plugin.getCollectionManager().getItemGlobal(itemId);
             if (cItem == null) return;
 
@@ -153,52 +156,45 @@ public class ColeccionesMenu extends NexoMenu {
             int[] slotsCentro = {10, 11, 12, 13, 14, 15, 16, 19, 20, 21, 22, 23, 24, 25};
             int i = 0;
             List<Integer> niveles = new ArrayList<>(cItem.getTiers().keySet());
-            java.util.Collections.sort(niveles);
+            Collections.sort(niveles);
 
             for (int nivel : niveles) {
                 if (i >= slotsCentro.length) break;
                 Tier tier = cItem.getTier(nivel);
                 boolean desbloqueado = progreso >= tier.getRequerido();
                 boolean reclamado = profile != null && profile.hasClaimedTier(cItem.getId(), nivel);
+
                 ItemStack item;
                 ItemMeta meta;
 
                 if (reclamado) {
                     item = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
                     meta = item.getItemMeta();
-                    meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.tiers.reclamado.titulo").replace("%level%", String.valueOf(nivel))));
-                    List<String> loreConfig = getMessageList("menus.colecciones.tiers.reclamado.lore");
-                    List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
-                            .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%required%", String.valueOf(tier.getRequerido()))))
-                            .collect(Collectors.toList());
-                    meta.lore(lore);
+                    meta.displayName(CrossplayUtils.parseCrossplay(player, "&#55FF55[✓] Nivel " + nivel + " Completado"));
+                    meta.lore(List.of(CrossplayUtils.parseCrossplay(player, "&#555555Ya has reclamado estas recompensas.")));
                 } else if (desbloqueado) {
                     item = new ItemStack(Material.YELLOW_STAINED_GLASS_PANE);
                     meta = item.getItemMeta();
-                    meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.tiers.listo-reclamar.titulo").replace("%level%", String.valueOf(nivel))));
-                    meta.addEnchant(org.bukkit.enchantments.Enchantment.LURE, 1, true);
+                    meta.displayName(CrossplayUtils.parseCrossplay(player, "&#FFAA00[!] Nivel " + nivel + " Desbloqueado"));
+                    meta.addEnchant(org.bukkit.enchantments.Enchantment.UNBREAKING, 1, true); // Brillo
+
                     List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
-                    getMessageList("menus.colecciones.tiers.listo-reclamar.lore-base").forEach(line ->
-                            lore.add(CrossplayUtils.parseCrossplay(player, line.replace("%required%", String.valueOf(tier.getRequerido())))));
+                    lore.add(CrossplayUtils.parseCrossplay(player, "&#E6CCFFMeta alcanzada: &#55FF55" + tier.getRequerido()));
+                    lore.add(CrossplayUtils.parseCrossplay(player, ""));
                     tier.getLoreRecompensa().forEach(line -> lore.add(CrossplayUtils.parseCrossplay(player, line)));
-                    getMessageList("menus.colecciones.tiers.listo-reclamar.lore-accion").forEach(line ->
-                            lore.add(CrossplayUtils.parseCrossplay(player, line)));
+                    lore.add(CrossplayUtils.parseCrossplay(player, ""));
+                    lore.add(CrossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para Reclamar"));
                     meta.lore(lore);
 
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "claim_tier");
-                    meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "tier_level"), PersistentDataType.INTEGER, nivel);
+                    meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "claim_tier");
+                    meta.getPersistentDataContainer().set(tierKey, PersistentDataType.INTEGER, nivel);
                 } else {
                     item = new ItemStack(Material.RED_STAINED_GLASS_PANE);
                     meta = item.getItemMeta();
-                    meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.tiers.bloqueado.titulo").replace("%level%", String.valueOf(nivel))));
-                    List<String> loreConfig = getMessageList("menus.colecciones.tiers.bloqueado.lore");
-                    List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
-                            .map(line -> CrossplayUtils.parseCrossplay(player, line
-                                    .replace("%progress%", String.valueOf(progreso))
-                                    .replace("%required%", String.valueOf(tier.getRequerido()))))
-                            .collect(Collectors.toList());
-                    meta.lore(lore);
+                    meta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF5555[x] Nivel " + nivel + " Bloqueado"));
+                    meta.lore(List.of(CrossplayUtils.parseCrossplay(player, "&#E6CCFFFaltan: &#FF5555" + (tier.getRequerido() - progreso) + " &#E6CCFFpara desbloquear.")));
                 }
+
                 meta.addItemFlags(ItemFlag.HIDE_ENCHANTS, ItemFlag.HIDE_ATTRIBUTES);
                 item.setItemMeta(meta);
                 inventory.setItem(slotsCentro[i], item);
@@ -207,16 +203,17 @@ public class ColeccionesMenu extends NexoMenu {
 
             addBackButton("cat_" + cItem.getCategoriaId());
 
+            // 🏆 Botón de Top 5
             ItemStack info = new ItemStack(Material.NETHER_STAR);
             ItemMeta iMeta = info.getItemMeta();
-            iMeta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.tiers.stats-globales.titulo")));
-            List<String> loreConfig = getMessageList("menus.colecciones.tiers.stats-globales.lore");
-            List<net.kyori.adventure.text.Component> iLore = loreConfig.stream()
-                    .map(line -> CrossplayUtils.parseCrossplay(player, line.replace("%progress%", String.valueOf(progreso))))
-                    .collect(Collectors.toList());
-            iMeta.lore(iLore);
-            iMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "show_top");
-            iMeta.getPersistentDataContainer().set(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING, cItem.getId());
+            iMeta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff🏆 Ránking de Colección"));
+            iMeta.lore(List.of(
+                    CrossplayUtils.parseCrossplay(player, "&#E6CCFFTu farmeo total: &#55FF55" + progreso),
+                    CrossplayUtils.parseCrossplay(player, ""),
+                    CrossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para ver el TOP 5 Global")
+            ));
+            iMeta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "show_top");
+            iMeta.getPersistentDataContainer().set(itemKey, PersistentDataType.STRING, cItem.getId());
             info.setItemMeta(iMeta);
             inventory.setItem(40, info);
         }
@@ -225,8 +222,8 @@ public class ColeccionesMenu extends NexoMenu {
     private void addBackButton(String target) {
         ItemStack back = new ItemStack(Material.ARROW);
         ItemMeta meta = back.getItemMeta();
-        meta.displayName(CrossplayUtils.parseCrossplay(player, getMessage("menus.colecciones.tiers.boton-volver")));
-        meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "back_" + target);
+        meta.displayName(CrossplayUtils.parseCrossplay(player, "&#FF5555⬅ Volver Atrás"));
+        meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "back_" + target);
         back.setItemMeta(meta);
         inventory.setItem(getSlots() - 5, back);
     }
@@ -239,59 +236,52 @@ public class ColeccionesMenu extends NexoMenu {
         if (item == null || !item.hasItemMeta()) return;
 
         ItemMeta meta = item.getItemMeta();
-        NamespacedKey actionKey = new NamespacedKey(plugin, "action");
-
         if (!meta.getPersistentDataContainer().has(actionKey, PersistentDataType.STRING)) return;
 
         String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
 
-        if (action.equals("open_category")) {
-            String catId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "category_id"), PersistentDataType.STRING);
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
-
-            player.closeInventory();
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                new ColeccionesMenu(player, plugin, MenuType.CATEGORY, catId, "").open();
-            }, 3L);
-        }
-        else if (action.equals("open_item")) {
-            String iId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING);
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
-
-            player.closeInventory();
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                new ColeccionesMenu(player, plugin, MenuType.ITEM_TIERS, categoryId, iId).open();
-            }, 3L);
-        }
-        else if (action.equals("claim_tier")) {
-            Integer tierNivel = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "tier_level"), PersistentDataType.INTEGER);
-            if (tierNivel != null) {
-                plugin.getCollectionManager().reclamarRecompensa(player, itemId, tierNivel);
-                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.0f);
-
-                setMenuItems();
+        // 🌟 FIX: Transiciones rápidas (1 tick) para que se sienta fluido
+        switch (action) {
+            case "open_category" -> {
+                String catId = meta.getPersistentDataContainer().get(categoryKey, PersistentDataType.STRING);
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.0f);
+                player.closeInventory();
+                Bukkit.getScheduler().runTaskLater(plugin, () -> new ColeccionesMenu(player, plugin, MenuType.CATEGORY, catId, "").open(), 1L);
             }
-        }
-        else if (action.equals("show_top")) {
-            String iId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "item_id"), PersistentDataType.STRING);
-            player.closeInventory();
-            player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 0.5f, 1.5f);
-            plugin.getCollectionManager().calcularTopAsync(player, iId);
-        }
-        else if (action.startsWith("back_")) {
-            String target = action.replace("back_", "");
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
-
-            player.closeInventory();
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (target.equals("main")) {
-                    new ColeccionesMenu(player, plugin, MenuType.MAIN, "", "").open();
-                } else if (target.startsWith("cat_")) {
-                    new ColeccionesMenu(player, plugin, MenuType.CATEGORY, target.replace("cat_", ""), "").open();
-                } else {
-                    new ColeccionesMenu(player, plugin, MenuType.CATEGORY, target, "").open();
+            case "open_item" -> {
+                String iId = meta.getPersistentDataContainer().get(itemKey, PersistentDataType.STRING);
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
+                player.closeInventory();
+                Bukkit.getScheduler().runTaskLater(plugin, () -> new ColeccionesMenu(player, plugin, MenuType.ITEM_TIERS, categoryId, iId).open(), 1L);
+            }
+            case "claim_tier" -> {
+                Integer tierNivel = meta.getPersistentDataContainer().get(tierKey, PersistentDataType.INTEGER);
+                if (tierNivel != null) {
+                    plugin.getCollectionManager().reclamarRecompensa(player, itemId, tierNivel);
+                    setMenuItems(); // Actualiza el cristal de amarillo a verde instantáneamente
                 }
-            }, 3L);
+            }
+            case "show_top" -> {
+                String iId = meta.getPersistentDataContainer().get(itemKey, PersistentDataType.STRING);
+                player.closeInventory();
+                player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 0.5f, 1.5f);
+                plugin.getCollectionManager().calcularTopAsync(player, iId);
+            }
+            default -> {
+                if (action.startsWith("back_")) {
+                    String target = action.replace("back_", "");
+                    player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 0.8f);
+                    player.closeInventory();
+
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (target.equals("main")) {
+                            new ColeccionesMenu(player, plugin, MenuType.MAIN, "", "").open();
+                        } else if (target.startsWith("cat_")) {
+                            new ColeccionesMenu(player, plugin, MenuType.CATEGORY, target.replace("cat_", ""), "").open();
+                        }
+                    }, 1L);
+                }
+            }
         }
     }
 }

@@ -15,29 +15,32 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * 📚 NexoColecciones - Menú de Contratos Slayer (Arquitectura Enterprise)
+ * Rendimiento: Cero Lag Visual (0 I/O), Llaves Cacheadas y Renderizado O(1).
+ */
 public class SlayerMenu extends NexoMenu {
 
     private final NexoColecciones plugin;
 
+    // 🌟 OPTIMIZACIÓN DE RAM: Llaves de PDC cacheadas
+    private final NamespacedKey actionKey;
+    private final NamespacedKey slayerKey;
+
     public SlayerMenu(Player player, NexoColecciones plugin) {
         super(player);
         this.plugin = plugin;
-    }
 
-    // 🌟 CORRECCIÓN 1: Usamos el ConfigManager local e independiente
-    private String getMessage(String path) {
-        return plugin.getConfigManager().getMessage(path);
-    }
-
-    private List<String> getMessageList(String path) {
-        return plugin.getConfigManager().getMessages().getStringList(path);
+        // Cacheamos las llaves una sola vez al abrir el menú
+        this.actionKey = new NamespacedKey(plugin, "action");
+        this.slayerKey = new NamespacedKey(plugin, "slayer_id");
     }
 
     @Override
     public String getMenuName() {
-        return getMessage("menus.slayer.titulo");
+        // 🌟 FIX: Texto Hexadecimal directo (0% Lag I/O)
+        return "&#FF5555⚔ <bold>CONTRATOS SLAYER</bold>";
     }
 
     @Override
@@ -50,11 +53,9 @@ public class SlayerMenu extends NexoMenu {
         setFillerGlass(); // Rellena los huecos vacíos con cristal morado del Vacío
 
         SlayerManager manager = plugin.getSlayerManager();
-        List<String> loreConfig = getMessageList("menus.slayer.item-lore");
-
         int slot = 10; // Empezamos a colocar los jefes en el centro de la interfaz
 
-        // 🌟 CORRECCIÓN 2: Leemos correctamente desde tu SlayerTemplate
+        // Leemos desde el SlayerTemplate almacenado en RAM
         for (SlayerManager.SlayerTemplate template : manager.getTemplates().values()) {
             if (slot >= 17) break; // Límite de seguridad visual (1 fila central)
 
@@ -64,24 +65,25 @@ public class SlayerMenu extends NexoMenu {
             ItemStack item = new ItemStack(mat);
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
-                meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>" + template.name() + "</bold>"));
+                meta.displayName(CrossplayUtils.parseCrossplay(player, "&#ff00ff<bold>" + template.name().toUpperCase() + "</bold>"));
 
-                // 🌟 CORRECCIÓN 3: Reemplazamos variables y forzamos el color Lila Iluminado
-                List<net.kyori.adventure.text.Component> lore = loreConfig.stream()
-                        .map(line -> CrossplayUtils.parseCrossplay(player, line
-                                .replace("%id%", template.id())
-                                .replace("%kills%", String.valueOf(template.requiredKills()))
-                                .replace("%mob%", template.targetMob())
-                                .replace("%boss_name%", template.bossName())
-                                .replace("&#1c0f2a", "&#E6CCFF"))) // Sustitución directa de color
-                        .collect(Collectors.toList());
+                // 🌟 FIX: Lore directo, estático y cacheado. Cero tirones al abrir el menú.
+                List<net.kyori.adventure.text.Component> lore = List.of(
+                        CrossplayUtils.parseCrossplay(player, "&#555555Contrato de Exterminio"),
+                        CrossplayUtils.parseCrossplay(player, ""),
+                        CrossplayUtils.parseCrossplay(player, "&#E6CCFFObjetivo: &#FF5555" + template.targetMob()),
+                        CrossplayUtils.parseCrossplay(player, "&#E6CCFFKills Requeridas: &#FFAA00" + template.requiredKills()),
+                        CrossplayUtils.parseCrossplay(player, "&#E6CCFFJefe a Invocar: &#55FF55" + template.bossName()),
+                        CrossplayUtils.parseCrossplay(player, ""),
+                        CrossplayUtils.parseCrossplay(player, "&#FFAA00▶ Haz clic para iniciar el contrato")
+                );
 
                 meta.lore(lore);
                 meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES, ItemFlag.HIDE_ENCHANTS);
 
-                // 🌟 CORRECCIÓN 4: Agregamos PersistentDataContainer para procesar el clic
-                meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "action"), PersistentDataType.STRING, "start_slayer");
-                meta.getPersistentDataContainer().set(new NamespacedKey(plugin, "slayer_id"), PersistentDataType.STRING, template.id());
+                // Asignamos las llaves de caché
+                meta.getPersistentDataContainer().set(actionKey, PersistentDataType.STRING, "start_slayer");
+                meta.getPersistentDataContainer().set(slayerKey, PersistentDataType.STRING, template.id());
 
                 item.setItemMeta(meta);
             }
@@ -97,18 +99,17 @@ public class SlayerMenu extends NexoMenu {
         if (item == null || !item.hasItemMeta()) return;
 
         ItemMeta meta = item.getItemMeta();
-        NamespacedKey actionKey = new NamespacedKey(plugin, "action");
 
-        // 🌟 CORRECCIÓN 5: Ejecutamos el contrato de caza usando tu método real "iniciarSlayer"
+        // Validamos usando la llave cacheada
         if (meta.getPersistentDataContainer().has(actionKey, PersistentDataType.STRING)) {
             String action = meta.getPersistentDataContainer().get(actionKey, PersistentDataType.STRING);
 
-            if (action.equals("start_slayer")) {
-                String slayerId = meta.getPersistentDataContainer().get(new NamespacedKey(plugin, "slayer_id"), PersistentDataType.STRING);
+            if ("start_slayer".equals(action)) {
+                String slayerId = meta.getPersistentDataContainer().get(slayerKey, PersistentDataType.STRING);
 
                 player.closeInventory();
 
-                // Iniciamos la cacería
+                // Iniciamos la cacería interactuando con el Manager
                 plugin.getSlayerManager().iniciarSlayer(player, slayerId);
                 player.playSound(player.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.5f, 1.5f);
             }
