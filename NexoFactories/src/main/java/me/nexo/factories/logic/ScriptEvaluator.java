@@ -1,50 +1,91 @@
 package me.nexo.factories.logic;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.inject.Singleton;
 import me.nexo.factories.core.ActiveFactory;
 import me.nexo.protections.core.ProtectionStone;
 
+/**
+ * 🏭 NexoFactories - Evaluador Lógico (Arquitectura Enterprise)
+ * Rendimiento: Compilación AOT (Ahead-Of-Time) y Caché de Lambdas O(1).
+ * Cero parseo de JSON o Strings durante el Tick Loop.
+ */
+@Singleton
 public class ScriptEvaluator {
 
+    // 🌟 MAGIA ENTERPRISE: Caché de Scripts "Compilados".
+    // En lugar de leer el JSON cada segundo, guardamos la instrucción matemática pura.
+    private final Cache<String, CompiledScript> scriptCache = Caffeine.newBuilder()
+            .maximumSize(5000) // Soporta hasta 5000 scripts únicos en memoria
+            .build();
+
     /**
-     * Evalúa si una máquina DEBE encenderse o apagarse basándose en su Script personalizado.
-     * Complejidad O(1) - Evaluado asíncronamente en Virtual Threads.
-     * * @return true si la máquina puede operar, false si el script ordena detenerla.
+     * Evalúa si una máquina DEBE encenderse o apagarse basándose en su Script.
+     * Complejidad: O(1) puro.
      */
     public boolean shouldRun(ActiveFactory factory, ProtectionStone stone, String jsonScript) {
-        // Si la máquina no tiene un script instalado, opera normalmente
+        // Si no hay script, opera normalmente
         if (jsonScript == null || jsonScript.isEmpty() || jsonScript.equals("NONE")) {
             return true;
         }
 
+        // 🚀 Obtenemos el script compilado O(1). Si no existe, lo compila (solo la primera vez)
+        CompiledScript compiled = scriptCache.get(jsonScript, this::compileScript);
+
+        // Si la compilación falló por un script corrupto, apagamos por seguridad
+        if (compiled == null) return false;
+
+        // Ejecutamos la matemática pura (Cero lag)
+        return compiled.evaluate(factory, stone);
+    }
+
+    /**
+     * 🧠 COMPILADOR INTERNO: Convierte texto pesado en lambdas de alto rendimiento.
+     * Solo se ejecuta UNA VEZ por cada script nuevo que se inserta en una máquina.
+     */
+    private CompiledScript compileScript(String rawJson) {
         try {
-            JsonObject logic = JsonParser.parseString(jsonScript).getAsJsonObject();
+            JsonObject logic = JsonParser.parseString(rawJson).getAsJsonObject();
 
-            // 🌟 ESTRUCTURA DEL JSON LOGIC CARD:
-            // {"condition": "ENERGY_>_50", "action": "START_MACHINE"}
-            // Más adelante esto será un árbol complejo de decisiones (AND, OR)
+            if (!logic.has("condition")) {
+                return (f, s) -> true; // Lambda por defecto (Siempre encendido)
+            }
 
-            if (!logic.has("condition")) return true;
             String condition = logic.get("condition").getAsString();
 
-            // REGLA 1: Prioridad de Escudo (Ahorrar energía si la base está bajo ataque o baja batería)
+            // REGLA 1: Prioridad de Escudo
             if (condition.startsWith("ENERGY_>_")) {
                 double requiredEnergy = Double.parseDouble(condition.split("_>_")[1]);
-                return stone.getCurrentEnergy() > requiredEnergy;
+
+                // Retornamos una función lambda que solo hace una comparación matemática < >
+                return (f, s) -> s != null && s.getCurrentEnergy() > requiredEnergy;
             }
 
-            // REGLA 2: Límite de Almacenamiento (No producir si ya hay mucho)
+            // REGLA 2: Límite de Almacenamiento
             if (condition.startsWith("STORAGE_<_")) {
                 int maxStorage = Integer.parseInt(condition.split("_<_")[1]);
-                return factory.getStoredOutput() < maxStorage;
+
+                // Retornamos la función lambda pre-calculada
+                return (f, s) -> f.getStoredOutput() < maxStorage;
             }
 
-            return true; // Si no hay reglas que impidan el funcionamiento, continuar
+            // Regla desconocida, opera normal
+            return (f, s) -> true;
 
         } catch (Exception e) {
-            // Si el jugador rompió el script (Hack/Exploit), apagamos la máquina por seguridad
-            return false;
+            // Script hackeado o mal formado. Retorna null para que la máquina se bloquee.
+            return null;
         }
+    }
+
+    // ==========================================
+    // ⚡ INTERFAZ FUNCIONAL DE ALTO RENDIMIENTO
+    // ==========================================
+    @FunctionalInterface
+    private interface CompiledScript {
+        boolean evaluate(ActiveFactory factory, ProtectionStone stone);
     }
 }

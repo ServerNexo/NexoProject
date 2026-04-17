@@ -2,59 +2,83 @@ package me.nexo.factories.core;
 
 import org.bukkit.Location;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * 🏭 NexoFactories - Modelo de Máquina Activa (Arquitectura Enterprise)
+ * Rendimiento: 100% Thread-Safe y Lock-Free mediante Atómicos y variables Volátiles.
+ */
 public class ActiveFactory {
 
+    // Identificadores inmutables
     private final UUID id;
     private final UUID stoneId;
     private final UUID ownerId;
     private final String factoryType;
-    private int level;
-    private String currentStatus;
-    private int storedOutput;
     private final Location coreLocation;
 
-    // 🌟 AUTOMATIZACIÓN (Logic Engine)
-    private String catalystItem;
-    private String jsonLogic;
+    // 🌟 OPTIMIZACIÓN: Atómicos para operaciones matemáticas masivas sin bloqueos (synchronized)
+    private final AtomicInteger level;
+    private final AtomicInteger storedOutput;
+    private final AtomicLong lastEvaluationTime;
 
-    // ⏳ NEXO ARCHITECT V3: Control de Tiempo (Timestamp Diff)
-    private long lastEvaluationTime;
+    // 🌟 OPTIMIZACIÓN: Volátiles para garantizar que los Hilos Virtuales siempre lean el valor más reciente en RAM
+    private volatile String currentStatus;
+    private volatile String catalystItem;
+    private volatile String jsonLogic;
 
     public ActiveFactory(UUID id, UUID stoneId, UUID ownerId, String factoryType, int level, String currentStatus, int storedOutput, Location coreLocation, String catalystItem, String jsonLogic, long lastEvaluationTime) {
         this.id = id;
         this.stoneId = stoneId;
         this.ownerId = ownerId;
         this.factoryType = factoryType;
-        this.level = level;
-        this.currentStatus = currentStatus;
-        this.storedOutput = storedOutput;
         this.coreLocation = coreLocation;
+
+        // Inicializamos los valores atómicos
+        this.level = new AtomicInteger(level);
+        this.storedOutput = new AtomicInteger(storedOutput);
+        this.lastEvaluationTime = new AtomicLong(lastEvaluationTime);
+
+        this.currentStatus = currentStatus;
         this.catalystItem = catalystItem;
         this.jsonLogic = jsonLogic;
-        this.lastEvaluationTime = lastEvaluationTime; // 🌟 Inicializado
     }
 
-    public synchronized void addOutput(int amount) { this.storedOutput += amount; }
-    public synchronized void clearOutput() { this.storedOutput = 0; }
+    // ==========================================
+    // ⚙️ OPERACIONES MATEMÁTICAS LOCK-FREE
+    // ==========================================
+    public void addOutput(int amount) {
+        this.storedOutput.addAndGet(amount); // Suma atómica, 0 micro-retrasos
+    }
 
+    public void clearOutput() {
+        this.storedOutput.set(0); // Seteo atómico
+    }
+
+    // ==========================================
+    // 💾 GETTERS Y SETTERS THREAD-SAFE
+    // ==========================================
     public UUID getId() { return id; }
     public UUID getStoneId() { return stoneId; }
     public UUID getOwnerId() { return ownerId; }
     public String getFactoryType() { return factoryType; }
-    public int getLevel() { return level; }
-    public void setLevel(int level) { this.level = level; }
+    public Location getCoreLocation() { return coreLocation; }
+
+    public int getLevel() { return level.get(); }
+    public void setLevel(int level) { this.level.set(level); }
+
+    public int getStoredOutput() { return storedOutput.get(); }
+
     public String getCurrentStatus() { return currentStatus; }
     public void setCurrentStatus(String currentStatus) { this.currentStatus = currentStatus; }
-    public int getStoredOutput() { return storedOutput; }
-    public Location getCoreLocation() { return coreLocation; }
 
     public String getCatalystItem() { return catalystItem; }
     public void setCatalystItem(String catalystItem) { this.catalystItem = catalystItem; }
+
     public String getJsonLogic() { return jsonLogic; }
     public void setJsonLogic(String jsonLogic) { this.jsonLogic = jsonLogic; }
 
-    // ⏳ Getters y Setters de Tiempo
-    public long getLastEvaluationTime() { return lastEvaluationTime; }
-    public void setLastEvaluationTime(long time) { this.lastEvaluationTime = time; }
+    public long getLastEvaluationTime() { return lastEvaluationTime.get(); }
+    public void setLastEvaluationTime(long time) { this.lastEvaluationTime.set(time); }
 }

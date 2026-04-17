@@ -13,21 +13,20 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 🏭 NexoFactories - Compilador Lógico de Máquinas (Arquitectura Enterprise)
- * Nota: Los menús son instanciados por jugador, NO usan @Singleton.
+ * Rendimiento: Cero Streams en renderizado, Prevención Absoluta de Robo de Ítems.
  */
 public class LogicMenu extends NexoMenu {
 
     private final NexoFactories plugin;
     private final ActiveFactory factory;
 
-    private final List<String> conditions = Arrays.asList("NONE", "ENERGY_>_50", "ENERGY_>_20", "STORAGE_<_100", "STORAGE_<_500");
-    private final List<String> actions = Arrays.asList("NONE", "START_MACHINE", "PAUSE_MACHINE");
+    // 🌟 OPTIMIZACIÓN: Listas Inmutables Nativas (Java 21)
+    private final List<String> conditions = List.of("NONE", "ENERGY_>_50", "ENERGY_>_20", "STORAGE_<_100", "STORAGE_<_500");
+    private final List<String> actions = List.of("NONE", "START_MACHINE", "PAUSE_MACHINE");
 
     private int currentConditionIndex = 0;
     private int currentActionIndex = 0;
@@ -37,20 +36,28 @@ public class LogicMenu extends NexoMenu {
         this.plugin = plugin;
         this.factory = factory;
 
-        // Cargamos la configuración anterior de esta máquina en específico
+        // Cargamos la configuración anterior de esta máquina de forma segura
         try {
-            if (factory.getJsonLogic() != null && !factory.getJsonLogic().equals("NONE")) {
-                JsonObject json = JsonParser.parseString(factory.getJsonLogic()).getAsJsonObject();
-                if (json.has("condition")) currentConditionIndex = Math.max(0, conditions.indexOf(json.get("condition").getAsString()));
-                if (json.has("action")) currentActionIndex = Math.max(0, actions.indexOf(json.get("action").getAsString()));
+            String currentLogic = factory.getJsonLogic();
+            if (currentLogic != null && !currentLogic.equals("NONE")) {
+                JsonObject json = JsonParser.parseString(currentLogic).getAsJsonObject();
+
+                if (json.has("condition")) {
+                    int idx = conditions.indexOf(json.get("condition").getAsString());
+                    if (idx != -1) currentConditionIndex = idx;
+                }
+
+                if (json.has("action")) {
+                    int idx = actions.indexOf(json.get("action").getAsString());
+                    if (idx != -1) currentActionIndex = idx;
+                }
             }
         } catch (Exception ignored) {}
     }
 
     @Override
     public String getMenuName() {
-        // 🌟 FIX: Título serializado compatible con Java y Bedrock
-        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse("&#FF5555⚙ <bold>COMPILADOR LÓGICO</bold>"));
+        return color("&#FF5555⚙ <bold>COMPILADOR LÓGICO</bold>");
     }
 
     @Override
@@ -65,50 +72,55 @@ public class LogicMenu extends NexoMenu {
         String cond = conditions.get(currentConditionIndex);
         String act = actions.get(currentActionIndex);
 
-        // 🌟 FIX: Lores con Hexadecimal directo, sin getMessageList
-        List<String> sensorLoreRaw = List.of(
-                "&#E6CCFFSelecciona la condición que",
-                "&#E6CCFFdisparará el evento.",
+        // 🌟 FIX RENDIMIENTO: Cero Streams. Pasamos los colores directamente mapeados.
+        List<String> sensorLore = List.of(
+                color("&#E6CCFFSelecciona la condición que"),
+                color("&#E6CCFFdisparará el evento."),
                 "",
-                "&#E6CCFFActual: &#00f5ff" + cond,
+                color("&#E6CCFFActual: &#00f5ff" + cond),
                 "",
-                "&#00f5ff► Clic para alternar"
+                color("&#00f5ff► Clic para alternar")
         );
-        setItem(11, Material.COMPARATOR, "&#00f5ff📡 <bold>SENSOR DE ENTRADA</bold>",
-                sensorLoreRaw.stream().map(line -> LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(line))).collect(Collectors.toList()));
+        setItem(11, Material.COMPARATOR, color("&#00f5ff📡 <bold>SENSOR DE ENTRADA</bold>"), sensorLore);
 
-        List<String> actionLoreRaw = List.of(
-                "&#E6CCFFSelecciona lo que hará la máquina",
-                "&#E6CCFFal cumplirse la condición.",
+        List<String> actionLore = List.of(
+                color("&#E6CCFFSelecciona lo que hará la máquina"),
+                color("&#E6CCFFal cumplirse la condición."),
                 "",
-                "&#E6CCFFActual: &#FFAA00" + act,
+                color("&#E6CCFFActual: &#FFAA00" + act),
                 "",
-                "&#FFAA00► Clic para alternar"
+                color("&#FFAA00► Clic para alternar")
         );
-        setItem(15, Material.REDSTONE_TORCH, "&#FFAA00⚡ <bold>OPERACIÓN DE RESPUESTA</bold>",
-                actionLoreRaw.stream().map(line -> LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(line))).collect(Collectors.toList()));
+        setItem(15, Material.REDSTONE_TORCH, color("&#FFAA00⚡ <bold>OPERACIÓN DE RESPUESTA</bold>"), actionLore);
 
-        List<String> saveLoreRaw = List.of(
-                "&#E6CCFFGuarda los cambios en el chip",
-                "&#E6CCFFlógico de esta maquinaria."
+        List<String> saveLore = List.of(
+                color("&#E6CCFFGuarda los cambios en el chip"),
+                color("&#E6CCFFlógico de esta maquinaria.")
         );
-        setItem(22, Material.LIME_DYE, "&#55FF55[✓] <bold>COMPILAR SCRIPT</bold>",
-                saveLoreRaw.stream().map(line -> LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(line))).collect(Collectors.toList()));
+        setItem(22, Material.LIME_DYE, color("&#55FF55[✓] <bold>COMPILAR SCRIPT</bold>"), saveLore);
+    }
+
+    // 🌟 UTILIDAD DE ALTO RENDIMIENTO: Para no escribir todo el serializador repetidamente
+    private String color(String hexText) {
+        return LegacyComponentSerializer.legacySection().serialize(NexoColor.parse(hexText));
     }
 
     @Override
     public void handleMenu(InventoryClickEvent event) {
-        int slot = event.getSlot();
+        // 🛑 FIX CRÍTICO: ¡Prevención absoluta de robo de ítems del menú!
+        event.setCancelled(true);
+
+        int slot = event.getRawSlot();
 
         if (slot == 11) {
             currentConditionIndex = (currentConditionIndex + 1) % conditions.size();
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
-            setMenuItems(); // Actualizamos la vista sin cerrar el inventario
+            setMenuItems(); // Actualizamos la vista O(1)
 
         } else if (slot == 15) {
             currentActionIndex = (currentActionIndex + 1) % actions.size();
             player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.5f, 1.2f);
-            setMenuItems(); // Actualizamos la vista sin cerrar el inventario
+            setMenuItems(); // Actualizamos la vista O(1)
 
         } else if (slot == 22) {
             String cond = conditions.get(currentConditionIndex);
@@ -123,12 +135,12 @@ public class LogicMenu extends NexoMenu {
                 factory.setJsonLogic(json.toString());
             }
 
+            // 🌟 El gestor guarda el nuevo String volátil asíncronamente
             plugin.getFactoryManager().saveFactoryStatusAsync(factory);
 
             player.closeInventory();
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 2f);
 
-            // 🌟 FIX: Mensaje Directo
             CrossplayUtils.sendMessage(player, "&#55FF55[✓] Script lógico compilado e inyectado en el procesador de la máquina.");
         }
     }
