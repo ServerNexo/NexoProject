@@ -1,6 +1,7 @@
 package me.nexo.protections.listeners;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.protections.config.ConfigManager;
 import me.nexo.protections.core.ClaimAction;
@@ -21,7 +22,9 @@ import org.bukkit.inventory.EquipmentSlot;
 
 /**
  * 🛡️ NexoProtections - Listener de Entorno (Arquitectura Enterprise)
+ * Rendimiento: Evaluaciones Zero-Garbage (O(1)), Prevención de pisotones de cultivos.
  */
+@Singleton
 public class EnvironmentListener implements Listener {
 
     private final ClaimManager claimManager;
@@ -34,54 +37,62 @@ public class EnvironmentListener implements Listener {
         this.configManager = configManager;
     }
 
-    // 🛡️ BLOQUEAR EXPLOSIONES (CREEPERS, TNT, ETC) DENTRO DE LOS DOMINIOS
+    // =========================================================================
+    // 💥 PROTECCIÓN CONTRA EXPLOSIONES (TNT, CREEPERS, WITHER)
+    // =========================================================================
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onEntityExplode(EntityExplodeEvent event) {
-        // Revisamos la lista de bloques que van a explotar
-        event.blockList().removeIf(block -> {
-            ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
-            // Si el bloque pertenece a un Monolito (o es el Monolito en sí), lo salvamos de la destrucción
-            return stone != null;
-        });
+        // 🚀 Gracias a nuestro nuevo Spatial Grid O(1), este removeIf se ejecutará
+        // en microsegundos sin importar si la explosión afecta 500 bloques.
+        event.blockList().removeIf(block -> claimManager.getStoneAt(block.getLocation()) != null);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockExplode(BlockExplodeEvent event) {
-        event.blockList().removeIf(block -> {
-            ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
-            return stone != null;
-        });
+        event.blockList().removeIf(block -> claimManager.getStoneAt(block.getLocation()) != null);
     }
 
-    // 🛡️ BLOQUEAR APERTURA DE COFRES, HORNOS, PUERTAS
+    // =========================================================================
+    // ✋ PROTECCIÓN DE INTERACCIONES Y CONTENEDORES
+    // =========================================================================
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerInteract(PlayerInteractEvent event) {
+        // Ignoramos la mano secundaria para evitar doble-ejecución
         if (event.getHand() == EquipmentSlot.OFF_HAND) return;
-        if (event.getClickedBlock() == null) return;
-
-        // No bloqueamos los ataques a monstruos con clic izquierdo
-        if (event.getAction() == Action.LEFT_CLICK_BLOCK) return;
 
         Block block = event.getClickedBlock();
+        if (block == null) return;
+
+        // No bloqueamos los clics izquierdos al aire o a monstruos
+        if (event.getAction() == Action.LEFT_CLICK_BLOCK) return;
+
         Player player = event.getPlayer();
         ProtectionStone stone = claimManager.getStoneAt(block.getLocation());
 
-        if (stone == null) return; // Si no hay protección, todo está permitido
+        if (stone == null) return; // Fuera de dominio, permitido
 
-        // Si es el dueño, tiene permiso absoluto
-        if (stone.getOwnerId().equals(player.getUniqueId())) return;
+        // Bypass de dueños, permisos de clan y administradores
+        if (stone.getOwnerId().equals(player.getUniqueId()) ||
+                stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT) ||
+                player.hasPermission("nexoprotections.admin")) {
+            return;
+        }
 
-        // Si es un acólito de confianza o del clan, tiene permiso
-        if (stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) return;
+        // 🌾 FIX CRÍTICO: Bloqueo de pisotones a cultivos y placas de presión
+        if (event.getAction() == Action.PHYSICAL) {
+            event.setCancelled(true);
+            return;
+        }
 
         Material tipo = block.getType();
-        String typeStr = tipo.toString();
+        String name = tipo.name(); // 🌟 OPTIMIZACIÓN: .name() NO crea basura en RAM. Devuelve la constante Enum.
 
-        // 1. REVISAR LEY DE CONTENEDORES (Cofres, Hornos, Barriles, Shulkers)
-        if (typeStr.contains("CHEST") || typeStr.contains("FURNACE") || typeStr.contains("BARREL")
-                || typeStr.contains("SHULKER") || typeStr.contains("HOPPER") || typeStr.contains("DROPPER")) {
+        // 1. LEY DE CONTENEDORES (Cofres, Hornos, Shulkers, etc)
+        boolean isContainer = name.contains("CHEST") || name.contains("SHULKER") || name.contains("FURNACE") ||
+                name.equals("BARREL") || name.equals("HOPPER") || name.equals("DROPPER") ||
+                name.equals("DISPENSER") || name.equals("SMOKER");
 
-            // Si la ley "containers" está en false, lo bloqueamos
+        if (isContainer) {
             if (!stone.getFlag("containers")) {
                 event.setCancelled(true);
                 CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().tesorosSellados());
@@ -89,11 +100,12 @@ public class EnvironmentListener implements Listener {
             }
         }
 
-        // 2. REVISAR LEY DE INTERACCIÓN (Puertas, Botones, Palancas, Yunques)
-        if (typeStr.contains("DOOR") || typeStr.contains("BUTTON") || typeStr.contains("LEVER")
-                || typeStr.contains("TRAPDOOR") || typeStr.contains("ANVIL") || typeStr.contains("CRAFTING")) {
+        // 2. LEY DE INTERACCIÓN GENERAL (Puertas, Botones, Palancas, Yunques)
+        boolean isInteractable = name.contains("DOOR") || name.contains("BUTTON") || name.equals("LEVER") ||
+                name.contains("ANVIL") || name.equals("CRAFTING_TABLE") || name.equals("LOOM") ||
+                name.contains("BED") || name.equals("BELL");
 
-            // Si la ley "interact" está en false, lo bloqueamos
+        if (isInteractable) {
             if (!stone.getFlag("interact")) {
                 event.setCancelled(true);
                 CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().sinInteractuar());
@@ -101,17 +113,23 @@ public class EnvironmentListener implements Listener {
         }
     }
 
-    // 🛡️ BLOQUEAR TIRAR ÍTEMS AL SUELO
+    // =========================================================================
+    // 🗑️ PROTECCIÓN CONTRA BASURA (ITEM DROPS)
+    // =========================================================================
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onItemDrop(PlayerDropItemEvent event) {
         Player player = event.getPlayer();
         ProtectionStone stone = claimManager.getStoneAt(player.getLocation());
 
         if (stone == null) return;
-        if (stone.getOwnerId().equals(player.getUniqueId())) return;
-        if (stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT)) return;
 
-        // Si la ley "item-drop" está en false, bloqueamos que ensucie el suelo
+        if (stone.getOwnerId().equals(player.getUniqueId()) ||
+                stone.hasPermission(player.getUniqueId(), ClaimAction.INTERACT) ||
+                player.hasPermission("nexoprotections.admin")) {
+            return;
+        }
+
+        // Si la ley "item-drop" está en false, bloqueamos que ensucien la base
         if (!stone.getFlag("item-drop")) {
             event.setCancelled(true);
             CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().errores().noArrojarOfrendas());

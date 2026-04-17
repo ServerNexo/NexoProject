@@ -1,11 +1,12 @@
 package me.nexo.protections.menu;
 
+import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
-import me.nexo.core.user.NexoAPI;
+import me.nexo.core.utils.NexoColor;
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.config.ConfigManager;
 import me.nexo.protections.core.ProtectionStone;
-import me.nexo.protections.managers.ClaimManager;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
@@ -15,11 +16,12 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 🛡️ NexoProtections - Menú de Leyes del Dominio (Arquitectura Enterprise)
+ * Rendimiento: Cero Streams, Llaves Cacheadas O(1) y Ensamblado Directo.
  */
 public class ProtectionFlagsMenu extends NexoMenu {
 
@@ -27,11 +29,16 @@ public class ProtectionFlagsMenu extends NexoMenu {
     private final NexoProtections plugin;
     private final ConfigManager configManager;
 
+    // 🌟 OPTIMIZACIÓN O(1): Cacheamos la llave en la memoria RAM
+    private final NamespacedKey flagKey;
+
     public ProtectionFlagsMenu(Player player, NexoProtections plugin, ProtectionStone stone) {
         super(player);
         this.plugin = plugin;
         this.stone = stone;
-        this.configManager = plugin.getConfigManager(); // 💡 Obtenemos la configuración segura en RAM
+        this.configManager = plugin.getConfigManager();
+
+        this.flagKey = new NamespacedKey(plugin, "flag_id");
     }
 
     @Override
@@ -48,7 +55,6 @@ public class ProtectionFlagsMenu extends NexoMenu {
     public void setMenuItems() {
         setFillerGlass();
 
-        // Extraemos los nodos base para hacer el código más limpio
         var flags = configManager.getMessages().menus().leyes().flags();
 
         // Fila 1: Entorno General
@@ -69,32 +75,53 @@ public class ProtectionFlagsMenu extends NexoMenu {
         setItem(getSlots() - 5, Material.ENDER_PEARL, configManager.getMessages().menus().leyes().items().volver().nombre(), null);
     }
 
+    /**
+     * 🌟 Ensamblado Nativo: Crea el ítem, inyecta la llave y lo pone en el inventario
+     * en una sola pasada, sin usar Streams lentos.
+     */
+    /**
+     * 🌟 Ensamblado Nativo: Crea el ítem, inyecta la llave y lo pone en el inventario
+     * en una sola pasada, sin usar Streams lentos.
+     */
     private void createFlagItem(int slot, Material mat, String nombre, String flagId) {
         boolean activo = stone.getFlag(flagId);
 
         var flagNode = configManager.getMessages().menus().leyes().items().flag();
         String estadoColor = activo ? flagNode.estadoPermitido() : flagNode.estadoBloqueado();
 
-        // Formateamos el lore dinámicamente
-        List<String> lore = flagNode.lore().stream()
-                .map(line -> line.replace("%status%", estadoColor))
-                .collect(Collectors.toList());
+        ItemStack item = new ItemStack(mat);
+        ItemMeta meta = item.getItemMeta();
 
-        setItem(slot, mat, "&#ff00ff<bold>" + nombre.toUpperCase() + "</bold>", lore);
+        if (meta != null) {
+            // 🌟 FIX COLOR: Usamos el deserializador de Adventure que ya soporta Hexadecimales (&#RRGGBB) y códigos legacy (&a, &b)
+            String nombreFormateado = "&#ff00ff<bold>" + nombre.toUpperCase() + "</bold>";
+            // Reemplazamos los ampersand y códigos hex al formato que Kyori entiende si es necesario,
+            // o usamos el legacySection si tus configs ya usan '§' o '&' internamente.
+            meta.displayName(LegacyComponentSerializer.legacyAmpersand().deserialize(nombreFormateado.replace("&#", "&x&")));
 
-        // Magia PDC: Guardamos la llave interna en el ítem de forma segura
-        ItemStack item = inventory.getItem(slot);
-        if (item != null && item.getItemMeta() != null) {
-            ItemMeta meta = item.getItemMeta();
-            NamespacedKey key = new NamespacedKey(plugin, "flag_id");
-            meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, flagId);
+            // Lore formateado sin usar Streams
+            List<net.kyori.adventure.text.Component> lore = new ArrayList<>();
+            for (String line : flagNode.lore()) {
+                String lineaFormateada = line.replace("%status%", estadoColor);
+                lore.add(LegacyComponentSerializer.legacyAmpersand().deserialize(lineaFormateada.replace("&#", "&x&")));
+            }
+            meta.lore(lore);
+
+            // Inyectamos la llave cacheada
+            meta.getPersistentDataContainer().set(flagKey, PersistentDataType.STRING, flagId);
+
             item.setItemMeta(meta);
         }
+        inventory.setItem(slot, item);
     }
 
     @Override
     public void handleMenu(InventoryClickEvent event) {
-        event.setCancelled(true); // Bloqueo absoluto contra robos
+        event.setCancelled(true); // 🛑 Bloqueo absoluto contra robos
+
+        // Ignorar si hace clic en su propio inventario
+        if (event.getRawSlot() >= getSlots()) return;
+
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
 
@@ -106,20 +133,19 @@ public class ProtectionFlagsMenu extends NexoMenu {
         }
 
         // Clic en Ley (Flag)
-        NamespacedKey key = new NamespacedKey(plugin, "flag_id");
         ItemMeta meta = clicked.getItemMeta();
 
-        if (meta.getPersistentDataContainer().has(key, PersistentDataType.STRING)) {
-            // Solo el dueño puede cambiar flags
-            if (!stone.getOwnerId().equals(player.getUniqueId())) return;
+        if (meta.getPersistentDataContainer().has(flagKey, PersistentDataType.STRING)) {
+            // Seguridad: Solo el dueño o un administrador pueden cambiar leyes
+            if (!stone.getOwnerId().equals(player.getUniqueId()) && !player.hasPermission("nexoprotections.admin")) return;
 
-            String flagId = meta.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+            String flagId = meta.getPersistentDataContainer().get(flagKey, PersistentDataType.STRING);
             boolean actual = stone.getFlag(flagId);
 
             stone.setFlag(flagId, !actual); // Invierte la ley
 
-            // 🛡️ Guardado seguro y desacoplado usando nuestro ServiceManager
-            NexoAPI.getServices().get(ClaimManager.class).ifPresent(cm -> cm.saveStoneDataAsync(stone));
+            // 🛡️ FIX DESACOPLADO: Guardado directo al manager del mismo plugin (Cero saltos)
+            plugin.getClaimManager().saveStoneDataAsync(stone);
 
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASEDRUM, 1f, 0.5f);
 

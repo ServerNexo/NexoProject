@@ -1,11 +1,11 @@
 package me.nexo.pvp.pvp;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.user.NexoAPI;
-import me.nexo.core.utils.NexoColor;
-import me.nexo.protections.managers.ClaimManager;
 import me.nexo.pvp.config.ConfigManager;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
@@ -19,16 +19,27 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.lang.reflect.Method;
 import java.util.UUID;
 
 /**
  * 🏛️ NexoPvP - Listener de Combate (Arquitectura Enterprise)
- * Textos centralizados y Dependencias Inyectadas.
+ * Rendimiento: Zero-Garbage, Reflexión Cacheada (O(1)) y Fast-Failing.
  */
+@Singleton
 public class PvPListener implements Listener {
 
     private final PvPManager manager;
-    private final ConfigManager configManager; // 💡 PILAR 2
+    private final ConfigManager configManager;
+
+    // 🌟 CACHÉ DE INTEGRACIÓN (Zero-Garbage): Evita buscar clases y métodos en cada golpe.
+    private boolean integrationsLoaded = false;
+    private Object claimManagerCache;
+    private Method getStoneAtMethod;
+    private Method getFlagMethod;
+
+    private Object warManagerCache;
+    private Method estanEnGuerraActivaMethod;
 
     // 💉 PILAR 3: Inyección
     @Inject
@@ -37,42 +48,88 @@ public class PvPListener implements Listener {
         this.configManager = configManager;
     }
 
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void onDañoJugadores(EntityDamageByEntityEvent event) {
+    /**
+     * 🧠 Carga las integraciones de forma segura (Reflexión) una sola vez.
+     */
+    private void setupIntegrations() {
+        if (integrationsLoaded) return;
 
-        Player tempAtacante = null;
-        if (event.getDamager() instanceof Player p) tempAtacante = p;
-        else if (event.getDamager() instanceof Projectile proj && proj.getShooter() instanceof Player p) tempAtacante = p;
-
-        final Player atacante = tempAtacante;
-
-        if (atacante != null && event.getEntity() instanceof Player victima) {
-            if (atacante.equals(victima)) return;
-
-            NexoAPI.getServices().get(ClaimManager.class).ifPresent(claimManager -> {
-                me.nexo.protections.core.ProtectionStone stone = claimManager.getStoneAt(victima.getLocation());
-                if (stone != null && !stone.getFlag("pvp")) {
-                    boolean ignorarProteccion = false;
-                    if (Bukkit.getPluginManager().isPluginEnabled("NexoWar")) {
-                        ignorarProteccion = me.nexo.war.NexoWar.getPlugin(me.nexo.war.NexoWar.class).getWarManager().estanEnGuerraActiva(atacante.getUniqueId(), victima.getUniqueId());
-                    }
-                    if (!ignorarProteccion) {
-                        CrossplayUtils.sendMessage(atacante, configManager.getMessages().mensajes().pvp().bloqueoArmamento());
-                        event.setCancelled(true);
-                    }
+        try {
+            if (Bukkit.getPluginManager().isPluginEnabled("NexoProtections")) {
+                claimManagerCache = NexoAPI.getServices().get(Class.forName("me.nexo.protections.managers.ClaimManager")).orElse(null);
+                if (claimManagerCache != null) {
+                    getStoneAtMethod = claimManagerCache.getClass().getMethod("getStoneAt", org.bukkit.Location.class);
+                    Class<?> stoneClass = Class.forName("me.nexo.protections.core.ProtectionStone");
+                    getFlagMethod = stoneClass.getMethod("getFlag", String.class);
                 }
-            });
-
-            if (event.isCancelled()) return;
-
-            if (!manager.tienePvP(atacante) || !manager.tienePvP(victima)) {
-                event.setCancelled(true);
-                return;
             }
 
-            manager.marcarEnCombate(atacante, victima);
-            event.setDamage(event.getDamage() * 0.40);
+            if (Bukkit.getPluginManager().isPluginEnabled("NexoWar")) {
+                Object warPlugin = Bukkit.getPluginManager().getPlugin("NexoWar");
+                if (warPlugin != null) {
+                    warManagerCache = warPlugin.getClass().getMethod("getWarManager").invoke(warPlugin);
+                    estanEnGuerraActivaMethod = warManagerCache.getClass().getMethod("estanEnGuerraActiva", UUID.class, UUID.class);
+                }
+            }
+        } catch (Exception ignored) {}
+
+        integrationsLoaded = true;
+    }
+
+    // 🌟 Utilidad ultra rápida para colores
+    private net.kyori.adventure.text.Component color(String text) {
+        return LegacyComponentSerializer.legacyAmpersand().deserialize(text.replace("&#", "&x&"));
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onDañoJugadores(EntityDamageByEntityEvent event) {
+        // 🚀 FAST-FAIL: Si la víctima no es jugador, descartamos el evento al instante.
+        if (!(event.getEntity() instanceof Player victima)) return;
+
+        Player atacante = null;
+        if (event.getDamager() instanceof Player p) atacante = p;
+        else if (event.getDamager() instanceof Projectile proj && proj.getShooter() instanceof Player p) atacante = p;
+
+        if (atacante == null || atacante.equals(victima)) return;
+
+        setupIntegrations(); // O(1) después de la primera vez
+
+        // 1. INTEGRACIÓN CON PROTECCIONES (Reflexión Nativa Ultrarrápida)
+        if (claimManagerCache != null && getStoneAtMethod != null) {
+            try {
+                Object stone = getStoneAtMethod.invoke(claimManagerCache, victima.getLocation());
+                if (stone != null) {
+                    boolean allowsPvP = (boolean) getFlagMethod.invoke(stone, "pvp");
+
+                    if (!allowsPvP) {
+                        boolean ignorarProteccion = false;
+
+                        // Integración con NexoWar
+                        if (warManagerCache != null && estanEnGuerraActivaMethod != null) {
+                            ignorarProteccion = (boolean) estanEnGuerraActivaMethod.invoke(warManagerCache, atacante.getUniqueId(), victima.getUniqueId());
+                        }
+
+                        if (!ignorarProteccion) {
+                            CrossplayUtils.sendMessage(atacante, configManager.getMessages().mensajes().pvp().bloqueoArmamento());
+                            event.setCancelled(true);
+                            return;
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
         }
+
+        // 2. Comprobación del modo PvP
+        if (!manager.tienePvP(atacante) || !manager.tienePvP(victima)) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // 3. Registrar combate
+        manager.marcarEnCombate(atacante, victima);
+
+        // Ajuste de daño global (40%)
+        event.setDamage(event.getDamage() * 0.40);
     }
 
     @EventHandler
@@ -89,14 +146,14 @@ public class PvPListener implements Listener {
             int honorActual = manager.puntosHonor.getOrDefault(idAsesino, 0) + 1;
             manager.puntosHonor.put(idAsesino, honorActual);
 
-            // 💡 TYPE-SAFE TEXT
             CrossplayUtils.sendMessage(asesino, configManager.getMessages().mensajes().pvp().objetivoNeutralizado()
                     .replace("%victima%", victima.getName()));
 
             int rachaVictima = manager.rachaAsesinatos.getOrDefault(idVictima, 0);
 
             if (rachaVictima >= 3) {
-                Bukkit.broadcast(NexoColor.parse(configManager.getMessages().mensajes().pvp().cazarrecompensasGlobal()
+                // 🌟 FIX COLOR: Usando Kyori Components
+                Bukkit.broadcast(color(configManager.getMessages().mensajes().pvp().cazarrecompensasGlobal()
                         .replace("%asesino%", asesino.getName())
                         .replace("%victima%", victima.getName())));
 
@@ -111,10 +168,10 @@ public class PvPListener implements Listener {
             manager.rachaAsesinatos.put(idAsesino, rachaAsesino);
 
             if (rachaAsesino == 3) {
-                Bukkit.broadcast(NexoColor.parse(configManager.getMessages().mensajes().pvp().rachaTresGlobal()
+                Bukkit.broadcast(color(configManager.getMessages().mensajes().pvp().rachaTresGlobal()
                         .replace("%asesino%", asesino.getName())));
             } else if (rachaAsesino > 3) {
-                Bukkit.broadcast(NexoColor.parse(configManager.getMessages().mensajes().pvp().rachaMayorGlobal()
+                Bukkit.broadcast(color(configManager.getMessages().mensajes().pvp().rachaMayorGlobal()
                         .replace("%asesino%", asesino.getName())
                         .replace("%kills%", String.valueOf(rachaAsesino))));
             }
@@ -127,9 +184,9 @@ public class PvPListener implements Listener {
     public void onDesconexionCobarde(PlayerQuitEvent event) {
         Player p = event.getPlayer();
         if (manager.estaEnCombate(p)) {
-            p.setHealth(0.0);
+            p.setHealth(0.0); // Lo matamos por desconectarse en combate
             manager.enCombate.remove(p.getUniqueId());
-            Bukkit.broadcast(NexoColor.parse(configManager.getMessages().mensajes().pvp().desconexionCobarde()
+            Bukkit.broadcast(color(configManager.getMessages().mensajes().pvp().desconexionCobarde()
                     .replace("%jugador%", p.getName())));
         }
     }

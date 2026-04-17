@@ -1,6 +1,7 @@
 package me.nexo.pvp.mechanics;
 
 import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import dev.aurelium.auraskills.api.AuraSkillsApi;
 import dev.aurelium.auraskills.api.skill.Skill;
 import dev.aurelium.auraskills.api.user.SkillsUser;
@@ -21,23 +22,34 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 🏛️ NexoPvP - Penalización de Muerte (Arquitectura Enterprise)
- * Inyección de Dependencias, Type-Safe Configs, y Guardado Asíncrono.
+ * Rendimiento: Promesas Aplanadas (Evita Callback Hell), Constantes O(1) y Prevención de Dupe de XP.
  */
+@Singleton
 public class DeathPenaltyListener implements Listener {
 
-    // 💉 PILAR 3: Inyectamos exactamente lo que necesitamos, nada de getPlugin()
     private final UserManager userManager;
     private final UserRepository userRepository;
     private final ConfigManager configManager;
+
+    // 🌟 OPTIMIZACIÓN ZERO-GARBAGE: Constante estática para no crear un nuevo objeto matemático por cada muerte
+    private static final BigDecimal PENALTY_RATE = new BigDecimal("0.05");
+
+    // Caché de integraciones para no leer el PluginManager en cada muerte
+    private final boolean hasAuraSkills;
+    private final boolean hasNexoEconomy;
 
     @Inject
     public DeathPenaltyListener(UserManager userManager, UserRepository userRepository, ConfigManager configManager) {
         this.userManager = userManager;
         this.userRepository = userRepository;
         this.configManager = configManager;
+
+        this.hasAuraSkills = Bukkit.getPluginManager().isPluginEnabled("AuraSkills");
+        this.hasNexoEconomy = Bukkit.getPluginManager().isPluginEnabled("NexoEconomy");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
@@ -57,15 +69,12 @@ public class DeathPenaltyListener implements Listener {
             event.getDrops().clear();
             event.setDroppedExp(0);
 
-            // 💡 PILAR 2 & 6: Texto Type-Safe y Crossplay
             CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().penalizaciones().muerteProtegida());
 
-            // Consumir la bendición de 1 uso si la tiene
+            // Consumir la bendición de 1 uso
             if (user.hasActiveBlessing("VOID_BLESSING")) {
                 user.removeBlessing("VOID_BLESSING");
-
-                // 🚀 PILAR 4: Llamada al nuevo DAO asíncrono del Core
-                userRepository.saveBlessings(user);
+                userRepository.saveBlessings(user); // SQL Asíncrono de NexoCore
             }
 
         } else {
@@ -75,45 +84,54 @@ public class DeathPenaltyListener implements Listener {
             int currentLevel = player.getLevel();
             event.setNewLevel(Math.max(0, currentLevel - (int)(currentLevel * 0.10)));
 
+            // 🛑 FIX DUPE: Evitamos que la experiencia perdida caiga al suelo para que no la vuelvan a recoger
+            event.setDroppedExp(0);
+
             // 2. Pérdida de 8% de XP de Profesiones (AuraSkills)
-            try {
-                SkillsUser skillsUser = AuraSkillsApi.get().getUser(player.getUniqueId());
-                if (skillsUser != null) {
-                    for (Skill skill : AuraSkillsApi.get().getGlobalRegistry().getSkills()) {
-                        double currentXp = skillsUser.getSkillXp(skill);
-                        if (currentXp > 0) {
-                            double xpLost = currentXp * 0.08;
-                            skillsUser.addSkillXp(skill, -xpLost);
+            if (hasAuraSkills) {
+                try {
+                    SkillsUser skillsUser = AuraSkillsApi.get().getUser(player.getUniqueId());
+                    if (skillsUser != null) {
+                        for (Skill skill : AuraSkillsApi.get().getGlobalRegistry().getSkills()) {
+                            double currentXp = skillsUser.getSkillXp(skill);
+                            if (currentXp > 0) {
+                                double xpLost = currentXp * 0.08;
+                                skillsUser.addSkillXp(skill, -xpLost);
+                            }
                         }
                     }
-                }
-            } catch (Exception ignored) {}
+                } catch (Exception ignored) {}
+            }
 
             // 3. 💸 PENALIZACIÓN ECONÓMICA ASÍNCRONA (5% del Balance Total)
-            NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
-            if (ecoPlugin != null) {
-                ecoPlugin.getEconomyManager().getAccountAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER).thenAccept(account -> {
-                    if (account != null) {
-                        BigDecimal currentBalance = account.getCoins();
+            if (hasNexoEconomy) {
+                NexoEconomy ecoPlugin = (NexoEconomy) Bukkit.getPluginManager().getPlugin("NexoEconomy");
 
-                        if (currentBalance != null && currentBalance.compareTo(BigDecimal.ZERO) > 0) {
-                            // Calculamos el 5% de pérdida
-                            BigDecimal loss = currentBalance.multiply(new BigDecimal("0.05")).setScale(2, RoundingMode.HALF_UP);
+                if (ecoPlugin != null) {
+                    // 🌟 FIX ARQUITECTURA: Aplanamos las Promesas (CompletableFuture Chaining)
+                    // para evitar el "Callback Hell" y asegurar la liberación de memoria.
+                    ecoPlugin.getEconomyManager().getAccountAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER)
+                            .thenCompose(account -> {
+                                if (account != null && account.getCoins() != null && account.getCoins().compareTo(BigDecimal.ZERO) > 0) {
+                                    BigDecimal loss = account.getCoins().multiply(PENALTY_RATE).setScale(2, RoundingMode.HALF_UP);
 
-                            // Ejecutamos el débito seguro
-                            ecoPlugin.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, loss, false).thenAccept(success -> {
-                                if (success) {
-                                    // Reemplazo seguro de variables
+                                    // Ejecutamos el débito y pasamos la pérdida al siguiente eslabón
+                                    return ecoPlugin.getEconomyManager()
+                                            .updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, loss, false)
+                                            .thenApply(success -> success ? loss : null);
+                                }
+                                return CompletableFuture.completedFuture(null);
+                            })
+                            .thenAccept(loss -> {
+                                // Este bloque solo se ejecuta si todo lo anterior fue exitoso
+                                if (loss != null) {
                                     String msgCobro = configManager.getMessages().mensajes().penalizaciones().cobroResurreccion().replace("%amount%", loss.toPlainString());
                                     CrossplayUtils.sendMessage(player, msgCobro);
                                 }
                             });
-                        }
-                    }
-                });
+                }
             }
 
-            // 🌟 TEXTOS DESDE CONFIG TYPE-SAFE
             CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().penalizaciones().perdidaProgreso());
             CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().penalizaciones().consejoBendicion());
         }

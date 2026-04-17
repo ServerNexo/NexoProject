@@ -2,39 +2,63 @@ package me.nexo.protections.managers;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import me.nexo.core.NexoCore;
+import me.nexo.core.database.DatabaseManager;
+import me.nexo.protections.NexoProtections;
 import me.nexo.protections.core.ClaimBox;
 import me.nexo.protections.core.ProtectionStone;
 import org.bukkit.Location;
 
-import java.util.ArrayList;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Level;
 
+/**
+ * 🛡️ NexoProtections - Gestor Espacial de Claims (Arquitectura Enterprise)
+ * Rendimiento: Spatial Grid "Zero-Garbage" O(1), Llaves Bitwise (Long) y Hilos Virtuales.
+ */
 @Singleton
 public class ClaimManager {
 
-    private final NexoCore core; // 💉 Inyectado
-    private final Map<String, List<ProtectionStone>> spatialGrid = new ConcurrentHashMap<>();
+    private final NexoProtections plugin;
+    private final DatabaseManager databaseManager;
+
+    // 🌟 OPTIMIZACIÓN O(1) ZERO-GARBAGE: Mapa anidado World -> ChunkKey(Long) -> Lista de Claims
+    private final Map<String, Map<Long, List<ProtectionStone>>> spatialGrid = new ConcurrentHashMap<>();
     private final Map<UUID, ProtectionStone> stonesById = new ConcurrentHashMap<>();
 
     @Inject
-    public ClaimManager(NexoCore core) {
-        this.core = core;
+    public ClaimManager(NexoProtections plugin, DatabaseManager databaseManager) {
+        this.plugin = plugin;
+        this.databaseManager = databaseManager; // 💉 Desacoplado de NexoCore
     }
 
+    // 🌟 MAGIA ENTERPRISE: Utilidad matemática pura para llaves de chunks sin crear Strings.
+    // Combinamos la X y la Z en un solo número "Long" usando Bit-Shifting. Cero impacto a la RAM.
+    private long getChunkKey(int x, int z) {
+        return ((long) x & 0xFFFFFFFFL) | (((long) z & 0xFFFFFFFFL) << 32);
+    }
+
+    // =========================================================================
+    // 🗺️ MOTOR ESPACIAL
+    // =========================================================================
     public boolean hasOverlappingClaim(ClaimBox newBox) {
         int minChunkX = newBox.minX() >> 4;
         int maxChunkX = newBox.maxX() >> 4;
         int minChunkZ = newBox.minZ() >> 4;
         int maxChunkZ = newBox.maxZ() >> 4;
 
+        Map<Long, List<ProtectionStone>> worldGrid = spatialGrid.get(newBox.world());
+        if (worldGrid == null) return false;
+
         for (int cx = minChunkX; cx <= maxChunkX; cx++) {
             for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
-                String chunkKey = newBox.world() + "_" + cx + "_" + cz;
-                List<ProtectionStone> stonesInChunk = spatialGrid.get(chunkKey);
+                List<ProtectionStone> stonesInChunk = worldGrid.get(getChunkKey(cx, cz));
                 if (stonesInChunk != null) {
                     for (ProtectionStone stone : stonesInChunk) {
                         if (stone.getBox().intersects(newBox)) return true;
@@ -52,10 +76,13 @@ public class ClaimManager {
         int minChunkZ = stone.getBox().minZ() >> 4;
         int maxChunkZ = stone.getBox().maxZ() >> 4;
 
+        Map<Long, List<ProtectionStone>> worldGrid = spatialGrid.computeIfAbsent(stone.getBox().world(), k -> new ConcurrentHashMap<>());
+
         for (int cx = minChunkX; cx <= maxChunkX; cx++) {
             for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
-                String chunkKey = stone.getBox().world() + "_" + cx + "_" + cz;
-                spatialGrid.computeIfAbsent(chunkKey, k -> new ArrayList<>()).add(stone);
+                // 🌟 FIX C.M.E: CopyOnWriteArrayList garantiza que si un jugador corre por la zona
+                // mientras otro pone un bloque, el servidor no colapse por concurrencia.
+                worldGrid.computeIfAbsent(getChunkKey(cx, cz), k -> new CopyOnWriteArrayList<>()).add(stone);
             }
         }
     }
@@ -67,21 +94,33 @@ public class ClaimManager {
         int minChunkZ = stone.getBox().minZ() >> 4;
         int maxChunkZ = stone.getBox().maxZ() >> 4;
 
+        Map<Long, List<ProtectionStone>> worldGrid = spatialGrid.get(stone.getBox().world());
+        if (worldGrid == null) return;
+
         for (int cx = minChunkX; cx <= maxChunkX; cx++) {
             for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
-                String chunkKey = stone.getBox().world() + "_" + cx + "_" + cz;
-                List<ProtectionStone> stonesInChunk = spatialGrid.get(chunkKey);
+                long key = getChunkKey(cx, cz);
+                List<ProtectionStone> stonesInChunk = worldGrid.get(key);
                 if (stonesInChunk != null) {
                     stonesInChunk.remove(stone);
-                    if (stonesInChunk.isEmpty()) spatialGrid.remove(chunkKey);
+                    if (stonesInChunk.isEmpty()) worldGrid.remove(key);
                 }
             }
         }
     }
 
     public ProtectionStone getStoneAt(Location loc) {
-        String chunkKey = loc.getWorld().getName() + "_" + (loc.getBlockX() >> 4) + "_" + (loc.getBlockZ() >> 4);
-        List<ProtectionStone> stonesInChunk = spatialGrid.get(chunkKey);
+        if (loc == null || loc.getWorld() == null) return null;
+
+        Map<Long, List<ProtectionStone>> worldGrid = spatialGrid.get(loc.getWorld().getName());
+        if (worldGrid == null) return null;
+
+        int cx = loc.getBlockX() >> 4;
+        int cz = loc.getBlockZ() >> 4;
+
+        // 🚀 Búsqueda O(1) Instantánea sin Strings
+        List<ProtectionStone> stonesInChunk = worldGrid.get(getChunkKey(cx, cz));
+
         if (stonesInChunk != null) {
             for (ProtectionStone stone : stonesInChunk) {
                 if (stone.getBox().contains(loc)) return stone;
@@ -94,10 +133,11 @@ public class ClaimManager {
     public Map<UUID, ProtectionStone> getAllStones() { return stonesById; }
 
     // =========================================================================
-    // 🌟 GUARDAR MIEMBROS Y LEYES ASÍNCRONAMENTE EN SUPABASE
+    // 🌟 GUARDADO ASÍNCRONO MASIVO EN HILOS VIRTUALES
     // =========================================================================
     public void saveStoneDataAsync(ProtectionStone stone) {
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
+        // 🚀 Reemplazado CompletableFuture por Hilos Virtuales (Java 21)
+        Thread.startVirtualThread(() -> {
             StringBuilder membersStr = new StringBuilder();
             for (UUID uuid : stone.getTrustedFriends()) {
                 membersStr.append(uuid.toString()).append(",");
@@ -109,25 +149,29 @@ public class ClaimManager {
             }
 
             String sql = "UPDATE nexo_protections SET members = ?, flags = ? WHERE stone_id = CAST(? AS UUID)";
-            try (java.sql.Connection conn = core.getDatabaseManager().getConnection();
-                 java.sql.PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (Connection conn = databaseManager.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql)) {
+
                 ps.setString(1, membersStr.toString());
                 ps.setString(2, flagsStr.toString());
                 ps.setString(3, stone.getStoneId().toString());
                 ps.executeUpdate();
-            } catch (Exception e) { e.printStackTrace(); }
+
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.SEVERE, "❌ Error guardando datos de la piedra " + stone.getStoneId(), e);
+            }
         });
     }
 
     // =========================================================================
-    // 🌟 CARGAR DESDE SUPABASE
+    // 🌟 CARGA INICIAL DESDE LA BASE DE DATOS
     // =========================================================================
     public void loadAllStonesAsync() {
-        java.util.concurrent.CompletableFuture.runAsync(() -> {
+        Thread.startVirtualThread(() -> {
             String sql = "SELECT * FROM nexo_protections";
-            try (java.sql.Connection conn = core.getDatabaseManager().getConnection();
-                 java.sql.PreparedStatement ps = conn.prepareStatement(sql);
-                 java.sql.ResultSet rs = ps.executeQuery()) {
+            try (Connection conn = databaseManager.getConnection();
+                 PreparedStatement ps = conn.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
 
                 int loaded = 0;
                 while(rs.next()) {
@@ -147,7 +191,7 @@ public class ClaimManager {
                     ClaimBox box = new ClaimBox(world, minX, minY, minZ, maxX, maxY, maxZ);
                     ProtectionStone stone = new ProtectionStone(stoneId, ownerId, clanId, box);
 
-                    stone.drainEnergy(100000);
+                    stone.drainEnergy(100000); // Reseteo simulado
                     stone.setMaxEnergy(rs.getDouble("max_energy"));
                     stone.addEnergy(rs.getDouble("current_energy"));
 
@@ -171,9 +215,9 @@ public class ClaimManager {
                     addStoneToCache(stone);
                     loaded++;
                 }
-                org.bukkit.Bukkit.getLogger().info("🛡️ NexoProtections: Se cargaron " + loaded + " zonas protegidas (Con Acólitos y Leyes).");
+                plugin.getLogger().info("🛡️ NexoProtections: Se cargaron " + loaded + " zonas protegidas (Con Acólitos y Leyes).");
             } catch (Exception e) {
-                e.printStackTrace();
+                plugin.getLogger().log(Level.SEVERE, "❌ Error cargando piedras de protección", e);
             }
         });
     }

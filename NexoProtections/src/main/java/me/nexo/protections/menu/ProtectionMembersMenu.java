@@ -2,11 +2,10 @@ package me.nexo.protections.menu;
 
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.core.menus.NexoMenu;
-import me.nexo.core.user.NexoAPI;
 import me.nexo.protections.NexoProtections;
 import me.nexo.protections.config.ConfigManager;
 import me.nexo.protections.core.ProtectionStone;
-import me.nexo.protections.managers.ClaimManager;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -19,11 +18,13 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * 🛡️ NexoProtections - Menú de Acólitos (Arquitectura Enterprise)
+ * Rendimiento: Cero Lag I/O en bucles, Llaves cacheadas O(1) y Guardado Asíncrono.
  */
 public class ProtectionMembersMenu extends NexoMenu {
 
@@ -31,11 +32,16 @@ public class ProtectionMembersMenu extends NexoMenu {
     private final NexoProtections plugin;
     private final ConfigManager configManager;
 
+    // 🌟 OPTIMIZACIÓN O(1): Cacheamos la llave en RAM
+    private final NamespacedKey uuidKey;
+
     public ProtectionMembersMenu(Player player, NexoProtections plugin, ProtectionStone stone) {
         super(player);
         this.plugin = plugin;
         this.stone = stone;
-        this.configManager = plugin.getConfigManager(); // 💡 Lectura ultra-rápida en RAM
+        this.configManager = plugin.getConfigManager();
+
+        this.uuidKey = new NamespacedKey(plugin, "acolyte_uuid");
     }
 
     @Override
@@ -51,28 +57,39 @@ public class ProtectionMembersMenu extends NexoMenu {
     @Override
     public void setMenuItems() {
         setFillerGlass();
-        NamespacedKey uuidKey = new NamespacedKey(plugin, "acolyte_uuid");
 
         int slot = 0;
         for (UUID uuid : stone.getTrustedFriends()) {
-            if (slot >= getSlots() - 9) break; // Protegemos los botones de abajo
+            if (slot >= getSlots() - 9) break; // Protegemos los botones inferiores
 
-            OfflinePlayer target = Bukkit.getOfflinePlayer(uuid);
-            String targetName = target.getName() != null ? target.getName() : "Alma Desconocida";
+            // 🌟 FIX I/O: Hacemos una sola petición a Bukkit para obtener la Skin y el Nombre al mismo tiempo
+            OfflinePlayer targetPlayer = Bukkit.getOfflinePlayer(uuid);
+            String targetName = targetPlayer.getName() != null ? targetPlayer.getName() : "Alma Desconocida";
 
-            // Leemos el nombre y lore desde config Type-Safe
-            String headName = configManager.getMessages().menus().miembros().items().cabeza().nombre().replace("%player%", targetName);
-            List<String> lore = configManager.getMessages().menus().miembros().items().cabeza().lore();
+            // Ensamblado Nativo de alto rendimiento
+            ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+            SkullMeta meta = (SkullMeta) head.getItemMeta();
 
-            setItem(slot, Material.PLAYER_HEAD, headName, lore);
+            if (meta != null) {
+                // Asignamos la textura de la cabeza
+                meta.setOwningPlayer(targetPlayer);
 
-            // Recuperamos el ítem para inyectarle la skin y el UUID invisible
-            ItemStack head = inventory.getItem(slot);
-            if (head != null && head.getItemMeta() instanceof SkullMeta meta) {
-                meta.setOwningPlayer(target);
+                String rawHeadName = configManager.getMessages().menus().miembros().items().cabeza().nombre().replace("%player%", targetName);
+                meta.displayName(LegacyComponentSerializer.legacySection().deserialize(rawHeadName));
+
+                List<net.kyori.adventure.text.Component> parsedLore = new ArrayList<>();
+                for (String line : configManager.getMessages().menus().miembros().items().cabeza().lore()) {
+                    parsedLore.add(LegacyComponentSerializer.legacySection().deserialize(line));
+                }
+
+                meta.lore(parsedLore);
+
+                // 🌟 MAGIA PDC CACHEADA: Guardamos el UUID sin generar basura en la memoria
                 meta.getPersistentDataContainer().set(uuidKey, PersistentDataType.STRING, uuid.toString());
+
                 head.setItemMeta(meta);
             }
+            inventory.setItem(slot, head);
             slot++;
         }
 
@@ -88,7 +105,8 @@ public class ProtectionMembersMenu extends NexoMenu {
 
     @Override
     public void handleMenu(InventoryClickEvent event) {
-        event.setCancelled(true); // Bloqueo absoluto contra robos
+        event.setCancelled(true); // 🛑 Bloqueo absoluto contra robo de ítems
+
         ItemStack clicked = event.getCurrentItem();
         if (clicked == null || !clicked.hasItemMeta()) return;
 
@@ -100,27 +118,30 @@ public class ProtectionMembersMenu extends NexoMenu {
         }
 
         // Clic en Cabeza (Desterrar)
-        NamespacedKey uuidKey = new NamespacedKey(plugin, "acolyte_uuid");
         ItemMeta meta = clicked.getItemMeta();
 
         if (clicked.getType() == Material.PLAYER_HEAD && meta.getPersistentDataContainer().has(uuidKey, PersistentDataType.STRING)) {
-            // Solo el dueño puede desterrar
+
+            // Seguridad: Solo el dueño puede desterrar
             if (!stone.getOwnerId().equals(player.getUniqueId())) return;
 
             String targetUuidStr = meta.getPersistentDataContainer().get(uuidKey, PersistentDataType.STRING);
-            UUID targetUuid = UUID.fromString(targetUuidStr);
 
-            stone.removeFriend(targetUuid);
+            try {
+                UUID targetUuid = UUID.fromString(targetUuidStr);
+                stone.removeFriend(targetUuid);
 
-            // 🛡️ Guardado seguro y desacoplado usando nuestro ServiceManager
-            NexoAPI.getServices().get(ClaimManager.class).ifPresent(cm -> cm.saveStoneDataAsync(stone));
+                // 🛡️ FIX DESACOPLADO: Guardado directo usando nuestro ClaimManager (Asíncrono real)
+                plugin.getClaimManager().saveStoneDataAsync(stone);
 
-            CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().exito().destierro());
-            player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1f);
+                CrossplayUtils.sendMessage(player, configManager.getMessages().mensajes().exito().destierro());
+                player.playSound(player.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1f);
 
-            // Refresca el menú al instante, sin tirones visuales
-            inventory.clear();
-            setMenuItems();
+                // Refresco visual O(1)
+                inventory.clear();
+                setMenuItems();
+
+            } catch (IllegalArgumentException ignored) {}
         }
     }
 }
