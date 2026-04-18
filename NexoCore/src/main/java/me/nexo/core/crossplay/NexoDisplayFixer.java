@@ -5,39 +5,32 @@ import org.bukkit.entity.Interaction;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.TextDisplay;
 
+/**
+ * 📱 Optimizador de Displays (Paper 26.1+)
+ * Resuelve problemas nativos de interpolación de Bedrock y sincroniza Hitboxes.
+ */
 public class NexoDisplayFixer {
 
     /**
-     * 🛡️ Interaction Bridge para Modelos 3D:
-     * Genera una Hitbox (caja de colisión) invisible exactamente donde está el modelo 3D.
-     * Esto le da a los jugadores de Bedrock una masa física sólida que pueden tocar con el dedo.
-     * * @param display La entidad ItemDisplay (Ej: El modelo del Minion o Boss).
-     * @param width Ancho de la hitbox (Recomendado: 1.2f).
-     * @param height Alto de la hitbox (Recomendado: 1.5f).
-     * @param makePassenger Si es true, la hitbox viajará pegada al modelo si este se mueve.
-     * @return La entidad Interaction (¡Guárdala para poder eliminarla cuando borres el ItemDisplay!).
+     * 🛡️ Interaction Bridge para Modelos 3D.
      */
     public static Interaction spawnBedrockHitbox(ItemDisplay display, float width, float height, boolean makePassenger) {
         Location loc = display.getLocation();
-        Interaction hitbox = loc.getWorld().spawn(loc, Interaction.class, interaction -> {
+
+        // 🌟 GENERACIÓN ATÓMICA: Paper permite configurar TODO (incluso pasajeros) antes de enviar el paquete de spawn al jugador.
+        return loc.getWorld().spawn(loc, Interaction.class, interaction -> {
             interaction.setInteractionWidth(width);
             interaction.setInteractionHeight(height);
-            interaction.setResponsive(true); // Fuerza al cliente a reconocer el clic
+            interaction.setResponsive(true);
+
+            if (makePassenger) {
+                display.addPassenger(interaction); // Cero parpadeo visual (Zero-tick lag)
+            }
         });
-
-        if (makePassenger) {
-            display.addPassenger(hitbox);
-        }
-
-        return hitbox;
     }
 
     /**
-     * 📱 Anti-Jitter para Hologramas:
-     * El cliente de Bedrock sufre espasmos al intentar interpolar el giro (Billboard) del texto.
-     * Esto desactiva el suavizado, haciendo que el holograma se vea fijo y nítido en móviles.
-     *
-     * @param hologram El holograma (TextDisplay) recién spawneado.
+     * 📱 Anti-Jitter para Hologramas de Bedrock.
      */
     public static void applyAntiJitter(TextDisplay hologram) {
         hologram.setBillboard(TextDisplay.Billboard.CENTER);
@@ -49,5 +42,8 @@ public class NexoDisplayFixer {
         // Optimizamos las sombras que causan caídas de FPS en Android/iOS
         hologram.setShadowRadius(0f);
         hologram.setShadowStrength(0f);
+
+        // 🌟 PAPER API EXTRA: Reducimos el ViewRange para que móviles no rendericen textos a más de 32 bloques
+        hologram.setViewRange(0.5f);
     }
 }

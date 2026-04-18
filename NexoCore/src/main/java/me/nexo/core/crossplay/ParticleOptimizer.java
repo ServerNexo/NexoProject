@@ -1,63 +1,61 @@
 package me.nexo.core.crossplay;
 
+import com.destroystokyo.paper.ParticleBuilder;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.entity.Player;
 import org.geysermc.floodgate.api.FloodgateApi;
 
+import java.util.Collection;
+
+/**
+ * ⚡ Optimizador de Partículas Nexo (Paper 26.1+ Nativo)
+ * Cero NMS. Evita el AsyncCatcher leyendo en Main y enviando paquetes en Virtual Threads.
+ */
 public class ParticleOptimizer {
 
-    /**
-     * Motor principal para el lanzamiento de partículas en todo el ecosistema (Dungeons, Combate, Habilidades).
-     * Se ejecuta usando Virtual Threads de Java 21 para no bloquear el Main Thread calculando matemáticas.
-     */
     public static void spawnOptimized(Location loc, Particle particle, int count, double oX, double oY, double oZ, double speed) {
         if (loc.getWorld() == null) return;
 
-        // Desplegamos un Hilo Virtual de Java 21 (Ultraligero)
+        // 🛡️ LECTURA SEGURA O(1): Obtenemos los jugadores en el Main Thread para evitar que Paper crashee (AsyncCatcher).
+        Collection<Player> targets = loc.getNearbyPlayers(48);
+        if (targets.isEmpty()) return;
+
+        // 🚀 MATEMÁTICAS Y RED: Desplegamos el Hilo Virtual de Java 25 para el envío masivo de paquetes.
         Thread.startVirtualThread(() -> {
-            // Recolectamos jugadores en un radio de 48 bloques (Visibilidad máxima estándar)
-            loc.getWorld().getNearbyPlayers(loc, 48).forEach(player -> {
 
-                // Si el jugador está conectado desde un móvil/consola (Bedrock)
+            // 🌟 PAPER API: Usamos ParticleBuilder en lugar de spawnParticle. Es infinitamente más rápido y no genera lag de GC.
+            var javaBuilder = new ParticleBuilder(particle).location(loc).count(count).offset(oX, oY, oZ).extra(speed);
+
+            Particle bedrockSafeParticle = getLighterParticle(particle);
+            int bedrockCount = Math.max(1, (int) (count * 0.3));
+            var bedrockBuilder = new ParticleBuilder(bedrockSafeParticle).location(loc).count(bedrockCount).offset(oX, oY, oZ).extra(speed);
+
+            for (Player player : targets) {
+                if (!player.isOnline()) continue;
+
+                // Floodgate check
                 if (FloodgateApi.getInstance().isFloodgatePlayer(player.getUniqueId())) {
-                    enviarParticulaBedrock(player, loc, particle, count, oX, oY, oZ, speed);
+                    bedrockBuilder.receivers(player).spawn(); // Envía paquete nativo al cliente Bedrock
+                } else {
+                    javaBuilder.receivers(player).spawn(); // Envía paquete nativo al cliente Java
                 }
-                // Si el jugador está en PC (Java)
-                else {
-                    enviarParticulaJava(player, loc, particle, count, oX, oY, oZ, speed);
-                }
-
-            });
+            }
         });
-    }
-
-    private static void enviarParticulaJava(Player player, Location loc, Particle particle, int count, double oX, double oY, double oZ, double speed) {
-        // En PC (Java), lanzamos todo el poder visual sin piedad
-        player.spawnParticle(particle, loc, count, oX, oY, oZ, speed);
-    }
-
-    private static void enviarParticulaBedrock(Player player, Location loc, Particle particle, int count, double oX, double oY, double oZ, double speed) {
-        // 1. Particle Replacement (Sustituimos partículas pesadas de Renderizado de GPU)
-        Particle bedrockSafeParticle = getLighterParticle(particle);
-
-        // 2. Throttling Law (Reducción estricta del 70% de densidad visual)
-        int bedrockCount = Math.max(1, (int) (count * 0.3));
-
-        player.spawnParticle(bedrockSafeParticle, loc, bedrockCount, oX, oY, oZ, speed);
     }
 
     /**
      * Convierte partículas masivas de humo o fuego expansivo (Causantes de Lag Spikes en móviles)
-     * en indicadores de daño críticos o mágicos de muy bajo consumo.
+     * en indicadores de bajo consumo.
      */
     private static Particle getLighterParticle(Particle p) {
+        // 🌟 Switch Expression (Java moderno) - Las partículas han sido validadas para 1.21.4+
         return switch (p) {
             case FLAME, LAVA, CAMPFIRE_COSY_SMOKE, SMOKE -> Particle.CRIT;
             case EXPLOSION_EMITTER, EXPLOSION -> Particle.FIREWORK;
             case DRAGON_BREATH -> Particle.WITCH;
             case SWEEP_ATTACK -> Particle.DAMAGE_INDICATOR;
-            default -> p; // Si es segura, la dejamos intacta
+            default -> p;
         };
     }
 }

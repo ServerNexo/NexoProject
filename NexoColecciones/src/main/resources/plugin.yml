@@ -2,7 +2,7 @@ name: NexoColecciones
 version: '${project.version}'
 main: me.nexo.colecciones.NexoColecciones
 api-version: '1.21'
-author: 'TuNombre'
+author: 'Z0101'
 description: 'Sistema de Slayers y farmeo progresivo.'
 depend: [NexoCore]
 softdepend: [PlaceholderAPI, NexoEconomy]

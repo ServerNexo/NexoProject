@@ -3,6 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
+
     <parent>
         <groupId>me.nexo</groupId>
         <artifactId>NexoNetwork</artifactId>
@@ -12,17 +13,7 @@
     <artifactId>NexoPvP</artifactId>
     <name>NexoPvP</name>
 
-    <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <repositories>
-        <repository>
-            <id>papermc</id>
-            <url>https://repo.papermc.io/repository/maven-public/</url>
-        </repository>
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
@@ -31,9 +22,27 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.papermc.paper</groupId>
-            <artifactId>paper-api</artifactId>
-            <version>1.21.1-R0.1-SNAPSHOT</version>
+            <groupId>me.nexo</groupId>
+            <artifactId>NexoCore</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>me.nexo</groupId>
+            <artifactId>NexoProtections</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>me.nexo</groupId>
+            <artifactId>NexoWar</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>me.nexo</groupId>
+            <artifactId>NexoEconomy</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -45,37 +54,11 @@
         </dependency>
 
         <dependency>
-            <groupId>me.nexo</groupId>
-            <artifactId>NexoCore</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>me.nexo</groupId>
-            <artifactId>NexoProtections</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>me.nexo</groupId>
-            <artifactId>NexoWar</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>me.nexo</groupId>
-            <artifactId>NexoEconomy</artifactId>
-            <version>1.0-SNAPSHOT</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
             <groupId>com.google.inject</groupId>
             <artifactId>guice</artifactId>
             <version>7.0.0</version>
             <scope>compile</scope>
         </dependency>
-
         <dependency>
             <groupId>com.github.Revxrsal.Lamp</groupId>
             <artifactId>common</artifactId>
@@ -88,7 +71,6 @@
             <version>3.1.9</version>
             <scope>compile</scope>
         </dependency>
-
         <dependency>
             <groupId>org.spongepowered</groupId>
             <artifactId>configurate-yaml</artifactId>
@@ -111,7 +93,6 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
-
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>
@@ -125,7 +106,6 @@
                                     </excludes>
                                 </filter>
                             </filters>
-
                             <relocations>
                                 <relocation>
                                     <pattern>com.google.inject</pattern>
