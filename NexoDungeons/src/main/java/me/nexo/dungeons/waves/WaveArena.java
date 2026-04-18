@@ -13,13 +13,13 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 🏰 NexoDungeons - Instancia de Arena de Oleadas (Arquitectura Enterprise)
- * Nota: Instanciada dinámicamente por el WaveManager. No requiere Inyección.
+ * 🏰 NexoDungeons - Instancia de Arena de Oleadas (Arquitectura Enterprise Java 25)
+ * Folia-Ready: RegionSchedulers, Zero-Garbage Sets y Paper 1.21.4 Attributes.
  */
 public class WaveArena {
 
@@ -27,6 +27,8 @@ public class WaveArena {
     private final String arenaId;
     private final Location spawnCenter;
     private int currentWave;
+
+    // 🌟 FIX CONCURRENCIA: Set Concurrente Lock-Free para evitar C.M.E. si mueren varios mobs a la vez
     private final Set<UUID> activeMythicMobs;
     private boolean isActive;
 
@@ -35,7 +37,7 @@ public class WaveArena {
         this.arenaId = arenaId;
         this.spawnCenter = spawnCenter;
         this.currentWave = 0;
-        this.activeMythicMobs = new HashSet<>();
+        this.activeMythicMobs = ConcurrentHashMap.newKeySet();
         this.isActive = false;
     }
 
@@ -54,7 +56,6 @@ public class WaveArena {
             int checkpoint = this.currentWave - 1;
             spawnCenter.getWorld().getNearbyEntities(spawnCenter, 30, 30, 30).forEach(e -> {
                 if (e instanceof Player p) {
-                    // 🌟 FIX: Mensaje directo, 0 lag de I/O
                     CrossplayUtils.sendMessage(p, "&#FFAA00[!] <bold>PUNTO DE CONTROL:</bold> &#E6CCFFHas sobrevivido hasta la oleada &#55FF55" + checkpoint + "&#E6CCFF.");
                     p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
                 }
@@ -64,7 +65,6 @@ public class WaveArena {
         // Anuncio de nueva oleada
         spawnCenter.getWorld().getNearbyEntities(spawnCenter, 30, 30, 30).forEach(e -> {
             if (e instanceof Player p) {
-                // 🌟 FIX: Títulos limpios y seguros para Bedrock
                 CrossplayUtils.sendTitle(p,
                         "&#FF5555<bold>OLEADA " + currentWave + "</bold>",
                         "&#E6CCFFDefiende la zona..."
@@ -73,15 +73,17 @@ public class WaveArena {
             }
         });
 
-        // Retraso de 3 segundos para que los jugadores se preparen
-        Bukkit.getScheduler().runTaskLater(plugin, this::spawnMobs, 60L);
+        // 🌟 FOLIA FIX: Usamos RegionScheduler anclado al centro de la arena en lugar del viejo BukkitScheduler
+        // Esto garantiza que los mobs se generen en el núcleo de la CPU que controla este chunk específico.
+        Bukkit.getRegionScheduler().runDelayed(plugin, spawnCenter, task -> spawnMobs(), 60L);
     }
 
     private void spawnMobs() {
+        if (!isActive) return; // Doble check de seguridad por si la arena se detuvo durante los 3 segundos de delay
+
         int mobsToSpawn = 3 + (currentWave * 2);
         String mythicMobType = currentWave % 5 == 0 ? "NexoBossMinion" : "NexoGuerrero";
 
-        // 🌟 FIX: Verificación segura del Mob de MythicMobs antes de intentar spawnearlo
         MythicMob mobType = MythicBukkit.inst().getMobManager().getMythicMob(mythicMobType).orElse(null);
         if (mobType == null) {
             plugin.getLogger().warning("⚠️ CRÍTICO: No se encontró el MythicMob '" + mythicMobType + "'. La oleada se ha estancado.");
@@ -106,14 +108,15 @@ public class WaveArena {
         // Incrementa las stats un 20% por cada oleada
         double multiplier = Math.pow(1.2, Math.max(0, currentWave - 1));
 
-        AttributeInstance healthAttr = mob.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        // 🌟 PAPER 1.21.4 FIX: Eliminado el prefijo GENERIC_ para evitar crasheos fatales
+        AttributeInstance healthAttr = mob.getAttribute(Attribute.MAX_HEALTH);
         if (healthAttr != null) {
             double newHealth = healthAttr.getBaseValue() * multiplier;
             healthAttr.setBaseValue(newHealth);
             mob.setHealth(newHealth); // Lo curamos a su nueva vida máxima
         }
 
-        AttributeInstance damageAttr = mob.getAttribute(Attribute.GENERIC_ATTACK_DAMAGE);
+        AttributeInstance damageAttr = mob.getAttribute(Attribute.ATTACK_DAMAGE);
         if (damageAttr != null) {
             double newDamage = damageAttr.getBaseValue() * multiplier;
             damageAttr.setBaseValue(newDamage);
@@ -125,8 +128,8 @@ public class WaveArena {
 
         if (activeMythicMobs.remove(mobId)) {
             if (activeMythicMobs.isEmpty()) {
-                // 🌟 FIX: Siguiente oleada con delay de 2 segundos para que los jugadores respiren
-                Bukkit.getScheduler().runTaskLater(plugin, this::nextWave, 40L);
+                // 🌟 FOLIA FIX: RegionScheduler para avanzar a la siguiente oleada de forma Thread-Safe
+                Bukkit.getRegionScheduler().runDelayed(plugin, spawnCenter, task -> nextWave(), 40L);
             }
         }
     }

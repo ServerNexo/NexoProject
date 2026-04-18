@@ -17,9 +17,11 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.DoubleAdder;
 
 /**
- * 🏰 NexoDungeons - Gestor de Combates contra Jefes Globales (Arquitectura Enterprise)
+ * 🏰 NexoDungeons - Gestor de Combates contra Jefes Globales (Arquitectura Enterprise Java 25)
+ * Rendimiento: DoubleAdder Atómico, Pattern Matching y Virtual Threads seguros.
  */
 @Singleton
 public class BossFightManager implements Listener {
@@ -27,17 +29,15 @@ public class BossFightManager implements Listener {
     private final NexoDungeons plugin;
     private final LootDistributor lootDistributor;
 
-    // Mapa tridimensional Thread-Safe: UUID del Boss -> (UUID del Jugador -> Daño Acumulado)
-    private final Map<UUID, Map<UUID, Double>> activeBosses = new ConcurrentHashMap<>();
+    // 🌟 OPTIMIZACIÓN RAM: Usamos DoubleAdder en lugar de Double para sumas atómicas lock-free
+    private final Map<UUID, Map<UUID, DoubleAdder>> activeBosses = new ConcurrentHashMap<>();
 
-    // Lista de nombres internos de MythicMobs que son considerados "Bosses Públicos"
     private final Set<String> trackedBossTypes = Set.of("NexoDragon", "ReyEsqueleto", "TitanDeMagma");
 
-    // 💉 PILAR 3: Inyección de Dependencias
     @Inject
     public BossFightManager(NexoDungeons plugin, LootDistributor lootDistributor) {
         this.plugin = plugin;
-        this.lootDistributor = lootDistributor; // Inyectamos el repartidor de botín
+        this.lootDistributor = lootDistributor;
     }
 
     // 🟢 1. Detectar cuando un Boss nace
@@ -50,23 +50,25 @@ public class BossFightManager implements Listener {
     }
 
     // ⚔️ 2. Rastrear cada golpe de forma ultra-rápida
+    // 🌟 FIX SEGURIDAD: Prioridad MONITOR (Se ejecuta al final de todos) para asegurar que el daño no fue cancelado por otro plugin
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onBossDamage(EntityDamageByEntityEvent event) {
         UUID entityId = event.getEntity().getUniqueId();
 
-        // Verificación O(1): Si no es un boss rastreado, ignoramos al instante para no dar lag
-        if (!activeBosses.containsKey(entityId)) return;
+        // Verificación O(1): Si no es un boss rastreado, ignoramos al instante
+        Map<UUID, DoubleAdder> damageMap = activeBosses.get(entityId);
+        if (damageMap == null) return;
 
-        Player atacante = null;
-        if (event.getDamager() instanceof Player p) {
-            atacante = p;
-        } else if (event.getDamager() instanceof Projectile proj && proj.getShooter() instanceof Player p) {
-            atacante = p; // Daño válido con arcos o magia
-        }
+        // 🌟 PATTERN MATCHING JAVA 21+: Código más limpio y rápido (Cero casteos pesados)
+        Player atacante = switch (event.getDamager()) {
+            case Player p -> p;
+            case Projectile proj when proj.getShooter() instanceof Player p -> p;
+            default -> null;
+        };
 
         if (atacante != null) {
-            // Sumamos el daño final al historial del jugador de forma atómica y segura
-            activeBosses.get(entityId).merge(atacante.getUniqueId(), event.getFinalDamage(), Double::sum);
+            // 🌟 FIX CONCURRENCIA: Suma Atómica de altísimo rendimiento (Wall-Street style)
+            damageMap.computeIfAbsent(atacante.getUniqueId(), k -> new DoubleAdder()).add(event.getFinalDamage());
         }
     }
 
@@ -75,22 +77,21 @@ public class BossFightManager implements Listener {
     public void onMythicDeath(MythicMobDeathEvent event) {
         UUID entityId = event.getEntity().getUniqueId();
 
-        // Removemos el boss de la memoria y extraemos su historial de daño
-        Map<UUID, Double> damageMap = activeBosses.remove(entityId);
+        Map<UUID, DoubleAdder> damageMapAdder = activeBosses.remove(entityId);
 
-        if (damageMap != null && !damageMap.isEmpty()) {
+        if (damageMapAdder != null && !damageMapAdder.isEmpty()) {
 
-            // 🌟 FIX SEGURIDAD ASÍNCRONA: Extraemos datos nativos antes de saltar al hilo asíncrono
+            // 🌟 FIX SEGURIDAD ASÍNCRONA: Extraemos datos nativos en el Main Thread
             final String bossName = event.getMobType().getInternalName();
-            final Location deathLoc = event.getEntity().getLocation().clone(); // ¡Clonado vital para evitar Crash!
+            final Location deathLoc = event.getEntity().getLocation().clone();
 
-            // 🚀 Java 21 Virtual Threads: Cálculo asíncrono ultrarrápido para no congelar el servidor
+            // Convertimos el mapa de DoubleAdder a Double normal para dárselo al LootDistributor
+            Map<UUID, Double> finalDamageMap = new ConcurrentHashMap<>();
+            damageMapAdder.forEach((k, v) -> finalDamageMap.put(k, v.sum()));
+
+            // 🚀 Java 25 Virtual Threads: Cálculo asíncrono puro en RAM
             Thread.startVirtualThread(() -> {
-
-                // 🌟 FIX: Adiós al anti-patrón static. Usamos el LootDistributor inyectado
-                // Le pasamos la 'deathLoc' para que sepa exactamente dónde soltar las recompensas
-                lootDistributor.distributeLoot(bossName, damageMap, deathLoc);
-
+                lootDistributor.distributeLoot(bossName, finalDamageMap, deathLoc);
             });
         }
     }

@@ -11,13 +11,14 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
- * 🏰 NexoDungeons - Motor de Emparejamiento y Colas (Arquitectura Enterprise)
+ * 🏰 NexoDungeons - Motor de Emparejamiento y Colas (Arquitectura Enterprise Java 25)
+ * Folia-Ready: Usa GlobalRegionScheduler y Colecciones Concurrentes.
  */
 @Singleton
 public class QueueManager {
@@ -25,7 +26,8 @@ public class QueueManager {
     private final NexoDungeons plugin;
     private final WaveManager waveManager;
 
-    private final LinkedList<UUID> waveQueue = new LinkedList<>();
+    // 🌟 FIX ANTI-CRASH: Cola Concurrente lock-free para alta disponibilidad
+    private final ConcurrentLinkedQueue<UUID> waveQueue = new ConcurrentLinkedQueue<>();
     private final Map<String, Location> configuredArenas;
 
     // 💉 PILAR 3: Inyección de Dependencias
@@ -62,8 +64,9 @@ public class QueueManager {
     }
 
     private void iniciarMotorDeEmparejamiento() {
-        // Tarea repetitiva que revisa la cola cada 2 segundos (40 ticks)
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+        // 🌟 PAPER/FOLIA FIX: Usamos el GlobalRegionScheduler en lugar del viejo BukkitScheduler
+        // Esto permite emparejar jugadores sin bloquear el hilo principal.
+        Bukkit.getGlobalRegionScheduler().runAtFixedRate(plugin, scheduledTask -> {
             if (waveQueue.isEmpty()) return;
 
             for (Map.Entry<String, Location> entry : configuredArenas.entrySet()) {
@@ -106,6 +109,6 @@ public class QueueManager {
                     if (waveQueue.isEmpty()) break;
                 }
             }
-        }, 20L, 40L);
+        }, 20L, 40L); // Retraso de 20 ticks, repite cada 40 ticks
     }
 }

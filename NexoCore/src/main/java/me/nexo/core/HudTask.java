@@ -2,9 +2,9 @@ package me.nexo.core;
 
 import me.nexo.core.user.NexoAPI;
 import me.nexo.core.user.NexoUser;
-import me.nexo.core.utils.NexoColor;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
@@ -13,75 +13,90 @@ import org.bukkit.NamespacedKey;
 
 import java.util.UUID;
 
+/**
+ * 🖥️ NexoCore - Motor de HUD (Arquitectura Enterprise Java 25)
+ * Rendimiento: Cero Garbage Collection (ItemMeta Bypass) y Kyori Nativo.
+ */
 public class HudTask extends BukkitRunnable {
 
     private final NexoCore plugin;
     private final NamespacedKey classKey;
+
+    // ⚡ CACHÉ: Evita consultar el PluginManager 20 veces por segundo
+    private Object auraSkillsApi = null;
+    private boolean auraSkillsLoaded = false;
 
     public HudTask(NexoCore plugin) {
         this.plugin = plugin;
         this.classKey = new NamespacedKey("nexoitems", "nexo_class");
     }
 
+    private void checkIntegrations() {
+        if (!auraSkillsLoaded) {
+            if (Bukkit.getPluginManager().isPluginEnabled("AuraSkills")) {
+                auraSkillsApi = dev.aurelium.auraskills.api.AuraSkillsApi.get();
+            }
+            auraSkillsLoaded = true;
+        }
+    }
+
     @Override
     public void run() {
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (!p.isOnline()) continue;
+        checkIntegrations();
 
+        for (Player p : Bukkit.getOnlinePlayers()) {
             UUID id = p.getUniqueId();
             NexoUser user = NexoAPI.getInstance().getUserLocal(id);
 
             // 1. LÓGICA DE BENDICIÓN (Booster Cookie)
-            String voidIcon = "";
-            if (user != null && user.isVoidBlessingActive()) {
-                voidIcon = " &#ff00ff✧";
-            }
+            String voidIcon = (user != null && user.isVoidBlessingActive()) ? " &#ff00ff✧" : "";
 
-            // 2. LÓGICA DE MANÁ (AuraSkills u otro)
+            // 2. LÓGICA DE MANÁ
             int manaActual = 0;
             int maxMana = 100;
-            try {
-                dev.aurelium.auraskills.api.user.SkillsUser userAura = dev.aurelium.auraskills.api.AuraSkillsApi.get().getUser(id);
-                if (userAura != null) {
-                    manaActual = (int) userAura.getMana();
-                    maxMana = (int) userAura.getMaxMana();
-                }
-            } catch (Exception ignored) {}
 
-            // Si tiene el Set de Inquisidor equipado, su maná máximo es x2 visualmente y funcionalmente
-            if (hasFullSet(p, "INQUISITOR")) {
-                maxMana *= 2; 
-                // Aquí podrías sumar maná extra a manaActual si regenera rápido
+            if (auraSkillsApi != null) {
+                try {
+                    var api = (dev.aurelium.auraskills.api.AuraSkillsApi) auraSkillsApi;
+                    var userAura = api.getUser(id);
+                    if (userAura != null) {
+                        manaActual = (int) userAura.getMana();
+                        maxMana = (int) userAura.getMaxMana();
+                    }
+                } catch (Throwable ignored) {}
             }
 
-            // 3. BARRA DE MANÁ VISUAL [ ■■■■□ ]
+            // Validación O(1) ultra rápida
+            boolean isInquisitor = hasFullSet(p, "INQUISITOR");
+            if (isInquisitor) maxMana *= 2;
+
+            // 3. BARRA DE MANÁ VISUAL
             String manaBar = buildProgressBar(manaActual, maxMana, 5, "&#00f5ff■", "&#E6CCFF■");
 
-            // 4. ESTADO DE CLASE O SKILL ACTIVA
-            String activeFocus = "Ninguna";
-            if (hasFullSet(p, "ASSASSIN")) activeFocus = "&#8b0000Asesino";
-            else if (hasFullSet(p, "INQUISITOR")) activeFocus = "&#ff00ffInquisidor";
-            else activeFocus = "&#E6CCFFAventurero";
+            // 4. ESTADO DE CLASE
+            String activeFocus = "&#E6CCFFAventurero";
+            if (isInquisitor) activeFocus = "&#ff00ffInquisidor";
+            else if (hasFullSet(p, "ASSASSIN")) activeFocus = "&#8b0000Asesino";
 
-            // 5. RENDERIZADO FINAL DEL ACTION BAR (Vivid Void Protocol)
-            // Ejemplo: [ ■■■■□ ] 80/100 MP | Clase: Inquisidor ✧
-            String hudFormat = String.format("%s &#00f5ff%d/%d MP &#E6CCFF| &#00f5ffClase: %s%s", 
+            // 5. RENDERIZADO FINAL DEL ACTION BAR
+            String hudFormat = String.format("%s &#00f5ff%d/%d MP &#E6CCFF| &#00f5ffClase: %s%s",
                     manaBar, manaActual, maxMana, activeFocus, voidIcon);
 
-            p.sendActionBar(NexoColor.parse(hudFormat));
+            // 🌟 FIX COMPILADOR: Deserialize directo de Kyori para evitar el error de PlayerHeadObjectContents
+            Component actionBarComp = LegacyComponentSerializer.legacyAmpersand().deserialize(hudFormat);
+            p.sendActionBar(actionBarComp);
         }
     }
 
-    // 🌟 MOTOR DE RENDERIZADO DE BARRAS (Ultra ligero)
+    // 🌟 MOTOR DE RENDERIZADO DE BARRAS (Matemática pura)
     private String buildProgressBar(int current, int max, int totalBars, String filledSymbol, String emptySymbol) {
         if (max <= 0) max = 1;
-        float percent = (float) current / max;
+        float percent = Math.min(1.0f, Math.max(0.0f, (float) current / max));
         int progressBars = (int) (totalBars * percent);
 
         StringBuilder bar = new StringBuilder("&#E6CCFF[ ");
         for (int i = 0; i < totalBars; i++) {
-            if (i < progressBars) bar.append(filledSymbol);
-            else bar.append(emptySymbol);
+            bar.append(i < progressBars ? filledSymbol : emptySymbol);
         }
         bar.append(" &#E6CCFF]");
         return bar.toString();
@@ -89,23 +104,24 @@ public class HudTask extends BukkitRunnable {
 
     // Validador rápido de Sets para el HUD
     private boolean hasFullSet(Player player, String targetClass) {
-        if (player.getInventory().getHelmet() == null) return false;
-        String helmClass = getClassTag(player.getInventory().getHelmet());
+        var inv = player.getInventory();
+        if (inv.getHelmet() == null || inv.getHelmet().isEmpty()) return false; // 🌟 1.21 fix
+
+        String helmClass = getClassTag(inv.getHelmet());
         if (helmClass == null || !helmClass.equalsIgnoreCase(targetClass)) return false;
 
-        String chestClass = getClassTag(player.getInventory().getChestplate());
-        String legsClass = getClassTag(player.getInventory().getLeggings());
-        String bootsClass = getClassTag(player.getInventory().getBoots());
-
-        return targetClass.equalsIgnoreCase(chestClass) && 
-               targetClass.equalsIgnoreCase(legsClass) && 
-               targetClass.equalsIgnoreCase(bootsClass);
+        return targetClass.equalsIgnoreCase(getClassTag(inv.getChestplate())) &&
+                targetClass.equalsIgnoreCase(getClassTag(inv.getLeggings())) &&
+                targetClass.equalsIgnoreCase(getClassTag(inv.getBoots()));
     }
 
     private String getClassTag(ItemStack item) {
-        if (item == null || !item.hasItemMeta()) return null;
-        if (item.getItemMeta().getPersistentDataContainer().has(classKey, PersistentDataType.STRING)) {
-            return item.getItemMeta().getPersistentDataContainer().get(classKey, PersistentDataType.STRING);
+        if (item == null || item.isEmpty()) return null; // 🌟 1.21 fix
+
+        // 🚀 CERO GARBAGE: En Paper 1.21.4+ leemos el PDC directamente del ItemStack sin crear ItemMeta
+        var pdc = item.getPersistentDataContainer();
+        if (pdc.has(classKey, PersistentDataType.STRING)) {
+            return pdc.get(classKey, PersistentDataType.STRING);
         }
         return null;
     }

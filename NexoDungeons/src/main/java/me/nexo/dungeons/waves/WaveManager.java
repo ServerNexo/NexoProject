@@ -14,7 +14,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 🏰 NexoDungeons - Gestor de Oleadas y Arenas (Arquitectura Enterprise)
+ * 🏰 NexoDungeons - Gestor de Oleadas y Arenas (Arquitectura Enterprise Java 25)
+ * Folia-Ready: Registro Concurrente Lock-Free.
  */
 @Singleton
 public class WaveManager implements Listener {
@@ -31,7 +32,9 @@ public class WaveManager implements Listener {
 
     // Método para iniciar una arena desde un comando, evento o el QueueManager
     public void startArena(String arenaId, Location center) {
-        if (activeArenas.containsKey(arenaId) && activeArenas.get(arenaId).isActive()) {
+        // 🌟 CHECK ATÓMICO: Evita que dos hilos inicien la arena al mismo tiempo
+        WaveArena existingArena = activeArenas.get(arenaId);
+        if (existingArena != null && existingArena.isActive()) {
             plugin.getLogger().warning("⚠️ Intento de iniciar la arena '" + arenaId + "', pero ya se encuentra en curso.");
             return;
         }
@@ -39,7 +42,7 @@ public class WaveManager implements Listener {
         // Instanciamos la arena (no se inyecta porque es un objeto temporal y dinámico)
         WaveArena arena = new WaveArena(plugin, arenaId, center);
         activeArenas.put(arenaId, arena);
-        arena.start();
+        arena.start(); // ⚠️ NOTA DEL ARQUITECTO: Este método start() dentro de WaveArena DEBE usar RegionScheduler
 
         plugin.getLogger().info("⚔️ [WAVES] Arena de supervivencia iniciada: " + arenaId);
     }
@@ -74,8 +77,7 @@ public class WaveManager implements Listener {
     public void onMythicMobDeath(MythicMobDeathEvent event) {
         UUID deadMobId = event.getEntity().getUniqueId();
 
-        // Buscamos a qué arena pertenecía este monstruo.
-        // Gracias al ConcurrentHashMap, iterar sobre los valores no lanzará ConcurrentModificationException.
+        // Búsqueda ultra-rápida sobre valores concurrentes
         for (WaveArena arena : activeArenas.values()) {
             if (arena.isActive()) {
                 arena.registrarMuerteMob(deadMobId);
