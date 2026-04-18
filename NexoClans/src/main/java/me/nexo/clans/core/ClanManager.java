@@ -16,8 +16,6 @@ import org.bukkit.entity.Player;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,8 +24,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
- * 👥 NexoClans - Cerebro y Base de Datos (Arquitectura Enterprise)
- * Rendimiento: Hilos Virtuales, Caffeine Cache y Cero Lag I/O.
+ * 👥 NexoClans - Cerebro y Base de Datos (Arquitectura Enterprise Java 25)
+ * Rendimiento: Hilos Virtuales, Transacciones ACID con Rollback y Cero Lag I/O.
  */
 @Singleton
 public class ClanManager {
@@ -68,16 +66,11 @@ public class ClanManager {
                             friendly_fire BOOLEAN DEFAULT FALSE
                         );
                         """;
-                // 🌟 FIX: Usamos db.getConnection() directo, que es como lo tienes en NexoCore
-                try (Connection conn = db.getConnection();
-                     java.sql.Statement stmt = conn.createStatement()) {
+                try (var conn = db.getConnection();
+                     var stmt = conn.createStatement()) {
 
                     stmt.execute(sql);
-
-                    // Parche seguro por si la columna no existe (Migraciones silenciosas)
-                    try {
-                        stmt.execute("ALTER TABLE nexo_clans ADD COLUMN friendly_fire BOOLEAN DEFAULT FALSE;");
-                    } catch (Exception ignored) {}
+                    try { stmt.execute("ALTER TABLE nexo_clans ADD COLUMN IF NOT EXISTS friendly_fire BOOLEAN DEFAULT FALSE;"); } catch (Exception ignored) {}
 
                 } catch (Exception e) {
                     plugin.getLogger().severe("❌ Error creando tabla nexo_clans: " + e.getMessage());
@@ -89,23 +82,20 @@ public class ClanManager {
     // ==========================================
     // ⚙️ OPERACIONES ASÍNCRONAS CON HILOS VIRTUALES
     // ==========================================
-
     public void setClanHomeAsync(NexoClan clan, Player player, Location loc) {
         String locStr = loc.getWorld().getName() + ";" + loc.getX() + ";" + loc.getY() + ";" + loc.getZ() + ";" + loc.getYaw() + ";" + loc.getPitch();
 
         Thread.startVirtualThread(() -> {
             NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
                 String sql = "UPDATE nexo_clans SET public_home = ? WHERE id = CAST(? AS UUID)";
-                try (Connection conn = db.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(sql)) {
+                try (var conn = db.getConnection();
+                     var ps = conn.prepareStatement(sql)) {
 
                     ps.setString(1, locStr);
                     ps.setString(2, clan.getId().toString());
                     ps.executeUpdate();
 
                     clan.setPublicHome(locStr);
-
-                    // Envío de mensaje Thread-Safe
                     CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>BASE ESTABLECIDA:</bold> &#E6CCFFLa nueva ubicación del clan ha sido guardada.");
                 } catch (Exception e) {
                     plugin.getLogger().severe("❌ Error guardando Base: " + e.getMessage());
@@ -118,8 +108,8 @@ public class ClanManager {
         Thread.startVirtualThread(() -> {
             NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
                 String sql = "UPDATE nexo_clans SET friendly_fire = ? WHERE id = CAST(? AS UUID)";
-                try (Connection conn = db.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(sql)) {
+                try (var conn = db.getConnection();
+                     var ps = conn.prepareStatement(sql)) {
 
                     ps.setBoolean(1, newValue);
                     ps.setString(2, clan.getId().toString());
@@ -138,11 +128,11 @@ public class ClanManager {
             List<ClanMember> miembros = new ArrayList<>();
             NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
                 String sql = "SELECT uuid, name, clan_role FROM jugadores WHERE clan_id = CAST(? AS UUID) ORDER BY clan_role DESC";
-                try (Connection conn = db.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(sql)) {
+                try (var conn = db.getConnection();
+                     var ps = conn.prepareStatement(sql)) {
 
                     ps.setString(1, clanId.toString());
-                    ResultSet rs = ps.executeQuery();
+                    var rs = ps.executeQuery();
                     while (rs.next()) {
                         miembros.add(new ClanMember(
                                 UUID.fromString(rs.getString("uuid")),
@@ -158,43 +148,56 @@ public class ClanManager {
         });
     }
 
+    // 🌟 FIX ACID: Transacción atómica con Rollback de seguridad
     public void crearClanAsync(Player player, NexoUser user, String tag, String nombre) {
         Thread.startVirtualThread(() -> {
             NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
-                String checkSQL = "SELECT id FROM nexo_clans WHERE tag = ? OR name = ?";
-                try (Connection conn = db.getConnection();
-                     PreparedStatement psCheck = conn.prepareStatement(checkSQL)) {
+                try (var conn = db.getConnection()) {
+                    conn.setAutoCommit(false);
 
-                    psCheck.setString(1, tag);
-                    psCheck.setString(2, nombre);
-                    if (psCheck.executeQuery().next()) {
-                        CrossplayUtils.sendMessage(player, "&#FF5555[!] Ese nombre o etiqueta de clan ya ha sido reclamado por otros guerreros.");
-                        return;
+                    try {
+                        String checkSQL = "SELECT id FROM nexo_clans WHERE tag = ? OR name = ?";
+                        try (var psCheck = conn.prepareStatement(checkSQL)) {
+                            psCheck.setString(1, tag);
+                            psCheck.setString(2, nombre);
+                            if (psCheck.executeQuery().next()) {
+                                CrossplayUtils.sendMessage(player, "&#FF5555[!] Ese nombre o etiqueta de clan ya ha sido reclamado.");
+                                conn.rollback(); // 🛡️ Rollback vital
+                                return;
+                            }
+                        }
+
+                        UUID nuevoClanId = UUID.randomUUID();
+                        String insertClan = "INSERT INTO nexo_clans (id, name, tag) VALUES (CAST(? AS UUID), ?, ?)";
+                        try (var psInsert = conn.prepareStatement(insertClan)) {
+                            psInsert.setString(1, nuevoClanId.toString());
+                            psInsert.setString(2, nombre);
+                            psInsert.setString(3, tag);
+                            psInsert.executeUpdate();
+                        }
+
+                        // 🌟 FIX POSTGRESQL: Casting UUID en el WHERE
+                        String updateUser = "UPDATE jugadores SET clan_id = CAST(? AS UUID), clan_role = 'LIDER' WHERE uuid = CAST(? AS UUID)";
+                        try (var psUser = conn.prepareStatement(updateUser)) {
+                            psUser.setString(1, nuevoClanId.toString());
+                            psUser.setString(2, player.getUniqueId().toString());
+                            psUser.executeUpdate();
+                        }
+
+                        conn.commit(); // 🌟 Ambas queries exitosas, consolidamos.
+
+                        // Actualizamos memoria RAM
+                        NexoClan nuevoClan = new NexoClan(nuevoClanId, nombre, tag, 1, 0L, BigDecimal.ZERO, null, false);
+                        clanCache.put(nuevoClanId, nuevoClan);
+                        user.setClanId(nuevoClanId);
+                        user.setClanRole("LIDER");
+
+                        CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>CLAN FUNDADO:</bold> &#E6CCFFLarga vida a &#FFAA00" + nombre + " [" + tag + "]&#E6CCFF!");
+
+                    } catch (Exception innerEx) {
+                        conn.rollback(); // 🛡️ Si algo falla, revertimos y prevenimos bloqueos en Supabase
+                        throw innerEx;
                     }
-
-                    UUID nuevoClanId = UUID.randomUUID();
-                    String insertClan = "INSERT INTO nexo_clans (id, name, tag) VALUES (CAST(? AS UUID), ?, ?)";
-                    try (PreparedStatement psInsert = conn.prepareStatement(insertClan)) {
-                        psInsert.setString(1, nuevoClanId.toString());
-                        psInsert.setString(2, nombre);
-                        psInsert.setString(3, tag);
-                        psInsert.executeUpdate();
-                    }
-
-                    String updateUser = "UPDATE jugadores SET clan_id = CAST(? AS UUID), clan_role = 'LIDER' WHERE uuid = ?";
-                    try (PreparedStatement psUser = conn.prepareStatement(updateUser)) {
-                        psUser.setString(1, nuevoClanId.toString());
-                        psUser.setString(2, player.getUniqueId().toString());
-                        psUser.executeUpdate();
-                    }
-
-                    // Actualizamos memoria RAM
-                    NexoClan nuevoClan = new NexoClan(nuevoClanId, nombre, tag, 1, 0L, BigDecimal.ZERO, null, false);
-                    clanCache.put(nuevoClanId, nuevoClan);
-                    user.setClanId(nuevoClanId);
-                    user.setClanRole("LIDER");
-
-                    CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>CLAN FUNDADO:</bold> &#E6CCFFLarga vida a &#FFAA00" + nombre + " [" + tag + "]&#E6CCFF!");
                 } catch (Exception e) {
                     plugin.getLogger().severe("❌ Error creando clan: " + e.getMessage());
                 }
@@ -212,11 +215,11 @@ public class ClanManager {
         Thread.startVirtualThread(() -> {
             NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
                 String sql = "SELECT * FROM nexo_clans WHERE id = CAST(? AS UUID)";
-                try (Connection conn = db.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(sql)) {
+                try (var conn = db.getConnection();
+                     var ps = conn.prepareStatement(sql)) {
 
                     ps.setString(1, clanId.toString());
-                    ResultSet rs = ps.executeQuery();
+                    var rs = ps.executeQuery();
                     if (rs.next()) {
                         NexoClan loadedClan = new NexoClan(
                                 clanId, rs.getString("name"), rs.getString("tag"),
@@ -239,9 +242,9 @@ public class ClanManager {
     public void unirseClanAsync(Player player, NexoUser user, NexoClan clan) {
         Thread.startVirtualThread(() -> {
             NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
-                String updateSQL = "UPDATE jugadores SET clan_id = CAST(? AS UUID), clan_role = 'MIEMBRO' WHERE uuid = ?";
-                try (Connection conn = db.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(updateSQL)) {
+                String updateSQL = "UPDATE jugadores SET clan_id = CAST(? AS UUID), clan_role = 'MIEMBRO' WHERE uuid = CAST(? AS UUID)";
+                try (var conn = db.getConnection();
+                     var ps = conn.prepareStatement(updateSQL)) {
 
                     ps.setString(1, clan.getId().toString());
                     ps.setString(2, player.getUniqueId().toString());
@@ -260,9 +263,9 @@ public class ClanManager {
     public void abandonarClanAsync(Player player, NexoUser user) {
         Thread.startVirtualThread(() -> {
             NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
-                String updateSQL = "UPDATE jugadores SET clan_id = NULL, clan_role = 'NONE' WHERE uuid = ?";
-                try (Connection conn = db.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(updateSQL)) {
+                String updateSQL = "UPDATE jugadores SET clan_id = NULL, clan_role = 'NONE' WHERE uuid = CAST(? AS UUID)";
+                try (var conn = db.getConnection();
+                     var ps = conn.prepareStatement(updateSQL)) {
 
                     ps.setString(1, player.getUniqueId().toString());
                     ps.executeUpdate();
@@ -278,9 +281,9 @@ public class ClanManager {
     public void expulsarJugadorAsync(Player ejector, Player target, NexoUser targetUser) {
         Thread.startVirtualThread(() -> {
             NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
-                String updateSQL = "UPDATE jugadores SET clan_id = NULL, clan_role = 'NONE' WHERE uuid = ?";
-                try (Connection conn = db.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(updateSQL)) {
+                String updateSQL = "UPDATE jugadores SET clan_id = NULL, clan_role = 'NONE' WHERE uuid = CAST(? AS UUID)";
+                try (var conn = db.getConnection();
+                     var ps = conn.prepareStatement(updateSQL)) {
 
                     ps.setString(1, target.getUniqueId().toString());
                     ps.executeUpdate();
@@ -295,35 +298,46 @@ public class ClanManager {
         });
     }
 
-    // 🌟 FIX: Restaurado el método de Disolver Clan
+    // 🌟 FIX: Transacción Atómica Completa y Protección AsyncCatcher
     public void disolverClanAsync(Player lider, NexoUser liderUser, UUID clanId) {
         Thread.startVirtualThread(() -> {
             NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
-                try (Connection conn = db.getConnection()) {
-                    String updateUsers = "UPDATE jugadores SET clan_id = NULL, clan_role = 'NONE' WHERE clan_id = CAST(? AS UUID)";
-                    try (PreparedStatement ps = conn.prepareStatement(updateUsers)) {
-                        ps.setString(1, clanId.toString());
-                        ps.executeUpdate();
-                    }
-                    String deleteClan = "DELETE FROM nexo_clans WHERE id = CAST(? AS UUID)";
-                    try (PreparedStatement ps = conn.prepareStatement(deleteClan)) {
-                        ps.setString(1, clanId.toString());
-                        ps.executeUpdate();
-                    }
+                try (var conn = db.getConnection()) {
+                    conn.setAutoCommit(false);
 
-                    clanCache.invalidate(clanId);
-
-                    // Notificamos a los miembros online usando la inyección de UserManager
-                    NexoAPI.getServices().get(UserManager.class).ifPresent(userManager -> {
-                        for (Player p : Bukkit.getOnlinePlayers()) {
-                            NexoUser u = userManager.getUserOrNull(p.getUniqueId());
-                            if (u != null && u.hasClan() && clanId.equals(u.getClanId())) {
-                                u.setClanId(null);
-                                u.setClanRole("NONE");
-                                CrossplayUtils.sendMessage(p, "&#FF5555[!] Tu clan ha sido disuelto permanentemente por el líder.");
-                            }
+                    try {
+                        String updateUsers = "UPDATE jugadores SET clan_id = NULL, clan_role = 'NONE' WHERE clan_id = CAST(? AS UUID)";
+                        try (var ps = conn.prepareStatement(updateUsers)) {
+                            ps.setString(1, clanId.toString());
+                            ps.executeUpdate();
                         }
-                    });
+
+                        String deleteClan = "DELETE FROM nexo_clans WHERE id = CAST(? AS UUID)";
+                        try (var ps = conn.prepareStatement(deleteClan)) {
+                            ps.setString(1, clanId.toString());
+                            ps.executeUpdate();
+                        }
+
+                        conn.commit();
+                        clanCache.invalidate(clanId);
+
+                        // 🌟 FIX ASYNCCATCHER: Volvemos al Main Thread ANTES de llamar a Bukkit.getOnlinePlayers()
+                        Bukkit.getScheduler().runTask(plugin, () -> {
+                            NexoAPI.getServices().get(UserManager.class).ifPresent(userManager -> {
+                                for (Player p : Bukkit.getOnlinePlayers()) {
+                                    NexoUser u = userManager.getUserOrNull(p.getUniqueId());
+                                    if (u != null && u.hasClan() && clanId.equals(u.getClanId())) {
+                                        u.setClanId(null);
+                                        u.setClanRole("NONE");
+                                        CrossplayUtils.sendMessage(p, "&#FF5555[!] Tu clan ha sido disuelto permanentemente por el líder.");
+                                    }
+                                }
+                            });
+                        });
+                    } catch (Exception innerEx) {
+                        conn.rollback(); // 🛡️ Rollback vital para la salud de Supabase
+                        throw innerEx;
+                    }
                 } catch (Exception e) {
                     plugin.getLogger().severe("❌ Error disolviendo clan: " + e.getMessage());
                 }
@@ -334,31 +348,24 @@ public class ClanManager {
     // ==========================================
     // 📨 GESTIÓN DE INVITACIONES (RAM)
     // ==========================================
-
     public void invitarJugador(Player lider, Player invitado, NexoClan clan) {
         invitaciones.put(invitado.getUniqueId(), clan.getId());
         CrossplayUtils.sendMessage(invitado, "&#FFAA00✉ <bold>CARTA DE RECLUTAMIENTO:</bold> &#E6CCFFEl clan &#55FF55" + clan.getName() + " &#E6CCFFte ha invitado a unirte. Escribe /clan join para aceptar.");
         CrossplayUtils.sendMessage(lider, "&#55FF55[✓] Invitación enviada a " + invitado.getName() + ".");
     }
 
-    public UUID getInvitacionPendiente(Player player) {
-        return invitaciones.getIfPresent(player.getUniqueId());
-    }
-
-    public Optional<NexoClan> getClanFromCache(UUID clanId) {
-        return Optional.ofNullable(clanCache.getIfPresent(clanId));
-    }
+    public UUID getInvitacionPendiente(Player player) { return invitaciones.getIfPresent(player.getUniqueId()); }
+    public Optional<NexoClan> getClanFromCache(UUID clanId) { return Optional.ofNullable(clanCache.getIfPresent(clanId)); }
 
     // ==========================================
     // 💾 GUARDADOS CRÍTICOS
     // ==========================================
-
     public void saveBankAsync(NexoClan clan) {
         Thread.startVirtualThread(() -> {
             NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
                 String sql = "UPDATE nexo_clans SET bank_balance = ? WHERE id = CAST(? AS UUID)";
-                try (Connection conn = db.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(sql)) {
+                try (var conn = db.getConnection();
+                     var ps = conn.prepareStatement(sql)) {
                     ps.setBigDecimal(1, clan.getBankBalance());
                     ps.setString(2, clan.getId().toString());
                     ps.executeUpdate();
@@ -369,14 +376,13 @@ public class ClanManager {
         });
     }
 
-    // Método Síncrono seguro para el onDisable (Evita corrupción de datos al apagar el server)
     public void saveAllClansSync() {
         NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
             String sql = "UPDATE nexo_clans SET monolith_exp = ?, monolith_level = ?, bank_balance = ?, public_home = ?, friendly_fire = ? WHERE id = CAST(? AS UUID)";
-            try (Connection conn = db.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (var conn = db.getConnection();
+                 var ps = conn.prepareStatement(sql)) {
 
-                conn.setAutoCommit(false); // 🌟 OPTIMIZACIÓN: Modo Batch Activado
+                conn.setAutoCommit(false);
 
                 for (NexoClan clan : clanCache.asMap().values()) {
                     ps.setLong(1, clan.getMonolithExp());

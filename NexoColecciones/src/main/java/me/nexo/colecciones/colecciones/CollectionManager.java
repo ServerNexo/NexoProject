@@ -9,28 +9,25 @@ import me.nexo.colecciones.data.CollectionCategory;
 import me.nexo.colecciones.data.CollectionItem;
 import me.nexo.colecciones.data.Tier;
 import me.nexo.core.crossplay.CrossplayUtils;
-import me.nexo.core.database.DatabaseManager;
-import me.nexo.core.user.NexoAPI;
+import me.nexo.core.database.DatabaseManager; // 🌟 Inyección directa del núcleo
 import org.bukkit.Bukkit;
 import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 📚 NexoColecciones - Gestor de Farmeo y Base de Datos (Arquitectura Enterprise)
+ * 📚 NexoColecciones - Gestor de Farmeo y Base de Datos (Arquitectura Enterprise Java 25)
+ * Cero AsyncCatcher Crashes. EntitySchedulers para efectos físicos y Virtual Threads para I/O.
  */
 @Singleton
 public class CollectionManager {
 
     private final NexoColecciones plugin;
     private final ColeccionesConfig coleccionesConfig;
+    private final DatabaseManager db; // 🌟 Inyectado centralmente para evitar código acoplado
     private final Gson gson;
 
     // ⚡ MAPAS EN RAM: Velocidad de acceso O(1)
@@ -39,10 +36,11 @@ public class CollectionManager {
 
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
-    public CollectionManager(NexoColecciones plugin, ColeccionesConfig coleccionesConfig) {
+    public CollectionManager(NexoColecciones plugin, ColeccionesConfig coleccionesConfig, DatabaseManager db) {
         this.plugin = plugin;
         this.coleccionesConfig = coleccionesConfig;
-        this.gson = new Gson(); // Instanciado una vez
+        this.db = db;
+        this.gson = new Gson();
     }
 
     public void cargarDesdeConfig() {
@@ -50,12 +48,13 @@ public class CollectionManager {
     }
 
     // 📥 CARGA DE DATOS ASÍNCRONA (VIRTUAL THREADS)
-    public void loadPlayerFromDatabase(UUID uuid, DataSource dataSource) {
+    // 🌟 FIX: Ya no pedimos el DataSource, usamos el DatabaseManager inyectado.
+    public void loadPlayerFromDatabase(UUID uuid) {
         Thread.startVirtualThread(() -> {
-            String sql = "SELECT collections_data, claimed_tiers FROM nexo_collections WHERE uuid = ?";
-            try (Connection conn = dataSource.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+            String sql = "SELECT collections_data, claimed_tiers FROM nexo_collections WHERE uuid = CAST(? AS UUID)";
+            try (var conn = db.getConnection(); var ps = conn.prepareStatement(sql)) {
                 ps.setString(1, uuid.toString());
-                ResultSet rs = ps.executeQuery();
+                var rs = ps.executeQuery();
 
                 if (rs.next()) {
                     String jsonProgress = rs.getString("collections_data");
@@ -78,7 +77,7 @@ public class CollectionManager {
         });
     }
 
-    // 📈 PROGRESIÓN EN TIEMPO REAL (Llamado constantemente desde el Listener)
+    // 📈 PROGRESIÓN EN TIEMPO REAL (Llamado constantemente desde el Listener o Minions)
     public void addProgress(Player player, String itemId, int amount) {
         itemId = itemId.toLowerCase();
         CollectionItem item = getItemGlobal(itemId);
@@ -91,25 +90,30 @@ public class CollectionManager {
         profile.addProgress(itemId, amount);
         int nivelNuevo = calcularNivel(item, profile.getProgress(itemId));
 
-        // 🎉 SUBIDA DE NIVEL (0 Lag I/O)
+        // 🎉 SUBIDA DE NIVEL
         if (nivelNuevo > nivelViejo) {
-            CrossplayUtils.sendTitle(player,
-                    "&#FFAA00<bold>NIVEL " + nivelNuevo + "</bold>",
-                    "&#E6CCFF" + item.getNombre());
+            // 🌟 PAPER FIX CRÍTICO: Si el progreso se añadió desde un Minion (Hilo Virtual),
+            // reproducir sonidos o enviar Títulos crashearía el server.
+            // Saltamos de vuelta al Hilo Principal (o Chunk Thread en Folia) de forma segura.
+            player.getScheduler().run(plugin, task -> {
+                CrossplayUtils.sendTitle(player,
+                        "&#FFAA00<bold>NIVEL " + nivelNuevo + "</bold>",
+                        "&#E6CCFF" + item.getNombre());
 
-            CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
-            CrossplayUtils.sendMessage(player, "&#FFAA00🌟 <bold>COLECCIÓN MEJORADA</bold>");
-            CrossplayUtils.sendMessage(player, "&#E6CCFFHas alcanzado el nivel &#55FF55" + nivelNuevo + " &#E6CCFFen &#55FF55" + item.getNombre());
-            CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
+                CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
+                CrossplayUtils.sendMessage(player, "&#FFAA00🌟 <bold>COLECCIÓN MEJORADA</bold>");
+                CrossplayUtils.sendMessage(player, "&#E6CCFFHas alcanzado el nivel &#55FF55" + nivelNuevo + " &#E6CCFFen &#55FF55" + item.getNombre());
+                CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
 
-            player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1.0f, 1.5f);
 
-            // Anuncio Global si alcanzó la maestría
-            if (nivelNuevo == item.getMaxTier()) {
-                CrossplayUtils.broadcastMessage(" ");
-                CrossplayUtils.broadcastMessage("&#ff00ff🏆 <bold>¡MAESTRÍA ALCANZADA!</bold> &#E6CCFF" + player.getName() + " ha maximizado la colección de &#55FF55" + item.getNombre() + "&#E6CCFF.");
-                CrossplayUtils.broadcastMessage(" ");
-            }
+                // Anuncio Global si alcanzó la maestría
+                if (nivelNuevo == item.getMaxTier()) {
+                    CrossplayUtils.broadcastMessage(" ");
+                    CrossplayUtils.broadcastMessage("&#ff00ff🏆 <bold>¡MAESTRÍA ALCANZADA!</bold> &#E6CCFF" + player.getName() + " ha maximizado la colección de &#55FF55" + item.getNombre() + "&#E6CCFF.");
+                    CrossplayUtils.broadcastMessage(" ");
+                }
+            }, null);
         }
     }
 
@@ -142,25 +146,32 @@ public class CollectionManager {
         if (profile.getProgress(itemId) < tier.getRequerido()) return;
         if (profile.hasClaimedTier(itemId, targetTier)) return;
 
-        ejecutarRecompensas(player, tier.getRecompensas());
         profile.markTierAsClaimed(itemId, targetTier);
 
-        CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>RECOMPENSA:</bold> &#E6CCFFHas reclamado los objetos de este nivel.");
-        player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
-        player.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, player.getLocation().add(0, 1, 0), 100, 0.5, 0.5, 0.5, 0.1);
+        // 🌟 PAPER FIX CRÍTICO: Spawnear partículas y ejecutar comandos requiere el Hilo Principal
+        player.getScheduler().run(plugin, task -> {
+            ejecutarRecompensas(player, tier.getRecompensas());
+
+            CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>RECOMPENSA:</bold> &#E6CCFFHas reclamado los objetos de este nivel.");
+            player.playSound(player.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1.0f, 1.0f);
+            player.getWorld().spawnParticle(Particle.TOTEM_OF_UNDYING, player.getLocation().add(0, 1, 0), 100, 0.5, 0.5, 0.5, 0.1);
+        }, null);
     }
 
     private void ejecutarRecompensas(Player player, List<String> acciones) {
-        for (String accion : acciones) {
-            String pName = player.getName();
-            if (accion.startsWith("[comando] ")) {
-                String cmd = accion.replace("[comando] ", "").replace("{player}", pName).trim();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
-            } else if (accion.startsWith("[permiso] ")) {
-                String perm = accion.replace("[permiso] ", "").replace("{player}", pName).trim();
-                Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + pName + " permission set " + perm + " true");
+        // 🌟 MAIN THREAD: Bukkit.dispatchCommand siempre debe ser síncrono.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            for (String accion : acciones) {
+                String pName = player.getName();
+                if (accion.startsWith("[comando] ")) {
+                    String cmd = accion.replace("[comando] ", "").replace("{player}", pName).trim();
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                } else if (accion.startsWith("[permiso] ")) {
+                    String perm = accion.replace("[permiso] ", "").replace("{player}", pName).trim();
+                    Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "lp user " + pName + " permission set " + perm + " true");
+                }
             }
-        }
+        });
     }
 
     // 🏆 TABLA DE LÍDERES ASÍNCRONA (SQL JSONB + Virtual Threads)
@@ -172,44 +183,43 @@ public class CollectionManager {
         }
 
         Thread.startVirtualThread(() -> {
-            NexoAPI.getServices().get(DatabaseManager.class).ifPresent(db -> {
-                String sql = "SELECT j.name, CAST(c.collections_data->>? AS INTEGER) as amount " +
-                        "FROM nexo_collections c " +
-                        "JOIN jugadores j ON c.uuid = j.uuid " +
-                        "WHERE c.collections_data ? ? " +
-                        "ORDER BY amount DESC LIMIT 5";
+            // 🌟 FIX: Ya no hacemos reflexión con NexoAPI, usamos la DB inyectada directamente
+            String sql = "SELECT j.name, CAST(c.collections_data->>? AS INTEGER) as amount " +
+                    "FROM nexo_collections c " +
+                    "JOIN jugadores j ON c.uuid = j.uuid " +
+                    "WHERE c.collections_data ? ? " +
+                    "ORDER BY amount DESC LIMIT 5";
 
-                try (Connection conn = db.getDataSource().getConnection();
-                     PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (var conn = db.getConnection();
+                 var ps = conn.prepareStatement(sql)) {
 
-                    ps.setString(1, cItem.getId());
-                    ps.setString(2, cItem.getId());
-                    ResultSet rs = ps.executeQuery();
+                ps.setString(1, cItem.getId());
+                ps.setString(2, cItem.getId());
+                var rs = ps.executeQuery();
 
-                    List<String> lineasTop = new ArrayList<>();
-                    int rank = 1;
-                    while (rs.next()) {
-                        String pName = rs.getString("name");
-                        int amt = rs.getInt("amount");
-                        lineasTop.add("&#E6CCFF" + rank + ". &#55FF55" + pName + " &#555555- &#FFAA00" + amt);
-                        rank++;
-                    }
-
-                    // 🌟 FIX: Envío directo asíncrono. Paper permite enviar mensajes fuera del hilo principal.
-                    CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
-                    CrossplayUtils.sendMessage(player, "&#FFAA00🏆 <bold>TOP 5: " + cItem.getNombre().toUpperCase() + "</bold>");
-                    if (lineasTop.isEmpty()) {
-                        CrossplayUtils.sendMessage(player, "&#FF5555Aún no hay registros en esta colección.");
-                    } else {
-                        lineasTop.forEach(l -> CrossplayUtils.sendMessage(player, l));
-                    }
-                    CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
-
-                } catch (Exception e) {
-                    plugin.getLogger().severe("❌ Error calculando Top de " + itemId + ": " + e.getMessage());
-                    CrossplayUtils.sendMessage(player, "&#8b0000[!] Error crítico de red al contactar con la base de datos.");
+                List<String> lineasTop = new ArrayList<>();
+                int rank = 1;
+                while (rs.next()) {
+                    String pName = rs.getString("name");
+                    int amt = rs.getInt("amount");
+                    lineasTop.add("&#E6CCFF" + rank + ". &#55FF55" + pName + " &#555555- &#FFAA00" + amt);
+                    rank++;
                 }
-            });
+
+                // Envío directo asíncrono (Los mensajes son Thread-Safe)
+                CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
+                CrossplayUtils.sendMessage(player, "&#FFAA00🏆 <bold>TOP 5: " + cItem.getNombre().toUpperCase() + "</bold>");
+                if (lineasTop.isEmpty()) {
+                    CrossplayUtils.sendMessage(player, "&#FF5555Aún no hay registros en esta colección.");
+                } else {
+                    lineasTop.forEach(l -> CrossplayUtils.sendMessage(player, l));
+                }
+                CrossplayUtils.sendMessage(player, "&#555555--------------------------------");
+
+            } catch (Exception e) {
+                plugin.getLogger().severe("❌ Error calculando Top de " + itemId + ": " + e.getMessage());
+                CrossplayUtils.sendMessage(player, "&#8b0000[!] Error crítico de red al contactar con la base de datos.");
+            }
         });
     }
 

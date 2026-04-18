@@ -8,9 +8,6 @@ import me.nexo.protections.core.ClaimBox;
 import me.nexo.protections.core.ProtectionStone;
 import org.bukkit.Location;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -19,7 +16,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.logging.Level;
 
 /**
- * 🛡️ NexoProtections - Gestor Espacial de Claims (Arquitectura Enterprise)
+ * 🛡️ NexoProtections - Gestor Espacial de Claims (Arquitectura Enterprise Java 25)
  * Rendimiento: Spatial Grid "Zero-Garbage" O(1), Llaves Bitwise (Long) y Hilos Virtuales.
  */
 @Singleton
@@ -103,7 +100,8 @@ public class ClaimManager {
                 List<ProtectionStone> stonesInChunk = worldGrid.get(key);
                 if (stonesInChunk != null) {
                     stonesInChunk.remove(stone);
-                    if (stonesInChunk.isEmpty()) worldGrid.remove(key);
+                    // 🌟 FIX TOCTOU: Eliminado el check de isEmpty() y el worldGrid.remove().
+                    // La lista vacía permanecerá en RAM asegurando transacciones futuras seguras.
                 }
             }
         }
@@ -136,7 +134,7 @@ public class ClaimManager {
     // 🌟 GUARDADO ASÍNCRONO MASIVO EN HILOS VIRTUALES
     // =========================================================================
     public void saveStoneDataAsync(ProtectionStone stone) {
-        // 🚀 Reemplazado CompletableFuture por Hilos Virtuales (Java 21)
+        // 🚀 Reemplazado CompletableFuture por Hilos Virtuales nativos
         Thread.startVirtualThread(() -> {
             StringBuilder membersStr = new StringBuilder();
             for (UUID uuid : stone.getTrustedFriends()) {
@@ -149,8 +147,8 @@ public class ClaimManager {
             }
 
             String sql = "UPDATE nexo_protections SET members = ?, flags = ? WHERE stone_id = CAST(? AS UUID)";
-            try (Connection conn = databaseManager.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql)) {
+            try (var conn = databaseManager.getConnection();
+                 var ps = conn.prepareStatement(sql)) {
 
                 ps.setString(1, membersStr.toString());
                 ps.setString(2, flagsStr.toString());
@@ -169,9 +167,9 @@ public class ClaimManager {
     public void loadAllStonesAsync() {
         Thread.startVirtualThread(() -> {
             String sql = "SELECT * FROM nexo_protections";
-            try (Connection conn = databaseManager.getConnection();
-                 PreparedStatement ps = conn.prepareStatement(sql);
-                 ResultSet rs = ps.executeQuery()) {
+            try (var conn = databaseManager.getConnection();
+                 var ps = conn.prepareStatement(sql);
+                 var rs = ps.executeQuery()) {
 
                 int loaded = 0;
                 while(rs.next()) {
