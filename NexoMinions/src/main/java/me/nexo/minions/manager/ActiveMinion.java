@@ -27,8 +27,8 @@ import org.joml.Vector3f;
 import java.util.UUID;
 
 /**
- * 🤖 NexoMinions - Modelo de Minion Activo (Arquitectura Enterprise)
- * Rendimiento: Híbrido. Matemáticas en RAM asíncrona, Física en Bukkit Síncrono.
+ * 🤖 NexoMinions - Modelo de Minion Activo (Arquitectura Enterprise Java 25)
+ * Rendimiento: Híbrido. Matemáticas en RAM asíncrona, Física con EntityScheduler (Folia-Ready).
  */
 public class ActiveMinion {
     private final NexoMinions plugin;
@@ -38,7 +38,7 @@ public class ActiveMinion {
     private final UUID ownerId;
     private final MinionType type;
 
-    // Volátiles para garantizar lectura segura en Hilos Virtuales
+    // Volátiles para garantizar lectura segura entre Hilos Virtuales y el Main Thread
     private volatile int tier;
     private volatile long nextActionTime;
     private volatile int storedItems;
@@ -71,7 +71,7 @@ public class ActiveMinion {
         int bonus = 0;
 
         for (ItemStack item : upgrades) {
-            if (item == null) continue;
+            if (item == null || item.isEmpty()) continue; // 🌟 1.21 Fix
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
             if (datos != null && "UPGRADE".equals(datos.getString("category")) && "STORAGE".equals(datos.getString("type"))) {
                 bonus += datos.getInt("bonus_capacidad", 0);
@@ -83,14 +83,12 @@ public class ActiveMinion {
     // ==========================================
     // 🧠 MOTOR LÓGICO ASÍNCRONO (Virtual Threads)
     // ==========================================
-    // Este método es llamado por el MinionManager desde un Hilo Virtual.
-    // Hace todos los cálculos sin afectar el TPS.
     public void tick(long currentTimeMillis) {
         int maxStorage = getRealMaxStorage();
         boolean estaLleno = storedItems >= maxStorage;
         boolean tieneEnlaceCofre = tieneMejoraPorTipo("STORAGE_LINK");
 
-        // 1. Planificamos qué tareas físicas debe hacer el Hilo Principal de Bukkit
+        // 1. Planificamos qué tareas físicas se deben hacer
         boolean debeTrabajar = (currentTimeMillis >= nextActionTime) && (!estaLleno || tieneEnlaceCofre);
 
         // Calculamos tiempo de próxima acción si es necesario
@@ -99,14 +97,19 @@ public class ActiveMinion {
             this.nextActionTime = currentTimeMillis + (long) (tiempoBase * getSpeedMultiplier());
         }
 
-        // 2. Ejecución Física (Thread-Safe Bridge)
-        // Volvemos al Hilo Principal solo para las acciones que tocan el mundo.
-        Bukkit.getScheduler().runTask(plugin, () -> {
+        // 2. Ejecución Física SEGURA (EntityScheduler)
+        // 🌟 PAPER 1.21+ NATIVO: Despacha la tarea al hilo específico de este Chunk.
+        entity.getScheduler().run(plugin, scheduledTask -> {
 
-            // Si el minion fue removido mientras calculábamos, abortamos.
-            if (!entity.isValid()) return;
+            // Si el minion fue removido o el chunk se descargó, limpiamos y abortamos.
+            if (!entity.isValid() || entity.isDead()) {
+                if (hitbox != null && hitbox.isValid()) hitbox.remove();
+                if (holograma != null && holograma.isValid()) holograma.remove();
+                plugin.getMinionManager().getMinionsActivos().remove(entity.getUniqueId());
+                return;
+            }
 
-            // Actualización visual holográfica O(1)
+            // Actualización visual holográfica
             actualizarHolograma(maxStorage, estaLleno, tieneEnlaceCofre);
 
             if (debeTrabajar) {
@@ -115,18 +118,18 @@ public class ActiveMinion {
             }
 
             animarFisica();
-        });
+        }, null);
     }
 
     // ==========================================
-    // 🔨 EJECUCIÓN FÍSICA (Main Thread)
+    // 🔨 EJECUCIÓN FÍSICA (Entity/Chunk Thread)
     // ==========================================
     private void realizarTrabajoFisico() {
         Location loc = entity.getLocation();
 
-        // 🌟 OPTIMIZACIÓN VISUAL: Solo spawneamos partículas si hay un jugador cerca (Distancia al cuadrado < 1024 = 32 bloques)
-        boolean jugadorCerca = loc.getWorld().getPlayers().stream()
-                .anyMatch(p -> p.getLocation().distanceSquared(loc) < 1024);
+        // 🌟 OPTIMIZACIÓN VISUAL O(1): Usamos getNearbyPlayers nativo.
+        // Paper procesa esto en C++ internamente, no causa lag como los Streams antiguos.
+        boolean jugadorCerca = !loc.getNearbyPlayers(32).isEmpty();
 
         if (jugadorCerca) {
             loc.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, loc.clone().add(0, 1, 0), 2, 0.2, 0.2, 0.2, 0.01);
@@ -145,7 +148,6 @@ public class ActiveMinion {
 
                 Player owner = Bukkit.getPlayer(ownerId);
                 if (owner != null && owner.isOnline()) {
-                    // 🌟 FIX DESACOPLADO: Economía mediante comandos de consola.
                     Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "eco give " + owner.getName() + " " + precio);
 
                     // Sistema de Colecciones
@@ -182,7 +184,7 @@ public class ActiveMinion {
             cachedStorage = null; // Caché inválido o cofre lleno
         }
 
-        // Búsqueda pesada rate-limited (10 segundos)
+        // Búsqueda rate-limited (10 segundos) para no ahogar el TPS
         if (currentTime - lastStorageCheckTime > 10000) {
             lastStorageCheckTime = currentTime;
             int[][] offsets = {{1, 0, 0}, {-1, 0, 0}, {0, 0, 1}, {0, 0, -1}};
@@ -207,7 +209,6 @@ public class ActiveMinion {
     private void actualizarHolograma(int maxStorage, boolean estaLleno, boolean tieneEnlaceCofre) {
         if (holograma == null || holograma.isDead()) return;
 
-        // 🌟 Textos Hexadecimales directos de alto rendimiento. (Cero llamadas I/O)
         if (estaLleno && !tieneEnlaceCofre) {
             holograma.text(CrossplayUtils.parseCrossplay(null, "&#FF5555[!] Inventario Lleno (" + storedItems + " / " + maxStorage + ")"));
         } else {
@@ -217,7 +218,6 @@ public class ActiveMinion {
     }
 
     private void animarFisica() {
-        // La animación requiere estar en el Hilo Principal para modificar la Transformación de la Entidad
         entity.setInterpolationDuration(20);
         entity.setInterpolationDelay(0);
 
@@ -233,7 +233,7 @@ public class ActiveMinion {
     public double getSpeedMultiplier() {
         double multiplicador = 1.0;
         for (ItemStack item : upgrades) {
-            if (item == null) continue;
+            if (item == null || item.isEmpty()) continue;
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
             if (datos != null && "FUEL".equals(datos.getString("category")) && "SPEED".equals(datos.getString("type"))) {
                 multiplicador -= datos.getDouble("multiplier", 0.0);
@@ -245,7 +245,7 @@ public class ActiveMinion {
     private void consumirCombustiblesFisico() {
         for (int i = 0; i < 4; i++) {
             ItemStack item = upgrades[i];
-            if (item == null) continue;
+            if (item == null || item.isEmpty()) continue; // 🌟 1.21 Fix
 
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
             if (datos != null && "FUEL".equals(datos.getString("category", ""))) {
@@ -270,7 +270,7 @@ public class ActiveMinion {
 
     public ConfigurationSection getMejoraActiva(String tipoBuscado) {
         for (ItemStack item : upgrades) {
-            if (item == null) continue;
+            if (item == null || item.isEmpty()) continue;
             ConfigurationSection datos = plugin.getUpgradesConfig().getUpgradeData(item);
             if (datos != null && datos.getString("type", "").equals(tipoBuscado)) return datos;
         }
@@ -286,7 +286,7 @@ public class ActiveMinion {
     public ItemStack[] getUpgrades() { return upgrades; }
     public void setUpgrade(int slot, ItemStack item) {
         upgrades[slot] = item;
-        if (item == null || item.getType().isAir()) {
+        if (item == null || item.isEmpty()) { // 🌟 1.21 Fix
             entity.getPersistentDataContainer().remove(MinionKeys.UPGRADES[slot]);
         } else {
             entity.getPersistentDataContainer().set(MinionKeys.UPGRADES[slot], PersistentDataType.BYTE_ARRAY, item.serializeAsBytes());
@@ -316,7 +316,7 @@ public class ActiveMinion {
         pdc.set(MinionKeys.TIER, PersistentDataType.INTEGER, this.tier);
 
         for (int i = 0; i < 4; i++) {
-            if (upgrades[i] != null && !upgrades[i].getType().isAir()) {
+            if (upgrades[i] != null && !upgrades[i].isEmpty()) { // 🌟 1.21 Fix
                 pdc.set(MinionKeys.UPGRADES[i], PersistentDataType.BYTE_ARRAY, upgrades[i].serializeAsBytes());
             } else {
                 pdc.remove(MinionKeys.UPGRADES[i]);

@@ -1,4 +1,4 @@
-package me.nexo.core.database; // 🟢 Paquete corregido
+package me.nexo.core.database;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
@@ -6,15 +6,13 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import me.nexo.core.NexoCore;
 import me.nexo.core.config.ConfigManager;
-import org.bukkit.Bukkit;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.sql.Statement;
 
 /**
- * 🏛️ Nexo Network - Database Manager (Motor HikariCP)
- * Responsabilidad: Únicamente gestionar la conexión con Supabase.
+ * 🏛️ Nexo Network - Database Manager (Motor HikariCP + Java 25)
+ * I/O O(1): Usa Hilos Virtuales Nativos para evitar el Thread Starvation de Bukkit.
  */
 @Singleton
 public class DatabaseManager {
@@ -23,7 +21,6 @@ public class DatabaseManager {
     private final ConfigManager configManager;
     private HikariDataSource dataSource;
 
-    // 💉 EL INYECTOR VITAL QUE FALTABA
     @Inject
     public DatabaseManager(NexoCore plugin, ConfigManager configManager) {
         this.plugin = plugin;
@@ -32,10 +29,12 @@ public class DatabaseManager {
 
     public void conectar() {
         try {
-            HikariConfig config = new HikariConfig();
-            config.setJdbcUrl(configManager.getConfig("config.yml").getString("database.url"));
-            config.setUsername(configManager.getConfig("config.yml").getString("database.username"));
-            config.setPassword(configManager.getConfig("config.yml").getString("database.password"));
+            var config = new HikariConfig(); // 🌟 Java 21+ var
+            var yaml = configManager.getConfig("config.yml");
+
+            config.setJdbcUrl(yaml.getString("database.url"));
+            config.setUsername(yaml.getString("database.username"));
+            config.setPassword(yaml.getString("database.password"));
             config.setDriverClassName("org.postgresql.Driver");
 
             config.setMaximumPoolSize(10);
@@ -45,9 +44,9 @@ public class DatabaseManager {
             config.setConnectionTimeout(10000);
 
             this.dataSource = new HikariDataSource(config);
-            crearTablas(); // Inicializamos el esquema SQL
+            crearTablas(); // 🚀 Esto ahora corre en un Hilo Virtual
 
-            plugin.getLogger().info("✅ ¡Conexión a Supabase establecida correctamente!");
+            plugin.getLogger().info("✅ ¡Conexión a Supabase establecida (HikariCP + Virtual Threads)!");
 
         } catch (Exception e) {
             plugin.getLogger().severe("❌ ERROR: No se pudo conectar a la base de datos Supabase.");
@@ -72,6 +71,7 @@ public class DatabaseManager {
     private void crearTablas() {
         if (dataSource == null) return;
 
+        // 🌟 Text Blocks nativos de Java para SQL más limpio
         String sqlJugadores = """
                 CREATE TABLE IF NOT EXISTS jugadores (
                     uuid VARCHAR(36) PRIMARY KEY, nombre VARCHAR(16) NOT NULL,
@@ -88,9 +88,13 @@ public class DatabaseManager {
         String sqlStorage = "CREATE TABLE IF NOT EXISTS nexo_storage (uuid VARCHAR(36), tipo VARCHAR(32), contenido TEXT, PRIMARY KEY (uuid, tipo));";
         String sqlColecciones = "CREATE TABLE IF NOT EXISTS nexo_collections (uuid VARCHAR(36) PRIMARY KEY, collections_data JSONB NOT NULL DEFAULT '{}'::jsonb);";
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
+        // 🚀 JAVA 25 VIRTUAL THREADS: Extirpamos el Bukkit.getScheduler()
+        // Este hilo no cuesta nada, se crea, hace el I/O en la DB, y muere sin molestar al procesador central.
+        Thread.startVirtualThread(() -> {
+            try (var conn = getConnection(); var stmt = conn.createStatement()) {
                 stmt.execute(sqlJugadores);
+
+                // Mantenemos tus inyecciones de ALTER TABLE seguras
                 try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS blessings TEXT DEFAULT '';"); } catch (Exception ignored) {}
                 try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS void_blessing_until BIGINT DEFAULT 0;"); } catch (Exception ignored) {}
                 try { stmt.execute("ALTER TABLE jugadores ADD COLUMN IF NOT EXISTS web_password TEXT;"); } catch (Exception ignored) {}

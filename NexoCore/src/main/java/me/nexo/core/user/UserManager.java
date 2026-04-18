@@ -2,21 +2,28 @@ package me.nexo.core.user;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * 🏛️ Nexo Network - User Manager
+ * Gestor en Memoria (RAM) ultra rápido con Caffeine y Guice.
+ */
+@Singleton // 🌟 FIX CRÍTICO: Garantiza que todo el servidor comparta la MISMA caché.
 public class UserManager {
 
-    // 🟢 CLEAN CODE: Caché ultra rápida que expira sola en 2 horas si el jugador no hace nada
-    // Esto previene los temidos Memory Leaks si un evento falla al desconectarse el jugador.
-    private final Cache<UUID, NexoUser> usersCache = Caffeine.newBuilder()
-            .expireAfterAccess(Duration.ofHours(2))
-            .build();
+    // 🟢 CLEAN CODE: Caché ultra rápida concurrente.
+    private final Cache<UUID, NexoUser> usersCache;
 
+    @Inject // 🌟 FIX: Permite que el ServiceManager/Guice inicialice esta clase correctamente.
     public UserManager() {
-        // Constructor vacío por ahora
+        this.usersCache = Caffeine.newBuilder()
+                .expireAfterAccess(Duration.ofHours(2))
+                .build();
     }
 
     /**

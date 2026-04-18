@@ -4,27 +4,29 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import me.nexo.core.NexoCore;
+import me.nexo.core.database.DatabaseManager;
 import me.nexo.economy.NexoEconomy;
-import org.bukkit.Bukkit;
 
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 💰 NexoEconomy - Manager Central de Economía (Arquitectura Enterprise)
+ * 💰 NexoEconomy - Manager Central de Economía (Arquitectura Enterprise Java 25)
+ * I/O Atómico No-Bloqueante, Hilos Virtuales y Batch Processing.
  */
 @Singleton
 public class EconomyManager {
 
     private final NexoEconomy plugin;
-    private final NexoCore core;
+    private final DatabaseManager db; // 🌟 Desacoplado: Ya no dependemos de obtener el plugin NexoCore.
+
+    // 🚀 EL MOTOR DE RENDIMIENTO I/O: Hilos Virtuales nativos para evitar Thread Starvation
+    private static final Executor VIRTUAL_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
 
     // ⚡ Caché Ultrarrápido: Las cuentas expiran a los 30 min de inactividad
     private final Cache<String, NexoAccount> accountCache = Caffeine.newBuilder()
@@ -33,14 +35,15 @@ public class EconomyManager {
 
     // 💉 PILAR 3: Inyección de Dependencias
     @Inject
-    public EconomyManager(NexoEconomy plugin) {
+    public EconomyManager(NexoEconomy plugin, DatabaseManager db) {
         this.plugin = plugin;
-        this.core = NexoCore.getPlugin(NexoCore.class);
+        this.db = db;
         crearTablaEconomia();
     }
 
     private void crearTablaEconomia() {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        // 🌟 I/O ASÍNCRONO NATIVO: Adiós al Bukkit Scheduler para tareas de SQL
+        Thread.startVirtualThread(() -> {
             String sql = """
                     CREATE TABLE IF NOT EXISTS nexo_economy (
                         id UUID PRIMARY KEY,
@@ -50,8 +53,8 @@ public class EconomyManager {
                         mana DECIMAL(20,2) DEFAULT 0.00
                     );
                     """;
-            try (Connection conn = core.getDatabaseManager().getConnection();
-                 java.sql.Statement stmt = conn.createStatement()) {
+            try (var conn = db.getConnection();
+                 var stmt = conn.createStatement()) {
                 stmt.execute(sql);
             } catch (Exception e) {
                 plugin.getLogger().severe("❌ Error creando tabla de economía: " + e.getMessage());
@@ -67,7 +70,17 @@ public class EconomyManager {
     }
 
     /**
-     * Carga una cuenta desde la DB (o la crea si no existe)
+     * 🌟 MÉTODO NUEVO DE SEGURIDAD (Requerido por el TradeListener)
+     * Revisa de forma instantánea O(1) si el jugador tiene fondos suficientes en su caché local.
+     */
+    public boolean hasBalance(UUID ownerId, NexoAccount.AccountType type, NexoAccount.Currency currency, BigDecimal amount) {
+        NexoAccount acc = accountCache.getIfPresent(getCacheKey(ownerId, type));
+        if (acc == null) return false; // Por seguridad Anti-Dupe, si no cargó la BD, denegamos el gasto.
+        return acc.hasEnough(currency, amount);
+    }
+
+    /**
+     * Carga una cuenta desde la DB (o la crea si no existe) de forma no bloqueante.
      */
     public CompletableFuture<NexoAccount> getAccountAsync(UUID ownerId, NexoAccount.AccountType type) {
         String cacheKey = getCacheKey(ownerId, type);
@@ -78,12 +91,12 @@ public class EconomyManager {
         }
 
         return CompletableFuture.supplyAsync(() -> {
-            try (Connection conn = core.getDatabaseManager().getConnection()) {
-                // Intentamos buscarla
+            try (var conn = db.getConnection()) {
+
                 String selectSQL = "SELECT * FROM nexo_economy WHERE id = CAST(? AS UUID)";
-                try (PreparedStatement ps = conn.prepareStatement(selectSQL)) {
+                try (var ps = conn.prepareStatement(selectSQL)) {
                     ps.setString(1, ownerId.toString());
-                    ResultSet rs = ps.executeQuery();
+                    var rs = ps.executeQuery();
 
                     if (rs.next()) {
                         NexoAccount acc = new NexoAccount(
@@ -97,9 +110,8 @@ public class EconomyManager {
                     }
                 }
 
-                // Si no existe, la creamos (Balance Inicial: 0)
                 String insertSQL = "INSERT INTO nexo_economy (id, account_type) VALUES (CAST(? AS UUID), ?)";
-                try (PreparedStatement ps = conn.prepareStatement(insertSQL)) {
+                try (var ps = conn.prepareStatement(insertSQL)) {
                     ps.setString(1, ownerId.toString());
                     ps.setString(2, type.name());
                     ps.executeUpdate();
@@ -112,11 +124,11 @@ public class EconomyManager {
                 plugin.getLogger().severe("❌ Error cargando cuenta: " + e.getMessage());
                 return null;
             }
-        });
+        }, VIRTUAL_EXECUTOR); // 🚀 Inyectamos el Virtual Executor para evitar cuellos de botella
     }
 
     /**
-     * 🛡️ TRANSACCIÓN ATÓMICA: Actualiza la DB y el Caché de forma segura
+     * 🛡️ TRANSACCIÓN ATÓMICA: Actualiza la DB y el Caché de forma segura (Anti-Dupe).
      */
     public CompletableFuture<Boolean> updateBalanceAsync(UUID ownerId, NexoAccount.AccountType type, NexoAccount.Currency currency, BigDecimal amount, boolean isDeposit) {
         return getAccountAsync(ownerId, type).thenApplyAsync(account -> {
@@ -126,21 +138,20 @@ public class EconomyManager {
                 return false; // No tiene fondos suficientes
             }
 
-            // Nombre exacto de la columna en la BD
             String column = currency.name().toLowerCase();
             String operator = isDeposit ? "+" : "-";
-
             String updateSQL = "UPDATE nexo_economy SET " + column + " = " + column + " " + operator + " ? WHERE id = CAST(? AS UUID)";
 
-            try (Connection conn = core.getDatabaseManager().getConnection();
-                 PreparedStatement ps = conn.prepareStatement(updateSQL)) {
+            try (var conn = db.getConnection();
+                 var ps = conn.prepareStatement(updateSQL)) {
 
                 ps.setBigDecimal(1, amount);
                 ps.setString(2, ownerId.toString());
                 int rows = ps.executeUpdate();
 
                 if (rows > 0) {
-                    // Solo si la BD se actualizó correctamente, actualizamos la RAM (Evita duplicaciones por lag)
+                    // Solo si la BD se actualizó correctamente (Commit a disco), actualizamos la RAM.
+                    // Esto evita duplicaciones de saldo o saldos fantasma en caso de crasheos.
                     if (isDeposit) account.addBalance(currency, amount);
                     else account.removeBalance(currency, amount);
                     return true;
@@ -149,7 +160,7 @@ public class EconomyManager {
                 plugin.getLogger().severe("❌ Fallo de Transacción Atómica: " + e.getMessage());
             }
             return false;
-        });
+        }, VIRTUAL_EXECUTOR); // 🚀 Inyectamos el Virtual Executor
     }
 
     public Optional<NexoAccount> getCachedAccount(UUID ownerId, NexoAccount.AccountType type) {
@@ -157,14 +168,16 @@ public class EconomyManager {
     }
 
     /**
-     * 🛡️ GUARDADO SÍNCRONO: Se ejecuta en onDisable() para prevenir rollbacks al apagar el servidor.
+     * 🛡️ GUARDADO SÍNCRONO BATCH: Se ejecuta en onDisable() para prevenir rollbacks.
      */
     public void saveAllAccountsSync() {
         if (accountCache.asMap().isEmpty()) return;
 
         String sql = "UPDATE nexo_economy SET coins = ?, gems = ?, mana = ? WHERE id = CAST(? AS UUID)";
-        try (Connection conn = core.getDatabaseManager().getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (var conn = db.getConnection();
+             var ps = conn.prepareStatement(sql)) {
+
+            conn.setAutoCommit(false); // 🌟 OPTIMIZACIÓN: Transacciones en Lote (Batch Processing) para proteger el disco duro.
 
             for (NexoAccount acc : accountCache.asMap().values()) {
                 ps.setBigDecimal(1, acc.getBalance(NexoAccount.Currency.COINS));
@@ -175,7 +188,8 @@ public class EconomyManager {
             }
 
             ps.executeBatch();
-            plugin.getLogger().info("✅ Se guardaron " + accountCache.estimatedSize() + " cuentas exitosamente.");
+            conn.commit();
+            plugin.getLogger().info("✅ Se guardaron " + accountCache.estimatedSize() + " cuentas exitosamente (Batch Mode).");
 
         } catch (Exception e) {
             plugin.getLogger().severe("❌ Error en guardado de emergencia de economía: " + e.getMessage());

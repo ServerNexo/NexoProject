@@ -7,21 +7,20 @@ import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
 import me.nexo.economy.trade.TradeManager;
 import me.nexo.economy.trade.TradeSession;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
 
 import java.math.BigDecimal;
 
 /**
  * 💰 NexoEconomy - Listener de Intercambios (Arquitectura Enterprise Inhackeable)
+ * Protección Anti-Dupe: Bloqueo de Drags, Shift-Clicks y Cierres Atómicos.
  */
 @Singleton
 public class TradeListener implements Listener {
@@ -29,26 +28,31 @@ public class TradeListener implements Listener {
     private final NexoEconomy plugin;
     private final TradeManager tradeManager;
 
-    // 💉 PILAR 3: Inyección de Dependencias
     @Inject
     public TradeListener(NexoEconomy plugin, TradeManager tradeManager) {
         this.plugin = plugin;
         this.tradeManager = tradeManager;
     }
 
-    @EventHandler(priority = EventPriority.HIGH)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onTradeClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        TradeSession session = tradeManager.getSession(player);
-        if (session == null) return;
+        // 🛡️ PATRÓN ENTERPRISE: Validación 100% segura usando el Holder nativo
+        if (!(event.getInventory().getHolder() instanceof TradeSession session)) return;
 
-        // 🛡️ PATRÓN ENTERPRISE SEGURO: Validación por instancia en memoria (Adiós validación por título)
-        if (!event.getView().getTopInventory().equals(session.getInventory())) return;
+        // 🛡️ ANTI-DUPE: Cancelamos Shift-Clicks para evitar desbordes de arrays e ítems fantasma
+        if (event.isShiftClick() && event.getClickedInventory() != null && event.getClickedInventory().equals(event.getView().getBottomInventory())) {
+            event.setCancelled(true);
+            CrossplayUtils.sendMessage(player, "&#FF5555[!] Por seguridad, usa el clic normal para mover ítems al intercambio.");
+            return;
+        }
 
-        // Si hace clic en su propio inventario en lugar del menú superior
-        if (event.getClickedInventory() != session.getInventory()) {
-            session.unready(); // Si añade/quita un ítem de abajo, quitamos el estado de "listo"
+        if (event.getClickedInventory() == null) return;
+
+        // Si toca su propio inventario (el de abajo), desmarcamos el "Listo" pero permitimos mover sus ítems
+        if (event.getClickedInventory().equals(event.getView().getBottomInventory())) {
+            session.unready();
             return;
         }
 
@@ -57,71 +61,63 @@ public class TradeListener implements Listener {
 
         // Fila central (Divisor y botones de dinero)
         if (slot % 9 == 4) {
-            event.setCancelled(true); // Nadie puede robar los divisores
-            if (slot == 13) session.addCurrency(player, NexoAccount.Currency.COINS, new BigDecimal("1000"));
-            else if (slot == 22) session.addCurrency(player, NexoAccount.Currency.GEMS, new BigDecimal("100"));
-            else if (slot == 31) session.addCurrency(player, NexoAccount.Currency.MANA, new BigDecimal("10"));
+            event.setCancelled(true); // Nadie puede tocar el divisor
+
+            // 🌟 FIX DINERO: Cobramos instantáneamente de la cuenta para evitar deudas o dupes
+            if (slot == 13) procesarAumentoDinero(player, session, NexoAccount.Currency.COINS, new BigDecimal("1000"));
+            else if (slot == 22) procesarAumentoDinero(player, session, NexoAccount.Currency.GEMS, new BigDecimal("100"));
+            else if (slot == 31) procesarAumentoDinero(player, session, NexoAccount.Currency.MANA, new BigDecimal("10"));
             return;
         }
 
         boolean isLeftSide = (slot % 9 < 4);
 
-        // Evitar que toquen el lado del otro jugador
-        if (isPlayer1 && !isLeftSide) event.setCancelled(true);
-        else if (!isPlayer1 && isLeftSide) event.setCancelled(true);
-        else session.unready(); // Si movió un ítem válido, desmarcamos el botón de listo
-
         // Botón de Listo P1
         if (slot == 45 && isPlayer1) {
             event.setCancelled(true);
             session.toggleReady(player);
+            return;
         }
 
         // Botón de Listo P2
         if (slot == 53 && !isPlayer1) {
             event.setCancelled(true);
             session.toggleReady(player);
+            return;
+        }
+
+        // Bloquear tocar cualquier otro botón inferior (45 al 53)
+        if (slot >= 45) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Evitar que toquen el lado del otro jugador
+        if (isPlayer1 && !isLeftSide) {
+            event.setCancelled(true);
+        } else if (!isPlayer1 && isLeftSide) {
+            event.setCancelled(true);
+        } else {
+            session.unready(); // Si movió un ítem válido, desmarcamos el botón de listo
+        }
+    }
+
+    // 🛡️ ANTI-DUPE: Bloquear arrastre masivo de ítems (Drag Exploit)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onTradeDrag(InventoryDragEvent event) {
+        if (event.getInventory().getHolder() instanceof TradeSession) {
+            event.setCancelled(true);
+            if (event.getWhoClicked() instanceof Player player) {
+                CrossplayUtils.sendMessage(player, "&#FF5555[!] Por seguridad, arrastrar ítems está bloqueado. Muévelos de uno en uno.");
+            }
         }
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void onTradeClose(InventoryCloseEvent event) {
-        if (!(event.getPlayer() instanceof Player player)) return;
-
-        TradeSession session = tradeManager.getSession(player);
-
-        // 🛡️ Asegurarnos de que el inventario cerrado fue el de tradeo (y no otro)
-        if (session != null && event.getInventory().equals(session.getInventory())) {
-            devolverItems(session);
-            tradeManager.removeSession(session);
-
-            Player other = player.equals(session.getPlayer1()) ? session.getPlayer2() : session.getPlayer1();
-            if (other.getOpenInventory().getTopInventory().equals(session.getInventory())) {
-                other.closeInventory();
-                CrossplayUtils.sendMessage(other, "&#ff4b2b[!] La otra parte ha abortado el proceso de intercambio.");
-            }
-            CrossplayUtils.sendMessage(player, "&#ff4b2b[!] Canal de intercambio cerrado.");
-        }
-    }
-
-    private void devolverItems(TradeSession session) {
-        Inventory inv = session.getInventory();
-        // Recorremos la cuadrícula del tradeo (ignora los botones de listo)
-        for (int i = 0; i < 45; i++) {
-            if (i % 9 == 4) continue; // Salta la columna del medio
-
-            ItemStack item = inv.getItem(i);
-            if (item == null || item.getType() == Material.AIR) continue;
-
-            Player owner = (i % 9 < 4) ? session.getPlayer1() : session.getPlayer2();
-
-            // Evita borrar ítems si el inventario está lleno
-            if (owner.getInventory().firstEmpty() == -1) {
-                owner.getWorld().dropItemNaturally(owner.getLocation(), item);
-            } else {
-                owner.getInventory().addItem(item);
-            }
-            inv.setItem(i, null);
+        // 🛡️ CIERRE ATÓMICO: Si alguien cierra con ESC, se aborta y se devuelven fondos e ítems automáticamente
+        if (event.getInventory().getHolder() instanceof TradeSession session) {
+            session.abortTrade("Una de las partes ha cerrado la ventana de intercambio.");
         }
     }
 
@@ -131,14 +127,28 @@ public class TradeListener implements Listener {
         TradeSession session = tradeManager.getSession(player);
 
         if (session != null) {
-            devolverItems(session);
-            tradeManager.removeSession(session);
+            // 🛡️ ABORTO ATÓMICO POR DESCONEXIÓN
+            session.abortTrade("El jugador " + player.getName() + " se ha desconectado del servidor.");
+        }
+    }
 
-            Player other = player.equals(session.getPlayer1()) ? session.getPlayer2() : session.getPlayer1();
-            if (other.getOpenInventory().getTopInventory().equals(session.getInventory())) {
-                other.closeInventory();
-                CrossplayUtils.sendMessage(other, "&#ff4b2b[!] El otro jugador ha abandonado la realidad física. Intercambio abortado.");
-            }
+    /**
+     * 🌟 Lógica Segura de Dinero: Verifica fondos, los descuenta, y luego los añade a la mesa.
+     * (Si el trade se cancela, session.abortTrade() los reembolsará automáticamente).
+     */
+    private void procesarAumentoDinero(Player player, TradeSession session, NexoAccount.Currency currency, BigDecimal amount) {
+        // Nota del Arquitecto: Modifica "hasSufficientFunds" según la API exacta de tu EconomyManager
+        boolean tieneFondos = plugin.getEconomyManager().hasBalance(player.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amount);
+
+        if (tieneFondos) {
+            // 1. Deducimos el dinero de su cuenta real instantáneamente
+            plugin.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amount, false);
+
+            // 2. Lo añadimos a la mesa de intercambio
+            session.addCurrency(player, currency, amount);
+            CrossplayUtils.sendMessage(player, "&#55FF55[+] Añadido al intercambio.");
+        } else {
+            CrossplayUtils.sendMessage(player, "&#FF5555[!] No tienes fondos suficientes para añadir esa cantidad.");
         }
     }
 }

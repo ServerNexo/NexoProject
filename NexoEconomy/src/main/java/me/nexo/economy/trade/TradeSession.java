@@ -1,10 +1,8 @@
 package me.nexo.economy.trade;
 
 import me.nexo.core.crossplay.CrossplayUtils;
-import me.nexo.core.utils.NexoColor;
 import me.nexo.economy.NexoEconomy;
 import me.nexo.economy.core.NexoAccount;
-import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -16,10 +14,11 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * 💰 NexoEconomy - Sesión de Intercambio (Arquitectura Enterprise)
- * Nota: No usa Inyección porque se instancia por cada trade activo.
+ * 💰 NexoEconomy - Sesión de Intercambio (Arquitectura Enterprise Java 25)
+ * Blindaje Anti-Dupe con Transacciones Atómicas (Lock-Free).
  */
 public class TradeSession implements InventoryHolder {
 
@@ -30,6 +29,10 @@ public class TradeSession implements InventoryHolder {
 
     private boolean p1Ready = false;
     private boolean p2Ready = false;
+
+    // 🌟 CANDADOS ATÓMICOS: Evitan la clonación de ítems por concurrencia o lag
+    private final AtomicBoolean isExecuting = new AtomicBoolean(false);
+    private final AtomicBoolean isClosed = new AtomicBoolean(false);
 
     private BigDecimal p1Coins = BigDecimal.ZERO;
     private BigDecimal p2Coins = BigDecimal.ZERO;
@@ -45,7 +48,6 @@ public class TradeSession implements InventoryHolder {
         this.player1 = player1;
         this.player2 = player2;
 
-        // 🌟 FIX: Título seguro serializado y asignando ESTA CLASE como el InventoryHolder (Inhackeable)
         net.kyori.adventure.text.Component titleComp = CrossplayUtils.parseCrossplay(player1, "&#00f5ff🤝 <bold>INTERCAMBIO SEGURO</bold>");
         this.inventory = Bukkit.createInventory(this, 54, titleComp);
 
@@ -53,9 +55,7 @@ public class TradeSession implements InventoryHolder {
     }
 
     @Override
-    public Inventory getInventory() {
-        return inventory; // Retorna el inventario para el Holder
-    }
+    public Inventory getInventory() { return inventory; }
 
     private void setupGUI() {
         setItem(13, Material.GOLD_INGOT, "&#FFAA00[+] <bold>AÑADIR MONEDAS</bold>",
@@ -68,11 +68,7 @@ public class TradeSession implements InventoryHolder {
                 "&#E6CCFFClic para transferir &#ff00ff+10 de Maná&#E6CCFF.");
 
         ItemStack separator = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
-        ItemMeta sepMeta = separator.getItemMeta();
-        if (sepMeta != null) {
-            sepMeta.displayName(CrossplayUtils.parseCrossplay(player1, " "));
-            separator.setItemMeta(sepMeta);
-        }
+        separator.editMeta(meta -> meta.displayName(CrossplayUtils.parseCrossplay(player1, " "))); // 🌟 Paper EditMeta
 
         inventory.setItem(4, separator);
         inventory.setItem(40, separator);
@@ -83,17 +79,12 @@ public class TradeSession implements InventoryHolder {
 
     private void setItem(int slot, Material mat, String name, String... lore) {
         ItemStack item = new ItemStack(mat);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
+        item.editMeta(meta -> {
             meta.displayName(CrossplayUtils.parseCrossplay(player1, name));
             List<net.kyori.adventure.text.Component> loreList = new ArrayList<>();
-            for (String l : lore) {
-                // 🌟 FIX: Usamos directamente parseCrossplay para no romper colores
-                loreList.add(CrossplayUtils.parseCrossplay(player1, l));
-            }
+            for (String l : lore) loreList.add(CrossplayUtils.parseCrossplay(player1, l));
             meta.lore(loreList);
-            item.setItemMeta(meta);
-        }
+        });
         inventory.setItem(slot, item);
     }
 
@@ -101,13 +92,11 @@ public class TradeSession implements InventoryHolder {
         // --- Jugador 1 ---
         String p1Color = p1Ready ? "&#55FF55[✓] <bold>AUTORIZADO</bold>" : "&#FF5555[X] <bold>ESPERANDO</bold>";
         List<String> p1LoreRaw = List.of(
-                "&#E6CCFFSocio: &#00f5ff" + player1.getName(),
-                "",
+                "&#E6CCFFSocio: &#00f5ff" + player1.getName(), "",
                 "&#E6CCFFOfreciendo:",
                 "&#FFAA00" + p1Coins.toString() + " Monedas",
                 "&#55FF55" + p1Gems.toString() + " Gemas",
-                "&#ff00ff" + p1Mana.toString() + " Maná",
-                "",
+                "&#ff00ff" + p1Mana.toString() + " Maná", "",
                 "&#E6CCFFClic para " + (p1Ready ? "cancelar." : "aceptar trato.")
         );
         setItem(45, p1Ready ? Material.LIME_DYE : Material.RED_DYE, p1Color, p1LoreRaw.toArray(new String[0]));
@@ -115,19 +104,19 @@ public class TradeSession implements InventoryHolder {
         // --- Jugador 2 ---
         String p2Color = p2Ready ? "&#55FF55[✓] <bold>AUTORIZADO</bold>" : "&#FF5555[X] <bold>ESPERANDO</bold>";
         List<String> p2LoreRaw = List.of(
-                "&#E6CCFFSocio: &#00f5ff" + player2.getName(),
-                "",
+                "&#E6CCFFSocio: &#00f5ff" + player2.getName(), "",
                 "&#E6CCFFOfreciendo:",
                 "&#FFAA00" + p2Coins.toString() + " Monedas",
                 "&#55FF55" + p2Gems.toString() + " Gemas",
-                "&#ff00ff" + p2Mana.toString() + " Maná",
-                "",
+                "&#ff00ff" + p2Mana.toString() + " Maná", "",
                 "&#E6CCFFClic para " + (p2Ready ? "cancelar." : "aceptar trato.")
         );
         setItem(53, p2Ready ? Material.LIME_DYE : Material.RED_DYE, p2Color, p2LoreRaw.toArray(new String[0]));
     }
 
     public void addCurrency(Player p, NexoAccount.Currency currency, BigDecimal amount) {
+        if (isClosed.get() || isExecuting.get()) return; // Bloqueo de seguridad
+
         if (p.equals(player1)) {
             if (currency == NexoAccount.Currency.COINS) p1Coins = p1Coins.add(amount);
             else if (currency == NexoAccount.Currency.GEMS) p1Gems = p1Gems.add(amount);
@@ -137,10 +126,12 @@ public class TradeSession implements InventoryHolder {
             else if (currency == NexoAccount.Currency.GEMS) p2Gems = p2Gems.add(amount);
             else if (currency == NexoAccount.Currency.MANA) p2Mana = p2Mana.add(amount);
         }
-        unready(); // Al cambiar los fondos, forzamos a que tengan que aceptar de nuevo
+        unready();
     }
 
     public void toggleReady(Player player) {
+        if (isClosed.get() || isExecuting.get()) return;
+
         if (player.equals(player1)) p1Ready = !p1Ready;
         else p2Ready = !p2Ready;
 
@@ -151,9 +142,7 @@ public class TradeSession implements InventoryHolder {
     }
 
     private void iniciarCuentaRegresiva() {
-        taskID = Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, this::ejecutarIntercambio, 60L); // 3 Segundos
-
-        // 🌟 FIX: Mensajes limpios y directos
+        taskID = Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, this::ejecutarIntercambio, 60L);
         CrossplayUtils.sendMessage(player1, "&#00f5ff[!] <bold>Ambas partes han aceptado. Intercambio en 3 segundos...</bold>");
         CrossplayUtils.sendMessage(player2, "&#00f5ff[!] <bold>Ambas partes han aceptado. Intercambio en 3 segundos...</bold>");
     }
@@ -165,7 +154,12 @@ public class TradeSession implements InventoryHolder {
         }
     }
 
+    // 🌟 MOTOR ATÓMICO PRINCIPAL
     private void ejecutarIntercambio() {
+        // CompareAndSet garantiza que aunque el servidor intente llamar esto 2 veces en 1 milisegundo, solo pasará 1 vez.
+        if (!isExecuting.compareAndSet(false, true)) return;
+        isClosed.set(true); // Bloquea la devolución accidental de ítems
+
         transferirLado(true);
         transferirLado(false);
 
@@ -178,40 +172,81 @@ public class TradeSession implements InventoryHolder {
 
         CrossplayUtils.sendMessage(player1, "&#55FF55[✓] <bold>Intercambio finalizado con éxito.</bold>");
         CrossplayUtils.sendMessage(player2, "&#55FF55[✓] <bold>Intercambio finalizado con éxito.</bold>");
+
+        plugin.getTradeManager().removeSession(this);
+    }
+
+    // 🌟 RUTINA DE CANCELACIÓN (ANTI-SCAM / ANTI-DUPE)
+    public void abortTrade(String reason) {
+        if (isExecuting.get() || !isClosed.compareAndSet(false, true)) return;
+
+        cancelarCuenta();
+
+        devolverLado(true); // Devuelve P1 a P1
+        devolverLado(false); // Devuelve P2 a P2
+
+        // 🚨 MUY IMPORTANTE: Devolvemos el dinero si fue descontado de las cuentas al añadirlo a la sesión
+        refundCurrency(NexoAccount.Currency.COINS, p1Coins, p2Coins);
+        refundCurrency(NexoAccount.Currency.GEMS, p1Gems, p2Gems);
+        refundCurrency(NexoAccount.Currency.MANA, p1Mana, p2Mana);
+
+        if (reason != null && !reason.isEmpty()) {
+            CrossplayUtils.sendMessage(player1, "&#FF5555[!] Intercambio abortado: " + reason);
+            CrossplayUtils.sendMessage(player2, "&#FF5555[!] Intercambio abortado: " + reason);
+        }
+
+        player1.closeInventory();
+        player2.closeInventory();
+        plugin.getTradeManager().removeSession(this);
     }
 
     private void transferCurrency(NexoAccount.Currency currency, BigDecimal amountP1, BigDecimal amountP2) {
-        // Enviar fondos de P1 a P2
         if (amountP1.compareTo(BigDecimal.ZERO) > 0) {
-            plugin.getEconomyManager().updateBalanceAsync(player1.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP1, false);
             plugin.getEconomyManager().updateBalanceAsync(player2.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP1, true);
+            // Ya NO descontamos a Player1 aquí, debe descontarse al momento de hacer Clic en "Añadir Monedas"
         }
-        // Enviar fondos de P2 a P1
         if (amountP2.compareTo(BigDecimal.ZERO) > 0) {
-            plugin.getEconomyManager().updateBalanceAsync(player2.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP2, false);
             plugin.getEconomyManager().updateBalanceAsync(player1.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP2, true);
         }
     }
 
+    private void refundCurrency(NexoAccount.Currency currency, BigDecimal amountP1, BigDecimal amountP2) {
+        if (amountP1.compareTo(BigDecimal.ZERO) > 0) plugin.getEconomyManager().updateBalanceAsync(player1.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP1, true);
+        if (amountP2.compareTo(BigDecimal.ZERO) > 0) plugin.getEconomyManager().updateBalanceAsync(player2.getUniqueId(), NexoAccount.AccountType.PLAYER, currency, amountP2, true);
+    }
+
     private void transferirLado(boolean deP1aP2) {
         Player receptor = deP1aP2 ? player2 : player1;
+        procesarSlots(deP1aP2, receptor);
+    }
+
+    private void devolverLado(boolean isP1) {
+        Player dueño = isP1 ? player1 : player2;
+        procesarSlots(isP1, dueño);
+    }
+
+    private void procesarSlots(boolean isLadoIzquierdo, Player receptor) {
         for (int i = 0; i < 54; i++) {
-            boolean esSlotDeOrigen = deP1aP2 ? (i % 9 < 4) : (i % 9 > 4);
-            if (i >= 45) esSlotDeOrigen = false; // Ignorar botones
+            boolean esSlotDeOrigen = isLadoIzquierdo ? (i % 9 < 4) : (i % 9 > 4);
+            if (i >= 45 || i % 9 == 4) esSlotDeOrigen = false; // Ignorar botones y cristal central
 
             if (esSlotDeOrigen) {
                 ItemStack item = inventory.getItem(i);
-                if (item != null && item.getType() != Material.AIR) {
-                    if (receptor.getInventory().firstEmpty() == -1)
+                if (item != null && !item.isEmpty()) {
+                    inventory.setItem(i, null); // 🌟 CRÍTICO: Eliminamos del GUI *antes* de devolver el ítem para evitar clonación
+
+                    if (receptor.getInventory().firstEmpty() == -1) {
                         receptor.getWorld().dropItemNaturally(receptor.getLocation(), item);
-                    else receptor.getInventory().addItem(item);
-                    inventory.setItem(i, null);
+                    } else {
+                        receptor.getInventory().addItem(item);
+                    }
                 }
             }
         }
     }
 
     public void unready() {
+        if (isExecuting.get() || isClosed.get()) return;
         p1Ready = false;
         p2Ready = false;
         updateReadyButtons();

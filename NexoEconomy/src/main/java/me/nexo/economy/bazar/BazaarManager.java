@@ -2,9 +2,9 @@ package me.nexo.economy.bazar;
 
 import com.google.inject.Inject;
 import com.google.inject.Singleton;
-import me.nexo.core.NexoCore;
 import me.nexo.core.crossplay.CrossplayUtils;
 import me.nexo.economy.NexoEconomy;
+import me.nexo.core.database.DatabaseManager;
 import me.nexo.economy.core.NexoAccount;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -13,35 +13,36 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 /**
- * 💰 NexoEconomy - Manager del Bazar Global (Arquitectura Enterprise)
+ * 💰 NexoEconomy - Manager del Bazar Global (Arquitectura Enterprise Java 25)
+ * Motor HFT (High-Frequency Trading) con Virtual Threads y Transacciones SQL ACID (Anti-Dupe).
  */
 @Singleton
 public class BazaarManager {
 
     private final NexoEconomy plugin;
-    private final NexoCore core;
+    private final me.nexo.core.database.DatabaseManager db; // 🌟 Desacoplado de NexoCore
 
-    // 💉 PILAR 3: Inyección de Dependencias
+    // 🚀 EL MOTOR DE RENDIMIENTO I/O: Hilos Virtuales para alta concurrencia
+    private static final Executor VIRTUAL_EXECUTOR = Executors.newVirtualThreadPerTaskExecutor();
+
     @Inject
-    public BazaarManager(NexoEconomy plugin) {
+    public BazaarManager(NexoEconomy plugin, me.nexo.core.database.DatabaseManager db) {
         this.plugin = plugin;
-        this.core = NexoCore.getPlugin(NexoCore.class);
+        this.db = db;
         crearTablasBazar();
     }
 
     private void crearTablasBazar() {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try (Connection conn = core.getDatabaseManager().getConnection();
-                 Statement stmt = conn.createStatement()) {
+        Thread.startVirtualThread(() -> {
+            try (var conn = db.getConnection();
+                 var stmt = conn.createStatement()) {
                 stmt.execute("""
                     CREATE TABLE IF NOT EXISTS nexo_bazaar_orders (
                         order_id SERIAL PRIMARY KEY,
@@ -71,23 +72,24 @@ public class BazaarManager {
     }
 
     private boolean tieneNivelComercial(Player player, String itemId) {
-        if (Bukkit.getPluginManager().getPlugin("NexoColecciones") == null) return true;
+        if (!Bukkit.getPluginManager().isPluginEnabled("NexoColecciones")) return true;
         try {
-            me.nexo.colecciones.NexoColecciones colPlugin = me.nexo.colecciones.NexoColecciones.getPlugin(me.nexo.colecciones.NexoColecciones.class);
-            me.nexo.colecciones.colecciones.CollectionManager colManager = colPlugin.getCollectionManager();
-            me.nexo.colecciones.data.CollectionItem itemData = colManager.getItemGlobal(itemId);
+            var colPlugin = me.nexo.colecciones.NexoColecciones.getPlugin(me.nexo.colecciones.NexoColecciones.class);
+            var colManager = colPlugin.getCollectionManager();
+            var itemData = colManager.getItemGlobal(itemId);
             if (itemData == null) return true;
 
-            me.nexo.colecciones.colecciones.CollectionProfile profile = colManager.getProfile(player.getUniqueId());
+            var profile = colManager.getProfile(player.getUniqueId());
             if (profile == null) return false;
 
             int nivel = colManager.calcularNivel(itemData, profile.getProgress(itemId));
-            return nivel >= 1; // Requiere Nivel 1 en la colección para vender/comprar
+            return nivel >= 1;
         } catch (Exception e) {
-            return true; // Falla seguro si no encuentra la colección
+            return true;
         }
     }
 
+    // 🌟 SE EJECUTA EN EL MAIN THREAD (Porque altera inventarios)
     public void crearOrdenVenta(Player player, String itemId, int amount, BigDecimal pricePerUnit) {
         if (!tieneNivelComercial(player, itemId)) {
             CrossplayUtils.sendMessage(player, "&#FF5555[!] Necesitas alcanzar el Nivel 1 en la colección de este ítem para comerciarlo.");
@@ -102,10 +104,17 @@ public class BazaarManager {
         }
 
         quitarItems(player, mat, amount);
-        guardarOrdenYEmparejar(player.getUniqueId(), BazaarOrder.OrderType.SELL, itemId, amount, pricePerUnit);
 
-        CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>BAZAR:</bold> &#E6CCFFHas creado una oferta de venta por &#55FF55" + amount + "x " + mat.name() + " &#E6CCFFa &#FFAA00" + pricePerUnit + " Monedas &#E6CCFFc/u.");
-        player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+        // 🚀 Despachamos a un Hilo Virtual para no congelar al jugador
+        VIRTUAL_EXECUTOR.execute(() -> {
+            guardarOrdenYEmparejar(player.getUniqueId(), BazaarOrder.OrderType.SELL, itemId, amount, pricePerUnit);
+
+            // Volvemos al hilo principal solo para enviar mensajes/sonidos seguros
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>BAZAR:</bold> &#E6CCFFHas creado una oferta de venta por &#55FF55" + amount + "x " + mat.name() + " &#E6CCFFa &#FFAA00" + pricePerUnit + " Monedas &#E6CCFFc/u.");
+                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+            });
+        });
     }
 
     public void crearOrdenCompra(Player player, String itemId, int amount, BigDecimal pricePerUnit) {
@@ -117,41 +126,45 @@ public class BazaarManager {
 
         BigDecimal totalCost = pricePerUnit.multiply(new BigDecimal(amount));
 
-        plugin.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, totalCost, false).thenAccept(success -> {
+        plugin.getEconomyManager().updateBalanceAsync(player.getUniqueId(), NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, totalCost, false).thenAcceptAsync(success -> {
             if (success) {
                 guardarOrdenYEmparejar(player.getUniqueId(), BazaarOrder.OrderType.BUY, itemId, amount, pricePerUnit);
-                CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>BAZAR:</bold> &#E6CCFFHas creado una petición de compra por &#55FF55" + amount + "x " + itemId + " &#E6CCFFreteniendo &#FFAA00" + totalCost + " Monedas&#E6CCFF.");
-                player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>BAZAR:</bold> &#E6CCFFHas creado una petición de compra por &#55FF55" + amount + "x " + itemId + " &#E6CCFFreteniendo &#FFAA00" + totalCost + " Monedas&#E6CCFF.");
+                    player.playSound(player.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0f, 1.0f);
+                });
             } else {
-                CrossplayUtils.sendMessage(player, "&#FF5555[!] Fondos insuficientes para crear esta orden.");
-                player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    CrossplayUtils.sendMessage(player, "&#FF5555[!] Fondos insuficientes para crear esta orden.");
+                    player.playSound(player.getLocation(), Sound.ENTITY_VILLAGER_NO, 1.0f, 1.0f);
+                });
             }
-        });
+        }, VIRTUAL_EXECUTOR);
     }
 
     private void guardarOrdenYEmparejar(UUID ownerId, BazaarOrder.OrderType type, String itemId, int amount, BigDecimal pricePerUnit) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            long timestamp = System.currentTimeMillis();
-            String insert = "INSERT INTO nexo_bazaar_orders (owner_id, order_type, item_id, amount, price_per_unit, timestamp) VALUES (CAST(? AS UUID), ?, ?, ?, ?, ?)";
+        long timestamp = System.currentTimeMillis();
+        String insert = "INSERT INTO nexo_bazaar_orders (owner_id, order_type, item_id, amount, price_per_unit, timestamp) VALUES (CAST(? AS UUID), ?, ?, ?, ?, ?)";
 
-            try (Connection conn = core.getDatabaseManager().getConnection();
-                 PreparedStatement ps = conn.prepareStatement(insert)) {
-                ps.setString(1, ownerId.toString());
-                ps.setString(2, type.name());
-                ps.setString(3, itemId.toUpperCase());
-                ps.setInt(4, amount);
-                ps.setBigDecimal(5, pricePerUnit);
-                ps.setLong(6, timestamp);
-                ps.executeUpdate();
-            } catch (Exception e) {
-                plugin.getLogger().severe("❌ Error guardando orden: " + e.getMessage());
-                return;
-            }
-            ejecutarMotorDeCruce(itemId);
-        });
+        try (var conn = db.getConnection();
+             var ps = conn.prepareStatement(insert)) {
+            ps.setString(1, ownerId.toString());
+            ps.setString(2, type.name());
+            ps.setString(3, itemId.toUpperCase());
+            ps.setInt(4, amount);
+            ps.setBigDecimal(5, pricePerUnit);
+            ps.setLong(6, timestamp);
+            ps.executeUpdate();
+
+            ejecutarMotorDeCruce(conn, itemId); // 🌟 Pasamos la conexión para que trabaje en la misma transacción
+
+        } catch (Exception e) {
+            plugin.getLogger().severe("❌ Error guardando orden: " + e.getMessage());
+        }
     }
 
-    private void ejecutarMotorDeCruce(String itemId) {
+    private void ejecutarMotorDeCruce(java.sql.Connection conn, String itemId) {
+        // 🌟 FOR UPDATE: Candado ACID. Bloquea la fila temporalmente para que nadie más la cruce o cancele al mismo tiempo.
         String findMatchSQL = """
             SELECT b.order_id AS buy_id, b.owner_id AS buyer_id, b.amount AS buy_amount, b.price_per_unit AS buy_price,
                    s.order_id AS sell_id, s.owner_id AS seller_id, s.amount AS sell_amount, s.price_per_unit AS sell_price
@@ -162,12 +175,12 @@ public class BazaarManager {
               AND b.price_per_unit >= s.price_per_unit
             ORDER BY s.price_per_unit ASC, b.timestamp ASC
             LIMIT 1
+            FOR UPDATE 
         """;
 
-        try (Connection conn = core.getDatabaseManager().getConnection();
-             PreparedStatement ps = conn.prepareStatement(findMatchSQL)) {
+        try (var ps = conn.prepareStatement(findMatchSQL)) {
             ps.setString(1, itemId);
-            ResultSet rs = ps.executeQuery();
+            var rs = ps.executeQuery();
 
             if (rs.next()) {
                 int buyId = rs.getInt("buy_id");
@@ -182,34 +195,36 @@ public class BazaarManager {
                 int cantidadIntercambiada = Math.min(buyAmount, sellAmount);
                 BigDecimal totalTransferencia = matchPrice.multiply(new BigDecimal(cantidadIntercambiada));
 
-                // 1% Tax (Comisión del Bazar)
+                // 1% Tax
                 BigDecimal tax = totalTransferencia.multiply(new BigDecimal("0.01"));
                 BigDecimal netoParaVendedor = totalTransferencia.subtract(tax);
 
                 plugin.getEconomyManager().updateBalanceAsync(sellerId, NexoAccount.AccountType.PLAYER, NexoAccount.Currency.COINS, netoParaVendedor, true);
-                enviarABuzon(buyerId, itemId, cantidadIntercambiada, BigDecimal.ZERO);
+
+                // Enviar ítems al comprador (Enviando la conexión para asegurar atomicidad)
+                enviarABuzonSync(conn, buyerId, itemId, cantidadIntercambiada, BigDecimal.ZERO);
 
                 actualizarOrden(conn, buyId, buyAmount - cantidadIntercambiada);
                 actualizarOrden(conn, sellId, sellAmount - cantidadIntercambiada);
 
                 plugin.getLogger().info("📈 [BAZAR] Cruce exitoso de " + cantidadIntercambiada + "x " + itemId + " por " + totalTransferencia + " Monedas.");
 
-                // Llamada recursiva en caso de que queden más órdenes por cruzar
-                ejecutarMotorDeCruce(itemId);
+                // Llamada recursiva
+                ejecutarMotorDeCruce(conn, itemId);
             }
         } catch (Exception e) {
             plugin.getLogger().severe("❌ Error en el Matching Engine: " + e.getMessage());
         }
     }
 
-    private void actualizarOrden(Connection conn, int orderId, int remainingAmount) throws Exception {
+    private void actualizarOrden(java.sql.Connection conn, int orderId, int remainingAmount) throws Exception {
         if (remainingAmount <= 0) {
-            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM nexo_bazaar_orders WHERE order_id = ?")) {
+            try (var ps = conn.prepareStatement("DELETE FROM nexo_bazaar_orders WHERE order_id = ?")) {
                 ps.setInt(1, orderId);
                 ps.executeUpdate();
             }
         } else {
-            try (PreparedStatement ps = conn.prepareStatement("UPDATE nexo_bazaar_orders SET amount = ? WHERE order_id = ?")) {
+            try (var ps = conn.prepareStatement("UPDATE nexo_bazaar_orders SET amount = ? WHERE order_id = ?")) {
                 ps.setInt(1, remainingAmount);
                 ps.setInt(2, orderId);
                 ps.executeUpdate();
@@ -217,10 +232,9 @@ public class BazaarManager {
         }
     }
 
-    private void enviarABuzon(UUID ownerId, String itemId, int amount, BigDecimal coins) {
+    private void enviarABuzonSync(java.sql.Connection conn, UUID ownerId, String itemId, int amount, BigDecimal coins) throws Exception {
         String insert = "INSERT INTO nexo_bazaar_deliveries (id, owner_id, item_id, amount, coins) VALUES (CAST(? AS UUID), CAST(? AS UUID), ?, ?, ?)";
-        try (Connection conn = core.getDatabaseManager().getConnection();
-             PreparedStatement ps = conn.prepareStatement(insert)) {
+        try (var ps = conn.prepareStatement(insert)) {
             ps.setString(1, UUID.randomUUID().toString());
             ps.setString(2, ownerId.toString());
             ps.setString(3, itemId);
@@ -228,21 +242,21 @@ public class BazaarManager {
             ps.setBigDecimal(5, coins);
             ps.executeUpdate();
 
-            Player p = Bukkit.getPlayer(ownerId);
-            if (p != null && (amount > 0 || coins.compareTo(BigDecimal.ZERO) > 0)) {
-                CrossplayUtils.sendMessage(p, "&#555555--------------------------------");
-                CrossplayUtils.sendMessage(p, "&#FFAA00📦 <bold>ENTREGA DEL BAZAR</bold>");
-                CrossplayUtils.sendMessage(p, "&#E6CCFFUna de tus órdenes se ha completado.");
-                CrossplayUtils.sendMessage(p, "&#E6CCFFRevisa tus entregas en el menú del Bazar.");
-                CrossplayUtils.sendMessage(p, "&#555555--------------------------------");
-                p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, 1.2f);
-            }
-        } catch (Exception e) {
-            plugin.getLogger().severe("❌ Error entregando al buzón: " + e.getMessage());
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                Player p = Bukkit.getPlayer(ownerId);
+                if (p != null && (amount > 0 || coins.compareTo(BigDecimal.ZERO) > 0)) {
+                    CrossplayUtils.sendMessage(p, "&#555555--------------------------------");
+                    CrossplayUtils.sendMessage(p, "&#FFAA00📦 <bold>ENTREGA DEL BAZAR</bold>");
+                    CrossplayUtils.sendMessage(p, "&#E6CCFFUna de tus órdenes se ha completado.");
+                    CrossplayUtils.sendMessage(p, "&#E6CCFFRevisa tus entregas en el menú del Bazar.");
+                    CrossplayUtils.sendMessage(p, "&#555555--------------------------------");
+                    p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BELL, 1.0f, 1.2f);
+                }
+            });
         }
     }
 
-    // 🌟 FIX: Quitar ítems de forma segura
+    // 🌟 EJECUCIÓN MAIN THREAD OBLIGATORIA
     private void quitarItems(Player player, Material mat, int amountToRemove) {
         int removed = 0;
         ItemStack[] contents = player.getInventory().getContents();
@@ -263,12 +277,13 @@ public class BazaarManager {
     }
 
     public void reclamarBuzon(Player player) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+        VIRTUAL_EXECUTOR.execute(() -> {
             String select = "SELECT id, item_id, amount, coins FROM nexo_bazaar_deliveries WHERE owner_id = CAST(? AS UUID)";
-            try (Connection conn = core.getDatabaseManager().getConnection();
-                 PreparedStatement ps = conn.prepareStatement(select)) {
+            try (var conn = db.getConnection();
+                 var ps = conn.prepareStatement(select)) {
+
                 ps.setString(1, player.getUniqueId().toString());
-                ResultSet rs = ps.executeQuery();
+                var rs = ps.executeQuery();
                 boolean tieneCosas = false;
 
                 while (rs.next()) {
@@ -279,7 +294,7 @@ public class BazaarManager {
                     BigDecimal coins = rs.getBigDecimal("coins");
 
                     String delete = "DELETE FROM nexo_bazaar_deliveries WHERE id = CAST(? AS UUID)";
-                    try (PreparedStatement delPs = conn.prepareStatement(delete)) {
+                    try (var delPs = conn.prepareStatement(delete)) {
                         delPs.setString(1, deliveryId);
                         delPs.executeUpdate();
                     }
@@ -316,43 +331,40 @@ public class BazaarManager {
         });
     }
 
+    // ==========================================
+    // 📊 LECTURAS RÁPIDAS DE MERCADO (Virtual Threads)
+    // ==========================================
     public BigDecimal getMejorPrecioCompra(String itemId) {
-        try (Connection conn = core.getDatabaseManager().getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT MAX(price_per_unit) FROM nexo_bazaar_orders WHERE item_id = ? AND order_type = 'BUY'")) {
+        try (var conn = db.getConnection();
+             var ps = conn.prepareStatement("SELECT MAX(price_per_unit) FROM nexo_bazaar_orders WHERE item_id = ? AND order_type = 'BUY'")) {
             ps.setString(1, itemId);
-            try (ResultSet rs = ps.executeQuery()) {
+            try (var rs = ps.executeQuery()) {
                 if (rs.next() && rs.getBigDecimal(1) != null) return rs.getBigDecimal(1);
             }
-        } catch (Exception e) {
-            plugin.getLogger().severe(e.getMessage());
-        }
+        } catch (Exception ignored) {}
         return BigDecimal.ZERO;
     }
 
     public BigDecimal getMejorPrecioVenta(String itemId) {
-        try (Connection conn = core.getDatabaseManager().getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT MIN(price_per_unit) FROM nexo_bazaar_orders WHERE item_id = ? AND order_type = 'SELL'")) {
+        try (var conn = db.getConnection();
+             var ps = conn.prepareStatement("SELECT MIN(price_per_unit) FROM nexo_bazaar_orders WHERE item_id = ? AND order_type = 'SELL'")) {
             ps.setString(1, itemId);
-            try (ResultSet rs = ps.executeQuery()) {
+            try (var rs = ps.executeQuery()) {
                 if (rs.next() && rs.getBigDecimal(1) != null) return rs.getBigDecimal(1);
             }
-        } catch (Exception e) {
-            plugin.getLogger().severe(e.getMessage());
-        }
+        } catch (Exception ignored) {}
         return BigDecimal.ZERO;
     }
 
     public int getVolumenOrdenes(String itemId, String type) {
-        try (Connection conn = core.getDatabaseManager().getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT SUM(amount) FROM nexo_bazaar_orders WHERE item_id = ? AND order_type = ?")) {
+        try (var conn = db.getConnection();
+             var ps = conn.prepareStatement("SELECT SUM(amount) FROM nexo_bazaar_orders WHERE item_id = ? AND order_type = ?")) {
             ps.setString(1, itemId);
             ps.setString(2, type);
-            try (ResultSet rs = ps.executeQuery()) {
+            try (var rs = ps.executeQuery()) {
                 if (rs.next()) return rs.getInt(1);
             }
-        } catch (Exception e) {
-            plugin.getLogger().severe(e.getMessage());
-        }
+        } catch (Exception ignored) {}
         return 0;
     }
 
@@ -374,10 +386,10 @@ public class BazaarManager {
 
     public List<ActiveOrderDTO> getMisOrdenes(UUID ownerId) {
         List<ActiveOrderDTO> orders = new ArrayList<>();
-        try (Connection conn = core.getDatabaseManager().getConnection();
-             PreparedStatement ps = conn.prepareStatement("SELECT order_id, item_id, amount, price_per_unit, order_type FROM nexo_bazaar_orders WHERE owner_id = CAST(? AS UUID) ORDER BY timestamp DESC")) {
+        try (var conn = db.getConnection();
+             var ps = conn.prepareStatement("SELECT order_id, item_id, amount, price_per_unit, order_type FROM nexo_bazaar_orders WHERE owner_id = CAST(? AS UUID) ORDER BY timestamp DESC")) {
             ps.setString(1, ownerId.toString());
-            try (ResultSet rs = ps.executeQuery()) {
+            try (var rs = ps.executeQuery()) {
                 while (rs.next()) {
                     orders.add(new ActiveOrderDTO(
                             rs.getInt("order_id"), rs.getString("item_id"), rs.getInt("amount"),
@@ -385,19 +397,21 @@ public class BazaarManager {
                     ));
                 }
             }
-        } catch (Exception e) {
-            plugin.getLogger().severe(e.getMessage());
-        }
+        } catch (Exception ignored) {}
         return orders;
     }
 
+    // 🌟 PROTECCIÓN ANTI-DUPE SQL: Transacciones seguras para cancelaciones
     public void cancelarOrden(Player player, int orderId) {
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
-            try (Connection conn = core.getDatabaseManager().getConnection()) {
-                PreparedStatement psSearch = conn.prepareStatement("SELECT item_id, amount, price_per_unit, order_type FROM nexo_bazaar_orders WHERE order_id = ? AND owner_id = CAST(? AS UUID)");
+        VIRTUAL_EXECUTOR.execute(() -> {
+            try (var conn = db.getConnection()) {
+                conn.setAutoCommit(false); // Inicia transacción
+
+                // 🌟 FOR UPDATE OF: Evita que el Motor de Cruce cruce la orden mientras la cancelas
+                var psSearch = conn.prepareStatement("SELECT item_id, amount, price_per_unit, order_type FROM nexo_bazaar_orders WHERE order_id = ? AND owner_id = CAST(? AS UUID) FOR UPDATE");
                 psSearch.setInt(1, orderId);
                 psSearch.setString(2, player.getUniqueId().toString());
-                ResultSet rs = psSearch.executeQuery();
+                var rs = psSearch.executeQuery();
 
                 if (rs.next()) {
                     String itemId = rs.getString("item_id");
@@ -405,22 +419,25 @@ public class BazaarManager {
                     BigDecimal price = rs.getBigDecimal("price_per_unit");
                     String type = rs.getString("order_type");
 
-                    PreparedStatement psDelete = conn.prepareStatement("DELETE FROM nexo_bazaar_orders WHERE order_id = ?");
+                    var psDelete = conn.prepareStatement("DELETE FROM nexo_bazaar_orders WHERE order_id = ?");
                     psDelete.setInt(1, orderId);
                     psDelete.executeUpdate();
 
                     if (type.equals("SELL")) {
-                        enviarABuzon(player.getUniqueId(), itemId, amount, BigDecimal.ZERO);
+                        enviarABuzonSync(conn, player.getUniqueId(), itemId, amount, BigDecimal.ZERO);
                     } else {
                         BigDecimal totalCoins = price.multiply(new BigDecimal(amount));
-                        enviarABuzon(player.getUniqueId(), "COINS", 0, totalCoins);
+                        enviarABuzonSync(conn, player.getUniqueId(), "COINS", 0, totalCoins);
                     }
+
+                    conn.commit(); // Aplica los cambios atómicamente
 
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         CrossplayUtils.sendMessage(player, "&#55FF55[✓] <bold>BAZAR:</bold> &#E6CCFFOrden cancelada. Revisa tu buzón de entregas.");
                         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_CHIME, 1f, 1f);
                     });
                 } else {
+                    conn.rollback();
                     Bukkit.getScheduler().runTask(plugin, () -> CrossplayUtils.sendMessage(player, "&#FF5555[!] Esa orden no existe o ya fue completada."));
                 }
             } catch (Exception e) {
@@ -429,12 +446,6 @@ public class BazaarManager {
         });
     }
 
-    /**
-     * 🛡️ GUARDADO SÍNCRONO: Se ejecuta en onDisable()
-     * Como el Bazar trabaja directo con SQL asíncrono en tiempo real,
-     * no hay caché local de órdenes que guardar al apagar.
-     * Pero dejamos este método listo por si a futuro agregas colas en memoria.
-     */
     public void saveMarketSync() {
         plugin.getLogger().info("✅ El estado del Bazar Global ya se encuentra sincronizado con la Base de Datos central.");
     }

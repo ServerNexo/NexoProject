@@ -23,8 +23,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 🤖 NexoMinions - Gestor de Minions (Arquitectura Enterprise)
- * Rendimiento: Cálculos Matemáticos Asíncronos (Virtual Threads), Cero I/O en Ticks.
+ * 🤖 NexoMinions - Gestor de Minions (Arquitectura Enterprise Java 25)
+ * Rendimiento: Matemáticas Asíncronas (Virtual Threads) + EntityScheduler Nativo.
  */
 @Singleton
 public class MinionManager {
@@ -40,7 +40,7 @@ public class MinionManager {
     private final NamespacedKey interactionKey;
     private final NamespacedKey limitKey;
 
-    // 💉 PILAR 3: Inyección Directa (Extirpado NexoCore)
+    // 💉 PILAR 3: Inyección Directa
     @Inject
     public MinionManager(NexoMinions plugin, ConfigManager configManager) {
         this.plugin = plugin;
@@ -106,7 +106,7 @@ public class MinionManager {
 
         // Entregar Upgrades al jugador
         for (ItemStack upgrade : minion.getUpgrades()) {
-            if (upgrade != null && !upgrade.getType().isAir()) {
+            if (upgrade != null && !upgrade.isEmpty()) { // 🌟 Paper 1.21 fix
                 player.getInventory().addItem(upgrade).values().forEach(drop ->
                         player.getWorld().dropItemNaturally(player.getLocation(), drop)
                 );
@@ -155,19 +155,12 @@ public class MinionManager {
     // ==========================================
     public void tickAll(long currentTimeMillis) {
         // 🌟 MAGIA ENTERPRISE: Procesamiento Asíncrono Masivo.
-        // Creamos un Hilo Virtual para evaluar a TODOS los minions sin tocar el TPS del servidor.
+        // Hilo Virtual PURAMENTE matemático. No toca ninguna entidad física
+        // evitando crasheos del AsyncCatcher.
         Thread.startVirtualThread(() -> {
             for (ActiveMinion minion : minionsActivos.values()) {
-
-                // Limpieza de minions corruptos o muertos
-                if (minion.getEntity() == null || minion.getEntity().isDead() || !minion.getEntity().isValid()) {
-                    if (minion.getHitbox() != null && !minion.getHitbox().isDead()) minion.getHitbox().remove();
-                    if (minion.getHolograma() != null && !minion.getHolograma().isDead()) minion.getHolograma().remove();
-                    minionsActivos.remove(minion.getEntity().getUniqueId());
-                    continue;
-                }
-
-                // Tick Lógico (Cálculos matemáticos puros en RAM)
+                // Todo el chequeo de "isDead" y "isValid" se hace ahora dentro de la propia
+                // clase ActiveMinion usando el EntityScheduler de forma segura.
                 minion.tick(currentTimeMillis);
             }
         });
